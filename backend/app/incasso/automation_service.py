@@ -143,10 +143,24 @@ async def evaluate_timeout_rules(
                 chosen.id if chosen else "geen (alle doel-stappen inactief)",
             )
 
+    # Lazy-import (circulaire module-load vermijden): pure guard-functie, geen DB.
+    from app.incasso.service import advance_guard_reason
+
     matches: list[RuleMatch] = []
     for case in cases:
         rule = rules_by_from_step.get(case.incasso_step_id)
         if not rule:
+            continue
+        # S234 — dezelfde doorschuif-waarborgen als op het verzendpad: een gesloten,
+        # betwiste of consumenten-zaak (b2c → zakelijke stap) mag geen (AI-)vervolg
+        # krijgen. Vóór S234 filterde de evaluator alleen op is_active → IN100613
+        # (afgesloten) kreeg elke ochtend een nieuw sommatie-concept.
+        block = advance_guard_reason(case, rule.to_step)
+        if block:
+            logger.debug(
+                "evaluate_timeout_rules: case %s overgeslagen — %s",
+                case.case_number, block,
+            )
             continue
         cond = _json.loads(rule.condition) if rule.condition else {}
         wait_days = int(cond.get("days", 0))

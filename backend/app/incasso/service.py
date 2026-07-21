@@ -174,10 +174,12 @@ async def seed_default_steps(
         # daarom als eerste in de lijst → laagste sort_order → eerste stap voor B2C.
         {"name": "14-dagenbrief", "min_wait_days": 0, "max_wait_days": 15, "step_category": "minnelijk", "debtor_type": "b2c", "template_type": "14_dagenbrief"},
         # Hoofdpad (B2B verzoekschrift faillissement)
-        {"name": "Eerste sommatie", "min_wait_days": 0, "max_wait_days": 4, "step_category": "minnelijk", "debtor_type": "both"},
-        {"name": "Tweede sommatie", "min_wait_days": 4, "max_wait_days": 4, "step_category": "minnelijk", "debtor_type": "both"},
-        {"name": "Derde sommatie", "min_wait_days": 4, "max_wait_days": 4, "step_category": "minnelijk", "debtor_type": "both"},
-        {"name": "Sommatie laatste mogelijkheid", "min_wait_days": 4, "max_wait_days": 4, "step_category": "minnelijk", "debtor_type": "b2b"},
+        {"name": "Eerste sommatie", "min_wait_days": 0, "max_wait_days": 4, "step_category": "minnelijk", "debtor_type": "both", "template_type": "sommatie_drukte"},
+        {"name": "Tweede sommatie", "min_wait_days": 4, "max_wait_days": 4, "step_category": "minnelijk", "debtor_type": "both", "template_type": "aanmaning"},
+        # S234 — derde + laatste sommatie krijgen nu óók een brief, zodat verzending die
+        # stappen doorschuift (S232-mechaniek) en de AI-conceptbatch ze kan overslaan.
+        {"name": "Derde sommatie", "min_wait_days": 4, "max_wait_days": 4, "step_category": "minnelijk", "debtor_type": "both", "template_type": "wederom_sommatie_kort"},
+        {"name": "Sommatie laatste mogelijkheid", "min_wait_days": 4, "max_wait_days": 4, "step_category": "minnelijk", "debtor_type": "b2b", "template_type": "sommatie_laatste_voor_fai"},
         {"name": "Verzoekschrift faillissement", "min_wait_days": 4, "max_wait_days": 4, "step_category": "gerechtelijk", "debtor_type": "b2b"},
         # Auto-trigger status
         {"name": "Verweer beantwoorden", "min_wait_days": 0, "max_wait_days": 0, "step_category": "administratief", "debtor_type": "both", "is_hold_step": True},
@@ -731,13 +733,19 @@ async def mark_current_step_communication_sent(
 # GRENS (S234-stappensessie): stappen zónder template_type (Derde sommatie / Sommatie
 # laatste mogelijkheid in prod) schuiven niet door — er is geen brief aan gekoppeld om
 # tegen te matchen. Zodra die koppeling er is, werkt dit zonder codewijziging mee.
+#
+# S234: de derde sommatie kreeg een eigen familie. `wederom_sommatie_kort` /
+# `wederom_sommatie_inhoudelijk` zijn de herhaal-sommatie ná de tweede — die horen bij
+# de DERDE-sommatie-stap (template_type `wederom_sommatie_kort`), niet meer bij de
+# tweede. Zo schuift een verstuurde derde sommatie precies zijn eigen stap door.
 STEP_TEMPLATE_FAMILIES: tuple[frozenset[str], ...] = (
     frozenset({"14_dagenbrief", "demand_for_payment_eerste"}),
     frozenset({"sommatie_drukte", "sommatie_eerste_opgave"}),
     frozenset(
-        {"aanmaning", "sommatie_na_reactie", "wederom_sommatie_kort", "tweede_sommatie",
+        {"aanmaning", "sommatie_na_reactie", "tweede_sommatie",
          "demand_for_payment_uitgebreid"}
     ),
+    frozenset({"wederom_sommatie_kort", "wederom_sommatie_inhoudelijk"}),
     frozenset({"sommatie_laatste_voor_fai", "demand_for_payment_laatste"}),
     frozenset({"faillissement_dreigbrief", "demand_for_payment_fai"}),
 )
@@ -787,6 +795,82 @@ def should_advance_on_template_send(
     return template_belongs_to_step(template_type, step_template_type)
 
 
+def advance_guard_reason(
+    case: Case, target_step: IncassoPipelineStep
+) -> str | None:
+    """Waarom een dossier NIET lineair naar `target_step` doorgeschoven mag worden — of None.
+
+    Eén bron voor ÁLLE doorschuif-routes (compose/send, AI-concept, batch, follow-up)
+    én de dagelijkse rule-evaluator (skill breed-testen, pijplijn). Voorheen kende alleen
+    `_try_auto_advance` deze waarborgen; `advance_after_step_send` (compose/send + AI-route)
+    checkte niets → een gesloten, betwiste of consumenten-zaak kon de verkeerde kant op.
+
+    - gesloten zaak (betaald/afgesloten): pijplijn staat stil;
+    - openstaand verweer: eerst afhandelen, niet automatisch dunnen;
+    - terminale/hold-stap als doel: die worden bewust handmatig bereikt, nooit lineair;
+    - consumentendossier (b2c) naar een zakelijke (b2b) stap: na de laatste minnelijke
+      consumentenstap is faillissement niet passend — stop en laat een mens beslissen.
+    """
+    if case.status in ("betaald", "afgesloten"):
+        return "zaak is afgehandeld (betaald/afgesloten)"
+    if case.has_verweer:
+        return "openstaand verweer — pijplijn staat stil tot dat is afgehandeld"
+    if target_step.is_terminal or target_step.is_hold_step:
+        return (
+            f"doelstap '{target_step.name}' is een eind-/wachtstap "
+            "(niet lineair doorschuiven)"
+        )
+    if case.debtor_type == "b2c" and target_step.debtor_type == "b2b":
+        return (
+            f"consumentendossier mag niet naar de zakelijke stap '{target_step.name}'"
+        )
+    return None
+
+
+async def _ensure_followup_decision_task(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case: Case,
+) -> None:
+    """Eenmalige 'vervolg bepalen'-taak voor een consumentendossier aan het einde van
+    de minnelijke consumentenstappen (na de derde sommatie is er geen zakelijke
+    vervolgstap voor een b2c-debiteur — faillissement past niet). Deduped: één open taak.
+    """
+    existing = (
+        await db.execute(
+            select(WorkflowTask).where(
+                WorkflowTask.tenant_id == tenant_id,
+                WorkflowTask.case_id == case.id,
+                WorkflowTask.task_type == "manual_review",
+                WorkflowTask.status.in_(["pending", "due", "overdue"]),
+                WorkflowTask.is_active.is_(True),
+                WorkflowTask.action_config["source"].astext == "b2c_pipeline_end",
+            )
+        )
+    ).scalar_one_or_none()
+    if existing:
+        return
+    db.add(
+        WorkflowTask(
+            tenant_id=tenant_id,
+            case_id=case.id,
+            assigned_to_id=case.assigned_to_id,
+            task_type="manual_review",
+            title=f"Vervolg bepalen consumentendossier {case.case_number}",
+            description=(
+                "Dit consumentendossier heeft de laatste minnelijke sommatie gehad. "
+                "Een faillissementsaanvraag is voor een consument niet passend — "
+                "bepaal het vervolg (bijvoorbeeld dagvaarding)."
+            ),
+            due_date=date.today(),
+            status="due",
+            auto_execute=False,
+            action_config={"source": "b2c_pipeline_end"},
+        )
+    )
+    await db.flush()
+
+
 async def advance_after_step_send(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -795,24 +879,31 @@ async def advance_after_step_send(
     *,
     document_id: uuid.UUID | None = None,
     notes: str = "Doorgeschoven na verzending",
+    record_send: bool = True,
 ) -> dict:
-    """Schuif een dossier door na een succesvol verstuurde STAP-brief.
+    """Schuif een dossier door na het afronden van een STAP-brief.
 
-    Gedeelde kern van de AI-concept-route (advance_after_send) en de sjabloon-
-    verzendknop (compose/send, S232). Legt eerst de verzending vast op de HUIDIGE
-    stap (zodat de sommatie zichtbaar blijft in de staphistorie, óók als er geen
-    advance-regel is), zoekt dan de default timeout-advance-regel en verplaatst via
-    move_case_to_step (CaseStepHistory + pijplijn-activiteit). Commit gebeurt bij de
-    aanroeper. Geeft een {advanced, reason, to_step_id, to_step_name}-dict terug.
+    Gedeelde motor van ALLE stap-brief-routes (S234): AI-concept (advance_after_send),
+    de sjabloon-verzendknop (compose/send, S232), batch en follow-up. Legt (bij een
+    echte verzending) de verzending vast op de HUIDIGE stap — zodat de sommatie
+    zichtbaar blijft in de staphistorie, óók als er geen advance-regel is — zoekt dan de
+    default timeout-advance-regel en verplaatst via move_case_to_step (CaseStepHistory +
+    pijplijn-activiteit) mét de doorschuif-waarborgen (`advance_guard_reason`). Commit
+    gebeurt bij de aanroeper. Geeft een {advanced, reason, to_step_id, to_step_name}.
+
+    `record_send=False`: alleen doorschuiven, geen email_sent-markering — voor de
+    batch-generatie zónder verzending (er ging niets de deur uit, dus de brief mag niet
+    als 'aantoonbaar verstuurd' tellen voor de 14-dagenbrief-gate).
     """
     if not case.incasso_step_id:
         return {"advanced": False, "reason": "Dossier heeft geen actieve stap"}
 
     # Log de verzending op de HUIDIGE stap (de stap waarvoor de brief gold) vóór het
     # doorschuiven — anders verdwijnt het bewijs uit de staphistorie.
-    await mark_current_step_communication_sent(
-        db, tenant_id, case, document_id=document_id
-    )
+    if record_send:
+        await mark_current_step_communication_sent(
+            db, tenant_id, case, document_id=document_id
+        )
 
     rule = (
         await db.execute(
@@ -832,6 +923,17 @@ async def advance_after_step_send(
             "advanced": False,
             "reason": "Geen default advance-rule gevonden voor huidige stap",
         }
+
+    # Doorschuif-waarborgen (S234) — dezelfde die `_try_auto_advance` al kende, nu op
+    # de gedeelde motor zodat compose/send + AI-route + batch + follow-up NOOIT een
+    # gesloten, betwiste of consumenten-zaak de verkeerde kant op duwen.
+    block_reason = advance_guard_reason(case, rule.to_step)
+    if block_reason:
+        # Consumentendossier aan het einde van de minnelijke keten → eenmalige
+        # 'vervolg bepalen'-taak zodat het niet stil blijft liggen (keuze Arsalan).
+        if case.debtor_type == "b2c" and rule.to_step.debtor_type == "b2b":
+            await _ensure_followup_decision_task(db, tenant_id, case)
+        return {"advanced": False, "reason": block_reason}
 
     await move_case_to_step(
         db,
@@ -1298,105 +1400,6 @@ async def _skip_review_drafts_for_step(
     return len(tasks)
 
 
-async def _try_auto_advance(
-    db: AsyncSession,
-    tenant_id: uuid.UUID,
-    case: Case,
-    user_id: uuid.UUID,
-    step_list: list[IncassoPipelineStep] | None = None,
-) -> bool:
-    """Check if all tasks are done for a case; if so, advance to next pipeline step.
-
-    Args:
-        step_list: Pre-fetched sorted pipeline steps to avoid N+1 queries.
-                   If None, fetches from DB.
-
-    Returns True if the case was advanced, False otherwise.
-    """
-    if not case.incasso_step_id:
-        return False
-
-    if case.status in ("betaald", "afgesloten"):
-        return False
-
-    if case.has_verweer:
-        return False
-
-    # Check for remaining open pipeline tasks for the current step only.
-    # We scope to action_config.source == "pipeline" to avoid blocking
-    # on initial case tasks or manually created tasks.
-    result = await db.execute(
-        select(WorkflowTask)
-        .where(
-            WorkflowTask.tenant_id == tenant_id,
-            WorkflowTask.case_id == case.id,
-            WorkflowTask.status.in_(["pending", "due", "overdue"]),
-            WorkflowTask.is_active.is_(True),
-            WorkflowTask.action_config["source"].astext == "pipeline",
-            WorkflowTask.action_config["step_id"].astext == str(case.incasso_step_id),
-        )
-        .limit(1)
-    )
-    if result.scalar_one_or_none():
-        return False  # Still has open pipeline tasks for this step
-
-    # Find current and next step
-    if step_list is None:
-        steps = await list_pipeline_steps(db, tenant_id, active_only=True)
-        step_list = sorted(steps, key=lambda s: s.sort_order)
-
-    current_idx = None
-    for i, step in enumerate(step_list):
-        if step.id == case.incasso_step_id:
-            current_idx = i
-            break
-
-    if current_idx is None:
-        return False
-
-    if current_idx + 1 >= len(step_list):
-        logger.debug(
-            "Case %s is on last step '%s' — no auto-advance possible",
-            case.case_number,
-            step_list[current_idx].name,
-        )
-        return False
-
-    next_step = step_list[current_idx + 1]
-
-    # AUDIT-M2: auto-advance mag een zaak nooit naar een terminale eindstap
-    # (Betaald/Afgesloten) of een hold-stap schuiven. De saldo-guard in
-    # move_case_to_step draait alleen voor manual/batch, dus zonder deze check zou
-    # een herordende of eigen terminale stap mét template een dossier mét saldo
-    # stil als betaald wegboeken. Terminale + hold-stappen worden bewust handmatig
-    # of via een expliciete trigger bereikt, niet via lineaire auto-advance.
-    if next_step.is_terminal or next_step.is_hold_step:
-        logger.debug(
-            "Case %s: auto-advance gestopt vóór stap '%s' (terminaal/hold)",
-            case.case_number,
-            next_step.name,
-        )
-        return False
-
-    old_step_name = step_list[current_idx].name
-
-    await move_case_to_step(
-        db, tenant_id, case, next_step,
-        user_id=user_id,
-        trigger_type="auto_advance",
-    )
-    await _create_tasks_for_step(db, tenant_id, case, next_step)
-
-    logger.info(
-        "Auto-advanced case %s from '%s' to '%s'",
-        case.case_number,
-        old_step_name,
-        next_step.name,
-    )
-
-    return True
-
-
 # ── Batch Execute ─────────────────────────────────────────────────────────
 
 
@@ -1649,15 +1652,6 @@ async def batch_execute(
                         )
                     continue
 
-                # S205: leg de daadwerkelijke verzending vast op de HUIDIGE stap
-                # (vóór de auto-advance de stap verlaat). Zo telt een via de batch
-                # verstuurde 14-dagenbrief mee als 'aantoonbaar verstuurd' voor de
-                # gate (email_sent), i.p.v. alleen stap-binnenkomst. Ontbrak hier.
-                if sent_this_case:
-                    await mark_current_step_communication_sent(
-                        db, tenant_id, case, document_id=doc.id
-                    )
-
                 # Auto-complete matching pipeline tasks for this step
                 completed_count = await _auto_complete_tasks(
                     db, tenant_id, case.id, case.incasso_step_id
@@ -1666,22 +1660,29 @@ async def batch_execute(
 
                 # S143: Skip eventuele open review_ai_draft tasks voor deze step.
                 # Batch verstuurt via template (geen AI-draft), dus de review-
-                # tasks zijn moot. Zonder dit blokkeren ze _try_auto_advance.
+                # tasks zijn moot. Zonder dit blokkeren ze het doorschuiven.
                 if case.incasso_step_id:
                     await _skip_review_drafts_for_step(
                         db, tenant_id, case.id, case.incasso_step_id
                     )
 
-                # Try auto-advance (always, even if no tasks were
-                # completed — case may already have all tasks done)
-                advanced = await _try_auto_advance(
+                # S234 — doorschuiven via de GEDEELDE motor (advance_after_step_send),
+                # dezelfde als compose/send + AI-route + follow-up. Schuift door via de
+                # default advance-rule mét alle waarborgen (gesloten/verweer/terminal/
+                # b2c→b2b). `record_send=sent_this_case`: alleen een échte verzending legt
+                # email_sent vast (telt mee voor de 14-dagenbrief-gate); een pure batch-
+                # generatie zonder verzending schuift wél door (bestaand gedrag) maar
+                # markeert niets als verstuurd.
+                advance_result = await advance_after_step_send(
                     db,
                     tenant_id,
                     case,
                     user_id,
-                    step_list=steps,
+                    document_id=doc.id,
+                    notes="Doorgeschoven na batch-verzending",
+                    record_send=sent_this_case,
                 )
-                if advanced:
+                if advance_result.get("advanced"):
                     cases_auto_advanced += 1
             except Exception as exc:
                 logger.error(

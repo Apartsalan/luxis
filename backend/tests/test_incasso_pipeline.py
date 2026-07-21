@@ -8,7 +8,7 @@ Total: 36 test cases.
 """
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
@@ -25,7 +25,6 @@ from app.incasso.service import (
     _build_step_email,
     _compute_deadline_status,
     _create_tasks_for_step,
-    _try_auto_advance,
 )
 from app.workflow.models import WorkflowTask
 from tests.helpers.incasso_fixtures import (
@@ -398,117 +397,10 @@ class TestAutoCompleteTasks:
         assert count == 0
 
 
-class TestTryAutoAdvance:
-    """Tests for _try_auto_advance — 4 tests."""
-
-    async def test_advances_when_all_tasks_done(
-        self, db, test_tenant, test_user, test_company, test_person
-    ):
-        """When all pipeline tasks for current step are completed, case advances."""
-        steps = await create_pipeline_steps(db, test_tenant.id)
-        case = await create_incasso_case(
-            db,
-            test_tenant.id,
-            test_company,
-            test_person,
-            test_user,
-            step=steps[0],
-        )
-        # Create a completed pipeline task (no open tasks remain)
-        await create_pipeline_task(db, test_tenant.id, case, steps[0], status="completed")
-        await db.commit()
-
-        advanced = await _try_auto_advance(db, test_tenant.id, case, test_user.id, step_list=steps)
-        await db.commit()
-
-        assert advanced is True
-        await db.refresh(case)
-        assert case.incasso_step_id == steps[1].id  # Moved to Sommatie
-
-        # New task created for Sommatie
-        result = await db.execute(
-            select(WorkflowTask).where(
-                WorkflowTask.case_id == case.id,
-                WorkflowTask.action_config["step_id"].astext == str(steps[1].id),
-            )
-        )
-        new_tasks = list(result.scalars().all())
-        assert len(new_tasks) == 1
-
-        # CaseActivity for pipeline advance
-        result = await db.execute(
-            select(CaseActivity).where(
-                CaseActivity.case_id == case.id,
-                CaseActivity.activity_type == "pipeline_change",
-            )
-        )
-        assert result.scalar_one_or_none() is not None
-
-    async def test_stays_when_open_pipeline_tasks(
-        self, db, test_tenant, test_user, test_company, test_person
-    ):
-        """Open pipeline tasks block auto-advance."""
-        steps = await create_pipeline_steps(db, test_tenant.id)
-        case = await create_incasso_case(
-            db,
-            test_tenant.id,
-            test_company,
-            test_person,
-            test_user,
-            step=steps[0],
-        )
-        # Create an open (pending) pipeline task
-        await create_pipeline_task(db, test_tenant.id, case, steps[0], status="pending")
-        await db.commit()
-
-        advanced = await _try_auto_advance(db, test_tenant.id, case, test_user.id, step_list=steps)
-
-        assert advanced is False
-        await db.refresh(case)
-        assert case.incasso_step_id == steps[0].id  # Still on Aanmaning
-
-    async def test_last_step_cannot_advance(
-        self, db, test_tenant, test_user, test_company, test_person
-    ):
-        """Case on the last step cannot advance further."""
-        steps = await create_pipeline_steps(db, test_tenant.id)
-        case = await create_incasso_case(
-            db,
-            test_tenant.id,
-            test_company,
-            test_person,
-            test_user,
-            step=steps[2],  # Dagvaarding = last step
-        )
-        await db.commit()
-
-        advanced = await _try_auto_advance(db, test_tenant.id, case, test_user.id, step_list=steps)
-
-        assert advanced is False
-
-    async def test_manual_tasks_dont_block_advance(
-        self, db, test_tenant, test_user, test_company, test_person
-    ):
-        """Open manual tasks (source=manual) do NOT block auto-advance."""
-        steps = await create_pipeline_steps(db, test_tenant.id)
-        case = await create_incasso_case(
-            db,
-            test_tenant.id,
-            test_company,
-            test_person,
-            test_user,
-            step=steps[0],
-        )
-        # Only a manual task open — no pipeline tasks
-        await create_manual_task(db, test_tenant.id, case, title="Bel debiteur", status="pending")
-        await db.commit()
-
-        advanced = await _try_auto_advance(db, test_tenant.id, case, test_user.id, step_list=steps)
-        await db.commit()
-
-        assert advanced is True  # Manual tasks don't block!
-        await db.refresh(case)
-        assert case.incasso_step_id == steps[1].id
+# S234: `_try_auto_advance` (task-gated auto-advance) is verwijderd. Batch + follow-up
+# schuiven nu door via de gedeelde `advance_after_step_send` (rule-based, mét de
+# waarborgen uit `advance_guard_reason`). De terminale/hold/gesloten/verweer/b2c-guards
+# staan nu in `test_advance_after_send_routes.py`.
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -745,6 +637,12 @@ class TestBatchExecute:
         """
         await self._seed_rates(db)
         steps = await create_pipeline_steps(db, test_tenant.id)
+        # S234 — doorschuiven loopt nu via de gedeelde rule-based motor; seed de
+        # default timeout-regel stap0→stap1 (in prod bestaan die regels).
+        await _mk_timeout_rule(
+            db, test_tenant.id, steps[0], steps[1], days=0,
+            created_at=datetime(2026, 1, 1, tzinfo=UTC),
+        )
         case = await create_incasso_case(
             db,
             test_tenant.id,
@@ -927,6 +825,11 @@ class TestBatchExecute:
         """Batch of 3 cases — all processed and auto-advanced."""
         await self._seed_rates(db)
         steps = await create_pipeline_steps(db, test_tenant.id)
+        # S234 — rule-based doorschuiven: seed de default timeout-regel stap0→stap1.
+        await _mk_timeout_rule(
+            db, test_tenant.id, steps[0], steps[1], days=0,
+            created_at=datetime(2026, 1, 1, tzinfo=UTC),
+        )
         cases = []
         for i in range(3):
             c = await create_incasso_case(
@@ -1578,36 +1481,8 @@ async def test_move_to_betaald_fails_closed_on_calc_error(
     assert case.incasso_step_id == werk.id     # nog op de werkstap
 
 
-async def test_auto_advance_stops_before_terminal_step(
-    db, test_tenant, test_user, test_company
-):
-    """AUDIT-M2: auto-advance mag een zaak nooit stil naar een terminale eindstap
-    schuiven. De saldo-guard in move_case_to_step draait alleen voor manual/batch,
-    dus zonder een terminale-check zou auto-advance een dossier mét saldo als betaald
-    wegboeken. Auto-advance stopt vóór terminale (en hold) stappen."""
-    from app.incasso.service import _try_auto_advance
-
-    werk = IncassoPipelineStep(
-        id=uuid.uuid4(), tenant_id=test_tenant.id, name="Eerste sommatie",
-        sort_order=1, min_wait_days=0, max_wait_days=0,
-    )
-    betaald = IncassoPipelineStep(
-        id=uuid.uuid4(), tenant_id=test_tenant.id, name="Betaald",
-        sort_order=2, min_wait_days=0, max_wait_days=0, is_terminal=True,
-    )
-    db.add_all([werk, betaald])
-    await db.flush()
-    case = await create_incasso_case(
-        db, test_tenant.id, test_company, None, test_user,
-        step=werk, case_number="2026-09301", status="in_behandeling",
-    )
-
-    advanced = await _try_auto_advance(db, test_tenant.id, case, test_user.id)
-
-    assert advanced is False
-    await db.refresh(case)
-    assert case.incasso_step_id == werk.id   # bleef op de werkstap
-    assert case.status != "betaald"
+# AUDIT-M2 (terminale-stap-guard) leeft nu in `advance_guard_reason` — getest in
+# test_advance_after_send_routes.py::test_guard_blocks_terminal_and_hold_targets.
 
 
 # ── AUDIT-H12: only evaluable (timeout) rules are seeded ─────────────────────
@@ -1729,6 +1604,51 @@ async def test_timeout_rule_deterministic_oldest_wins(
     case_matches = [m for m in matches if m.case_id == case.id]
     assert len(case_matches) == 1
     assert case_matches[0].to_step_id == older_target.id
+
+
+async def test_evaluate_skips_closed_case(db, test_tenant, test_user, test_company):
+    """S234 — de rule-evaluator (bron van de dagelijkse AI-conceptbatch) mag géén
+    vervolg voorstellen voor een AFGESLOTEN zaak. Vóór S234 filterde de evaluator
+    alleen op is_active → een afgesloten dossier (IN100613: status 'afgesloten',
+    is_active=True) kreeg elke ochtend een nieuw sommatie-concept."""
+    from app.incasso.automation_service import evaluate_timeout_rules
+
+    from_step = await _mk_step(db, test_tenant.id, "Tweede sommatie", 5)
+    target = await _mk_step(db, test_tenant.id, "Derde sommatie", 6)
+    await _mk_timeout_rule(
+        db, test_tenant.id, from_step, target, days=1,
+        created_at=datetime(2026, 3, 1, tzinfo=UTC),
+    )
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user,
+        step=from_step, case_number="2026-08202", days_in_step=5,
+        status="afgesloten",
+    )
+
+    matches = await evaluate_timeout_rules(db, test_tenant.id)
+    assert not [m for m in matches if m.case_id == case.id]
+
+
+async def test_evaluate_skips_verweer_case(db, test_tenant, test_user, test_company):
+    """S234 — een zaak met openstaand verweer krijgt geen automatisch vervolg."""
+    from app.incasso.automation_service import evaluate_timeout_rules
+
+    from_step = await _mk_step(db, test_tenant.id, "Tweede sommatie", 5)
+    target = await _mk_step(db, test_tenant.id, "Derde sommatie", 6)
+    await _mk_timeout_rule(
+        db, test_tenant.id, from_step, target, days=1,
+        created_at=datetime(2026, 3, 1, tzinfo=UTC),
+    )
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user,
+        step=from_step, case_number="2026-08203", days_in_step=5,
+        status="in_behandeling",
+    )
+    case.has_verweer = True
+    await db.flush()
+
+    matches = await evaluate_timeout_rules(db, test_tenant.id)
+    assert not [m for m in matches if m.case_id == case.id]
 
 
 # ── S182: getrouwheids-poort — concept moet dragende dossier-elementen bevatten

@@ -36,12 +36,11 @@ from app.email.incasso_templates import render_incasso_email
 from app.email.oauth_service import resolve_office_channel
 from app.email.send_service import send_with_attachment
 from app.email.subject import build_email_subject
-from app.incasso.models import IncassoPipelineStep
+from app.incasso.models import CaseStepHistory, IncassoPipelineStep
 from app.incasso.service import (
     _auto_complete_tasks,
-    _try_auto_advance,
+    advance_after_step_send,
     list_pipeline_steps,
-    mark_current_step_communication_sent,
 )
 from app.shared.exceptions import BadRequestError
 
@@ -106,12 +105,32 @@ async def scan_for_followups(
         if r.status == RecommendationStatus.EXECUTED
     }
 
+    # S234 — brief van de HUIDIGE stap al verstuurd? Dan geen nieuw advies om 'm
+    # nogmaals te sturen. De scanner keek hier niet naar; een sommatie die via een
+    # ándere route (batch / compose / AI-concept) verstuurd is liet geen EXECUTED
+    # follow-up-advies achter → de scanner adviseerde 'm opnieuw (de 7 echte dossiers
+    # op 'Eerste sommatie', 12 dagen, brief al 12 dagen weg). Kruispunt-signaal is de
+    # open staphistorie-rij (email_sent=True) — die zetten ÁLLE verzendroutes.
+    sent_result = await db.execute(
+        select(CaseStepHistory.case_id, CaseStepHistory.step_id).where(
+            CaseStepHistory.tenant_id == tenant_id,
+            CaseStepHistory.case_id.in_(case_ids),
+            CaseStepHistory.exited_at.is_(None),
+            CaseStepHistory.email_sent.is_(True),
+        )
+    )
+    step_letter_already_sent = {(row[0], row[1]) for row in sent_result.all()}
+
     created = 0
     today = date.today()
 
     for case in cases:
         step = step_by_id.get(case.incasso_step_id)
         if not step:
+            continue
+
+        # Brief van deze stap al de deur uit → niet opnieuw adviseren (S234).
+        if (case.id, case.incasso_step_id) in step_letter_already_sent:
             continue
 
         # Hold-stappen (Bijhouden regeling / On hold / Verweer beantwoorden) en
@@ -577,19 +596,23 @@ async def execute_recommendation(
         execution_parts.append(f"E-mail verstuurd naar {case.opposing_party.email}")
 
         # Vanaf hier is de verzending gelukt — nu pas de administratie bijwerken.
-        # S207 (review S205): leg de verzending vast op de open staphistorie-rij,
-        # net als het batch- en conceptpad — vóór de auto-advance de stap verlaat.
-        # Zonder dit telt een via 'Uitvoeren' verstuurde 14-dagenbrief niet als
-        # 'aantoonbaar verstuurd' voor de gate.
-        await mark_current_step_communication_sent(
-            db, tenant_id, case, document_id=doc.id
-        )
         completed = await _auto_complete_tasks(db, tenant_id, case.id, step_id=step.id)
         if completed:
             execution_parts.append(f"{completed} taak/taken afgerond")
 
-        advanced = await _try_auto_advance(db, tenant_id, case, user_id)
-        if advanced:
+        # S234 — doorschuiven via de GEDEELDE motor (advance_after_step_send), dezelfde
+        # als compose/send + AI-route + batch. Legt de verzending vast op de HUIDIGE stap
+        # (S207/S205: telt mee voor de 14-dagenbrief-gate) én schuift door via de default
+        # rule mét alle waarborgen (gesloten/verweer/terminal/b2c→b2b).
+        advance_result = await advance_after_step_send(
+            db,
+            tenant_id,
+            case,
+            user_id,
+            document_id=doc.id,
+            notes="Doorgeschoven na follow-up-verzending",
+        )
+        if advance_result.get("advanced"):
             execution_parts.append("Doorgeschoven naar volgende stap")
 
         activity = CaseActivity(

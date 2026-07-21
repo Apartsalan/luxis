@@ -383,6 +383,36 @@ async def test_scan_still_recommends_normal_step(
     assert count == 1
 
 
+@pytest.mark.asyncio
+async def test_scan_skips_step_whose_letter_already_sent(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """S234 — de brief van de HUIDIGE stap is al verstuurd (open staphistorie-rij met
+    email_sent=True, gezet door élke verzendroute) → geen nieuw advies om 'm nogmaals
+    te sturen. Dit was het gat waardoor de 7 echte 'Eerste sommatie'-dossiers (brief 12
+    dagen weg) opnieuw geadviseerd zouden worden."""
+    from app.incasso.models import CaseStepHistory
+
+    step = await _create_step(db, test_tenant.id, min_wait_days=14)
+    case = await _create_case(db, test_tenant.id, test_user.id, step, days_in_step=16)
+    # Brief van deze stap al verstuurd: open history-rij met email_sent=True.
+    db.add(CaseStepHistory(
+        tenant_id=test_tenant.id, case_id=case.id, step_id=step.id,
+        entered_at=datetime.now(UTC), trigger_type="manual", email_sent=True,
+    ))
+    await db.commit()
+
+    count = await scan_for_followups(db, test_tenant.id)
+    assert count == 0  # brief al weg → geen advies
+
+    # Controle: zonder verstuurde brief adviseert dezelfde situatie WÉL (guard
+    # over-skipt niet). Verse zaak, zelfde stap, geen email_sent.
+    await _create_case(db, test_tenant.id, test_user.id, step, days_in_step=16)
+    await db.commit()
+    count2 = await scan_for_followups(db, test_tenant.id)
+    assert count2 == 1
+
+
 # ---------------------------------------------------------------------------
 # Tests: Approve / Reject
 # ---------------------------------------------------------------------------

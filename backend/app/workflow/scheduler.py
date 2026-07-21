@@ -789,6 +789,7 @@ async def daily_pipeline_auto_drafts() -> None:
         evaluate_timeout_rules,
         generate_draft_for_step,
     )
+    from app.incasso.service import list_pipeline_steps
 
     logger.info("Scheduler: starting daily pipeline auto-drafts")
     try:
@@ -816,9 +817,23 @@ async def daily_pipeline_auto_drafts() -> None:
                     )
                     continue
 
+                # S234 — kosten: voor een doelstap MÉT briefsjabloon is er geen dure
+                # AI-oproep nodig. Bij stilte geeft de follow-up-adviseur (elke 30 min,
+                # geen AI) al het seintje "tijd voor {volgende sommatie}" en verstuurt de
+                # 'Uitvoeren'-knop het sjabloon. De AI-batch blijft alleen als vangnet voor
+                # sjabloonloze stappen. Na de briefkoppeling van derde/laatste sommatie
+                # (S234) heeft het hele hoofdpad een sjabloon → 0 AI-concepten voor stilte
+                # (was 21 op 21-7). Verweer-concepten lopen buiten deze batch om (mail-hook).
+                steps = await list_pipeline_steps(session, tenant.id, active_only=True)
+                template_step_ids = {s.id for s in steps if s.template_type}
+
                 matches = await evaluate_timeout_rules(session, tenant.id)
                 generated = 0
+                skipped_template = 0
                 for m in matches[:budget]:
+                    if m.to_step_id in template_step_ids:
+                        skipped_template += 1
+                        continue
                     try:
                         await generate_draft_for_step(
                             session,
@@ -836,6 +851,12 @@ async def daily_pipeline_auto_drafts() -> None:
                             "Scheduler: draft-generatie faalde voor case %s (tenant %s)",
                             m.case_id, tenant.name,
                         )
+                if skipped_template:
+                    logger.info(
+                        "Scheduler: tenant=%s %d matches overgeslagen (doelstap heeft "
+                        "sjabloon → follow-up dekt dit, geen AI-kosten)",
+                        tenant.name, skipped_template,
+                    )
                 logger.info(
                     "Scheduler: tenant=%s matches=%d drafts_generated=%d",
                     tenant.name, len(matches), generated,

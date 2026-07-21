@@ -1134,7 +1134,7 @@ export function EmailComposeDialog({
               <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
                 <span className="mt-0.5">⚠️</span>
                 <span>
-                  Je vroeg om de facturen bij te sluiten, maar dit dossier heeft
+                  U vroeg om de facturen bij te sluiten, maar dit dossier heeft
                   geen factuur-PDF. Er gaat nu <span className="font-medium">geen</span>{" "}
                   bijlage mee — controleer of de tekst niet naar een bijlage verwijst,
                   of voeg zelf een bestand toe.

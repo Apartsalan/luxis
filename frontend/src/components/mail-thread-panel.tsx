@@ -103,7 +103,9 @@ function ThreadRow({ summary }: { summary: SyncedEmailSummary }) {
 
 export function MailThreadPanel({ sourceEmail }: { sourceEmail: SyncedEmailDetail }) {
   const [openSource, setOpenSource] = useState(true);
-  const { data: caseEmails } = useCaseEmails(sourceEmail.case_id ?? undefined);
+  // S234-review: 200 i.p.v. de default 50 — het drukste dossier heeft ~83 mails,
+  // met 50 vielen oudere draadmails stil weg (zelfde cap als CorrespondentieTab).
+  const { data: caseEmails } = useCaseEmails(sourceEmail.case_id ?? undefined, 200);
 
   // Eerdere mailtjes van dezelfde draad (zelfde provider_thread_id), zonder de
   // bronmail zelf, nieuwste eerst. Zonder thread-id: geen geschiedenis tonen

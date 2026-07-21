@@ -324,7 +324,17 @@ class OutlookProvider(EmailProvider):
         # Windows-1252 charset header from corrupting € / ë / é etc.
         body_html = _to_html_entities(body_html)
 
-        if reply_to_message_id:
+        # S234 — Graph's /reply-endpoint verwacht het POSTVAK-INTERNE message-id
+        # (AAMk...). Een via IMAP gesyncte mail draagt zijn RFC Message-ID
+        # (`<...@...>`); dat langs /reply sturen gaf een harde 400 (live-bug), en
+        # een antwoord vanuit dít postvak op een mail die het nooit zag kan sowieso
+        # niet via /reply. Alleen een echt Graph-id (geen `<`-prefix) mag daarheen;
+        # een RFC-id valt terug op gewone sendMail met het (reeds "Re:") onderwerp.
+        # De draad blijft binnen Luxis intact via provider_thread_id op het
+        # uitgaande record (write_outbound_log). ponytail: externe thread-header
+        # (In-Reply-To) niet gezet — Graph's sendMail staat die niet toe; upgrade
+        # pad is een reply-draft (createReply) als perfecte client-threading nodig is.
+        if reply_to_message_id and not reply_to_message_id.startswith("<"):
             return await self._reply_to_message(
                 access_token,
                 message_id=reply_to_message_id,

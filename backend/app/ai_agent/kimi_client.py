@@ -230,11 +230,14 @@ INVOICE_SCHEMA: dict[str, Any] = {
         "confidence": {
             "type": "object",
             "properties": {f: {"type": "number"} for f in _INVOICE_FIELDS},
-            "required": [],
+            # Alles verplicht (velden zijn nullable): de structured-outputs-API
+            # staat max 24 optionele velden per schema toe (live gemeten S238:
+            # 54 optioneel → 400 "grammar compilation inefficient").
+            "required": _INVOICE_FIELDS,
             "additionalProperties": False,
         },
     },
-    "required": ["debtor_name", "debtor_type", "confidence"],
+    "required": [*_INVOICE_FIELDS, "confidence"],
     "additionalProperties": False,
 }
 

@@ -2,10 +2,95 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 22 juli 2026 (S235 — betalingsregeling: flexibel schema + pijplijnkoppeling + mail→taak + afsluit-melding, LIVE + volledig live getest).
-**Laatste feature/fix:** Flexibel termijnschema (2× €200, daarna €1.000) invoerbaar; nieuwe regeling zet de zaak op 'Bijhouden regeling'; wanprestatie → taak "vervolg bepalen"; regeling-mail → direct taak "Betalingsregeling vastleggen"; auto-afsluiten geeft nu de melding "wil je de cliënt factureren?". Alles end-to-end op prod-testdossiers bewezen (incl. echte AI-classificatie) en teruggedraaid. Detail: entry S235.
-**Openstaand (→ S236 e.v.):** IN100613 wacht op antwoord Lisanne (afgesloten maar op 'Tweede sommatie'); beslispunt takenpagina vs follow-up-pagina als werklijst (doorschuiven maakt sinds S232/S234 geen taak meer); 7 import-dossiers op 'Eerste sommatie' hebben hun eerste sommatie nog nooit gehad — adviezen staan klaar (Luxis is de waarheid, BaseNet doet geen incasso meer). Losse punten: BaseNet-delisting, derde AI-testronde + Lisanne-steekproef, kostenblokje, fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen.
-**Volgende sessie:** S236 — zie `docs/sessions/PROMPT-S236.md`.
+**Laatst bijgewerkt:** 22 juli 2026 (S236 — werklijst = Taken-pagina + 7 eerste sommaties verstuurd + spook-inkomend-fix, LIVE).
+**Laatste feature/fix:** Verstuur-adviezen krijgen een gespiegelde taak op de Taken-pagina (keuze Arsalan); de 7 import-dossiers kregen hun eerste sommatie (alle 7 sent, doorgeschoven; IN100606 betwistte binnen 25 min → verweer-keten werkte); mails namens incasso@ komen nooit meer als "inkomende post" terug. Detail: entry S236.
+**Openstaand (→ S237 e.v.):** verweer IN100606 (concept klaar voor Lisanne); reacties op de overige 6 sommaties verwerken; IN100613 wacht op Lisanne; IN100607 heeft stale eerste-sommatie-advies terwijl hij op 'Verweer beantwoorden' staat; voorstel escalatie-adviezen óók als taak. Losse punten: BaseNet-delisting, derde AI-testronde + Lisanne-steekproef, kostenblokje, fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen, 4 cosmetische restjes S235.
+**Volgende sessie:** S237 — zie `docs/sessions/PROMPT-S237.md`.
+
+## Sessie 236 (22 juli 2026, Opus-bouw → Fable-review → Opus-fixes — werklijst-taken + 7 sommaties verstuurd + spook-inkomend-fix, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S236. Besluiten Arsalan vooraf: IN100613 laten liggen (Lisanne nog
+niet geantwoord); **Taken-pagina = dé werklijst**; de 7 sommaties mochten na eigen
+grondige controle de deur uit ("als jij het hebt nagekeken mag je het doen").
+
+**1. Werklijst-taak voor verstuur-adviezen (LIVE + live bewezen).** Elk openstaand
+verstuur-advies van de follow-up-adviseur krijgt een gespiegelde taak
+"{stap} versturen — {zaaknummer}" op de Taken-pagina (scanner-backfill dekt ook oude
+adviezen; ontdubbeld per advies via rec_id in action_config). De taak sluit op exact
+de advies-momenten: brief écht verstuurd → completed op de gedeelde doorschuif-motor
+`advance_after_step_send` (dus álle verzendroutes); advies afgewezen/superseded →
+skipped (`close_followup_send_tasks` in `supersede_open_recommendations` +
+`reject_recommendation`). Taken-pagina kreeg knop "Controleren & versturen" → /followup
+(niet visueel doorgeklikt; tsc schoon). Live bewezen: na de 30-min-scan stonden exact
+de 4 juiste taken op prod.
+
+**2. De 7 eerste sommaties (IN100592/98/99, 602/03/04/06) — VERSTUURD.** Controle
+per dossier vóór verzending: 0 mails/documenten/staphistorie ooit (vers gemeten);
+hoofdsom = som losse vorderingen (7/7 exact, incl. creditnota's −1.200,01 en −621,53
+netjes in de brieftabel); **BIK onafhankelijk nagerekend volgens de wettelijke
+staffel: 7/7 op de cent**; rente-steekproef IN100604 met de hand (2%/mnd samengesteld):
+257,40 vs 257,38 in de brief (deelmaand-conventie); alle 7 b2b → geen
+14-dagenbrief-plicht; afzender incasso@ via Graph. Alle 7 sent (0 bounces), elk
+dossier → Tweede sommatie, adviezen executed. **IN100603 draagt een negatieve
+renteregel (−107,90; creditnota ouder dan facturen — S181-F-gedrag, voordeel
+debiteur).** **IN100606 (Maatwerk Zorgbemiddeling) betwistte binnen 25 min**: AI
+classificeerde betwisting (0.95), dossier auto → 'Verweer beantwoorden', AI-concept
+klaar — de hele verweer-keten live bewezen op een échte debiteur. **IN100607 bewust
+NIET verstuurd**: bleek op 'Verweer beantwoorden' te staan (stale eerste-sommatie-
+advies van vóór de stap-wissel).
+
+**3. Fable-review-vondst: spook-inkomend (gefixt, LIVE).** Elke mail namens
+kantooradres incasso@ ('Verzenden als' op seidony's account) kwam via de Verzonden
+Items-sync als **inbound** terug: eigen sommaties als ontvangen post, mét notificatie
+en AI-beoordelingscall (~$0,03 voor 7), patroon sinds 17-7 (verklaart de S233b-
+"doorstuurregel gmail"-randobservatie). Rode test eerst; fix: eigen-afzender-set
+(accountadres + Tenant.email) in richting-oordeel, ontdubbel-poort en
+contact-matching (`sync_service.py`, 3 wachters).
+
+**4. Tweede reviewvondst op eigen werk (gefixt, LIVE).** Het taak-filter keek alleen
+naar "stap heeft sjabloon" → 10 oude escalatie-adviezen (van vóór de S234-
+briefkoppeling, testdossiers) kregen een misleidende "versturen"-taak. Nu ook
+filteren op advies-type GENERATE_DOCUMENT (+wachter).
+
+**5. Prod-opruiming (één transactie, tellingen exact):** 10 misleidende taken weg;
+7 spookmails weg mét bijlage- en classificatierijen, hun echte Graph-ids overgezet
+op de uitgaande records (= wat de gefixte poort gedaan zou hebben); 14 onterechte
+"nieuwe e-mail"-meldingen weg. Echte reacties + meldingen onaangeraakt (nageteld).
+
+### Gewijzigde bestanden
+Backend: `ai_agent/followup_service.py` (taak-aanmaak + reject-koppeling),
+`incasso/service.py` (`close_followup_send_tasks` + motor + supersede),
+`email/sync_service.py` (eigen-afzender-set). Frontend: `taken/page.tsx` (knop).
+Tests: `test_followup_send_tasks.py` (nieuw, 10), `test_email_sync.py` (+3).
+Commits `e91037d`, `e18c2d2`, `1782310`; backend+frontend via SSH `--force-recreate`
+(geen migratie).
+
+### Verificatie
+9+1 nieuwe werklijst-wachters groen; 201 kruispunt-tests (followup/advance/workflow/
+arrangement) groen; mail-kruispunt 952 groen (15 errors = botsing met parallelle
+eigen run, schoon herdraaid: 98/98); ruff + tsc schoon; CI groen op `e91037d`
+(commits `e18c2d2`/`1782310`: run 29910413122 liep nog bij afsluiten — natrekken met
+`gh run list`); containers healthy, login-API 200 na beide deploys; alle prod-
+mutaties met dry-run + natelling (10/7/7/7/7/14 exact).
+
+### Bekende issues / bewust niet gedaan
+- **Escalatie-adviezen (o.a. 5 échte 'Voorstel dagvaarding'-dossiers) staan NIET op
+  de Taken-pagina** — buiten de gekozen scope (verstuur-adviezen). Voorstel voor
+  Arsalan: ook die als taak spiegelen.
+- **IN100607**: stale pending eerste-sommatie-advies terwijl de zaak op 'Verweer
+  beantwoorden' staat — advies zou superseded moeten worden (data-fix, niet gedaan).
+- Werklijst-taak is éénrichting: handmatig afvinken laat het advies op de
+  Follow-up-pagina staan (bewuste keuze); taak-aanmaak schrijft geen
+  dossier-activiteit (cosmetisch).
+- Batch-generatie zónder verzending laat de verstuur-taak bewust open (er ging niets
+  de deur uit) maar schuift de zaak wél door (bestaand S234-randgeval).
+- IN100613 onaangeraakt (wacht op Lisanne); heeft ook nog een oud pending advies.
+
+### Volgende sessie
+S237: reacties op de 7 sommaties verwerken (IN100606-verweer ligt bij Lisanne;
+meer reacties verwacht) + de open beslispunten hierboven. Zie
+`docs/sessions/PROMPT-S237.md`.
 
 ## Sessie 235 (22 juli 2026, Fable-review ontwerp+S234 → Opus-bouw → Fable-review + volledige live-test — betalingsregeling compleet, LIVE)
 
@@ -729,82 +814,3 @@ gedeployd via SSH (geen migratie). Geen prod-DB-mutaties.
 S228: opmaak-restpunt uitvragen (screenshot van wat nog niet klopt), dan
 S221b-rest óf KvK-backfill (voorrang zodra sleutel binnen, ~22 juli).
 
-## Sessie 226 (17/18 juli 2026, Opus-opmaaksprint → Fable-review — mailopmaak over alle routes, LIVE)
-
-### Samenvatting
-Startpunt PROMPT-S226 (punten Arsalan + testvondsten S225). Onderweg werd het
-een brede opmaak-sanering van álle uitgaande mail, plus een grondige
-Fable-tegenlees-review die 5 extra fouten vond. Per stuk: meten in de bron →
-bouwen → tests → deploy via SSH → live herbewezen (testmails naar Arsalans gmail,
-HTML gecontroleerd via Gmail-API).
-
-**Punten Arsalan + testvondsten S225:**
-- **A3 Betreft-regel huisformaat (LIVE):** alle 26 code-brieftypen + de
-  DB-stap-teksten (`html_renderer.py`) dragen nu "{klant} / {debiteur} —
-  {brieftype} — {dossiernummer}" via gedeelde `_betreft()`/`fill_betreft_slots`
-  (= `build_email_subject`). De dubbele "Betreft: Betreft:" verdween mee.
-- **A2 aanhef reactiebrieven (LIVE):** 6 `DEFAULT_TEMPLATES` (ResponseTemplate)
-  renderden "Geachte {{ wederpartij.naam }}," → bij een bedrijf ging "Geachte
-  Autobedrijf X B.V.," de deur uit. Nu S220-lijn "Geachte heer, mevrouw," (code
-  + 6 DB-rijen, UPDATE 6). 103 bibliotheek-antwoorden = referentie (aanhef bewust
-  gestript, geen bug).
-- **Punt 4 gmail-bezorging (uitgezocht):** SPF ✅ + DKIM ✅ (basenet0001), maar
-  **DMARC ontbreekt volledig** (`dmarc=bestguesspass`). Directe gmail-meting: 27
-  gewone brieven in inbox, 3 zware (dagvaarding + 2× faillissement) nergens (ook
-  niet spam). Weak-auth + zware inhoud → gmail dropt stil. DMARC publiceren =
-  Arsalan/BaseNet-actie; geen garantie maar de duidelijkste gap.
-- **Punt 5 nummer-hergebruik (geen prod-bug):** gemeten — dossiers worden ZACHT
-  verwijderd (rij blijft) en `generate_case_number` filtert niet op is_active →
-  nooit hergebruik (prod: 0 dubbele nummers). De reuse in de testronde kwam door
-  hard-delete in opruimscripts. Invariant vastgelegd met regressietest + comment;
-  matcher-datumgrens bewust NIET (zou geïmporteerde historische post breken).
-
-**Opmaakpunten Arsalan (screenshots) — logo + witregels:**
-- **Logo (LIVE):** zat als data-URL → Gmail/Outlook blokkeren dat (kapot kader).
-  Nu extern gehost `frontend/public/kesting-logo-email.png` via
-  `https://luxis.kestinglegal.nl/...` (zoals BaseNet). URL geeft 200; ook in de
-  DB-stap-teksten + 5 open concepten vervangen. Dode b64-inlaadcode weg.
-- **Witregel na aanhef (LIVE):** Gmail negeert head-`<style>` én nult `<p>`-marges
-  → brief begon meteen na de komma. Marge nu INLINE op elke `<p>` (16px) via
-  `_inline_paragraph_spacing`. Bewezen in ontvangen testmail.
-
-**Fable-review — 5 extra vondsten, alle gefixt + live:**
-1. AI-concept-route bouwde "Betreft: Betreft:" (eigen prefix bovenop het
-   basis-label) + antwoord-onderwerp (uit INKOMENDE mail) ging onge-escaped een
-   Markup-context in (S202-M4-klasse) → prefix weg, onderwerp ge-escaped.
-2. Stap-teksten-vulling: half label "WEDEROM SOMMATIE" matchte de prod-tekst
-   "WEDEROM SOMMATIE TOT BETALING / /" nooit → generiek label hapte de staart
-   ("WEDEROM {huisformaat}", 3 prod-stappen). Volledige labels, langste eerst;
-   vuller gedeeld met de batch-DOCX-tak (zelfde lege slots).
-3. Documenten-route + batch-DOCX-tak + custom-body hadden een eigen kale
-   Arial-wrapper (geen logo/schuldhulpblok, aanhef op naam, "Antwoord niet op
-   deze e-mail" aan de wederpartij) → kale alinea's, verzendlaag kleedt aan
-   (S186), gelijk aan alle routes.
-4. 6 reactiebrieven kregen twee handtekeningen (eigen slotgroet + aankleed-
-   handtekening) → slotgroet uit seed + 6 DB-rijen (UPDATE 6).
-5. 3 reactiebrieven openden met losse komma "<p>,</p>" → S220-aanhef.
-Plus: 3 dode sjabloon-functies (`deadline_reminder`/`payment_confirmation`/
-`status_change`, 0 aanroepers) met dezelfde foute stijl verwijderd.
-
-### Gewijzigde bestanden
-Backend: `email/{incasso_templates,subject,templates,send_service}.py`,
-`incasso/{html_renderer,service}.py`, `ai_agent/{service,unified_draft_service}.py`,
-`cases/service.py`, `documents/router.py`. Frontend: `public/kesting-logo-email.png`
-(nieuw). Tests: `test_{incasso_templates,html_renderer,unified_draft_service,
-ai_agent,cases}.py` (+8 wachters). 8 commits (`b888cf8`→`20f0c46`), backend meermaals
-+ frontend 1× gedeployd (geen migratie). Prod-DB: 6 reactiebrieven (aanhef+slotgroet),
-5 open concepten (logo) — elk dry-run + GO + natelling.
-
-### Bekende issues / bewust niet gedaan
-- **A1 AI-antwoord-knop op dossier-tabblad Correspondentie NIET gebouwd** —
-  grootste openstaande klus; kruispunt-matrix + brede test verplicht (nieuwe route
-  voor effect "concept maken").
-- Testdata 2026-00007 t/m -00019 NIET opgeruimd (Arsalan: bewaren voor meer testen).
-- DMARC-instelling = Arsalan/BaseNet (buiten mijn bereik).
-- Losse testmails naar Arsalans gmail liepen buiten dossier-vastlegging (bewust,
-  geen dossier); alle échte routes leggen wél vast.
-- S221b-rest + auto-concept-gate blijven staan.
-
-### Volgende sessie
-S227: A1 AI-antwoord-knop op het dossier-tabblad Correspondentie (Opus, kruispunt-
-matrix + brede test). KvK-backfill voorrang zodra sleutel binnen (~22 juli).

@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 22 juli 2026 (S235 — betalingsregeling compleet: flexibel termijnschema + pijplijnkoppeling + regeling-mail→taak + afsluit-melding, LIVE). Alles end-to-end op prod-testdossiers bewezen (incl. echte AI-classificatie 0.95) en per keten teruggedraaid. Rapport: entry S235 in `SESSION-NOTES.md`. **Volgende = S236: IN100613 (antwoord Lisanne) + werklijst-beslispunt, dan losse punten.**
+**Laatst bijgewerkt:** 22 juli 2026 (S236 — Taken-pagina = dé werklijst met gespiegelde verstuur-taken; de 7 import-dossiers kregen hun eerste sommatie, alle 7 verstuurd + doorgeschoven; IN100606 betwistte binnen 25 min en de verweer-keten werkte live; spook-inkomend-fix). Rapport: entry S236 in `SESSION-NOTES.md`. **Volgende = S237: reacties op de sommaties verwerken + open beslispunten.**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,24 +53,26 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 22 juli 2026, S235)
+## 🎯 Huidige prioriteit (bijgewerkt 22 juli 2026, S236)
 
-> ✅ **S235 AFGEROND — BETALINGSREGELING COMPLEET (LIVE + volledig live getest).**
-> Flexibel termijnschema (2× €200, daarna €1.000) invoerbaar met som-op-de-cent-controle;
-> nieuwe regeling zet de zaak automatisch op 'Bijhouden regeling' (hold); wanprestatie
-> geeft via beide routes één taak "Regeling verbroken — vervolg bepalen"; een herkende
-> regeling-mail maakt direct de taak "Betalingsregeling vastleggen" (niet meer via de
-> dode goedkeur-wachtrij); automatisch afsluiten na volledige betaling geeft de melding
-> "wil je de cliënt factureren?" met doorklik naar de facturen-tab. Alle vier ketens
-> end-to-end op prod-testdossiers bewezen en teruggedraaid. 16 nieuwe wachters, CI groen.
-> Commit `41497aa`. Detail: SESSION-NOTES entry S235.
+> ✅ **S236 AFGEROND — WERKLIJST + 7 SOMMATIES + SPOOK-INKOMEND-FIX (LIVE).**
+> Taken-pagina is dé werklijst (keuze Arsalan): elk verstuur-advies krijgt een
+> gespiegelde taak die vanzelf sluit zodra de brief via wélke route dan ook verstuurd
+> is, of vervalt met het advies. De 7 import-dossiers (IN100592/98/99, 602/03/04/06)
+> kregen na volledige eigen controle (BIK-staffel 7/7 op de cent nagerekend, rente-
+> steekproef, 0 eerdere verzendingen) hun eerste sommatie: alle 7 sent, doorgeschoven
+> naar Tweede sommatie. **IN100606 betwistte binnen 25 min** → verweer-keten werkte
+> live (classificatie 0.95, auto naar 'Verweer beantwoorden', concept klaar).
+> Fix: mails namens incasso@ komen nooit meer als "inkomende post" terug (spook-
+> inkomend sinds 17-7); prod opgeruimd met exacte tellingen. Detail: entry S236.
 >
-> 🎯 **VOLGENDE (S236):** (a) IN100613 rechtzetten zodra Lisanne antwoordt (dry-run + GO +
-> natelling); (b) beslispunt takenpagina vs follow-up-pagina als werklijst; (c) de 7
-> import-dossiers op 'Eerste sommatie' — adviezen staan klaar, verzending per GO. Daarna:
-> BaseNet-delisting, derde AI-testronde + Lisanne-steekproef, kostenblokje dashboard,
-> fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen.
-> KvK: niet naar vragen.
+> 🎯 **VOLGENDE (S237):** (a) reacties op de 7 sommaties verwerken — IN100606-verweer
+> ligt bij Lisanne (concept klaar), meer reacties verwacht; (b) beslispunten: escalatie-
+> adviezen óók als taak op de werklijst? IN100607-advies superseden (staat op 'Verweer
+> beantwoorden')? IN100613 zodra Lisanne antwoordt. Daarna losse punten: BaseNet-
+> delisting, derde AI-testronde + Lisanne-steekproef, kostenblokje dashboard, fysieke-
+> telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen,
+> 4 cosmetische restjes S235. KvK: niet naar vragen.
 
 ## Projectdocumenten
 

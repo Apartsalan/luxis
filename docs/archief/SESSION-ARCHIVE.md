@@ -10260,3 +10260,83 @@ pijplijn weer 15 stappen). **B1 live bewezen** met testfactuur F2026-00001
 ### Volgende sessie
 S226: nummer-hergebruik-vondst + testdata-opruiming + S221b-rest. KvK-backfill
 voorrang zodra de sleutel binnen is (~22 juli).
+
+## Sessie 226 (17/18 juli 2026, Opus-opmaaksprint → Fable-review — mailopmaak over alle routes, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S226 (punten Arsalan + testvondsten S225). Onderweg werd het
+een brede opmaak-sanering van álle uitgaande mail, plus een grondige
+Fable-tegenlees-review die 5 extra fouten vond. Per stuk: meten in de bron →
+bouwen → tests → deploy via SSH → live herbewezen (testmails naar Arsalans gmail,
+HTML gecontroleerd via Gmail-API).
+
+**Punten Arsalan + testvondsten S225:**
+- **A3 Betreft-regel huisformaat (LIVE):** alle 26 code-brieftypen + de
+  DB-stap-teksten (`html_renderer.py`) dragen nu "{klant} / {debiteur} —
+  {brieftype} — {dossiernummer}" via gedeelde `_betreft()`/`fill_betreft_slots`
+  (= `build_email_subject`). De dubbele "Betreft: Betreft:" verdween mee.
+- **A2 aanhef reactiebrieven (LIVE):** 6 `DEFAULT_TEMPLATES` (ResponseTemplate)
+  renderden "Geachte {{ wederpartij.naam }}," → bij een bedrijf ging "Geachte
+  Autobedrijf X B.V.," de deur uit. Nu S220-lijn "Geachte heer, mevrouw," (code
+  + 6 DB-rijen, UPDATE 6). 103 bibliotheek-antwoorden = referentie (aanhef bewust
+  gestript, geen bug).
+- **Punt 4 gmail-bezorging (uitgezocht):** SPF ✅ + DKIM ✅ (basenet0001), maar
+  **DMARC ontbreekt volledig** (`dmarc=bestguesspass`). Directe gmail-meting: 27
+  gewone brieven in inbox, 3 zware (dagvaarding + 2× faillissement) nergens (ook
+  niet spam). Weak-auth + zware inhoud → gmail dropt stil. DMARC publiceren =
+  Arsalan/BaseNet-actie; geen garantie maar de duidelijkste gap.
+- **Punt 5 nummer-hergebruik (geen prod-bug):** gemeten — dossiers worden ZACHT
+  verwijderd (rij blijft) en `generate_case_number` filtert niet op is_active →
+  nooit hergebruik (prod: 0 dubbele nummers). De reuse in de testronde kwam door
+  hard-delete in opruimscripts. Invariant vastgelegd met regressietest + comment;
+  matcher-datumgrens bewust NIET (zou geïmporteerde historische post breken).
+
+**Opmaakpunten Arsalan (screenshots) — logo + witregels:**
+- **Logo (LIVE):** zat als data-URL → Gmail/Outlook blokkeren dat (kapot kader).
+  Nu extern gehost `frontend/public/kesting-logo-email.png` via
+  `https://luxis.kestinglegal.nl/...` (zoals BaseNet). URL geeft 200; ook in de
+  DB-stap-teksten + 5 open concepten vervangen. Dode b64-inlaadcode weg.
+- **Witregel na aanhef (LIVE):** Gmail negeert head-`<style>` én nult `<p>`-marges
+  → brief begon meteen na de komma. Marge nu INLINE op elke `<p>` (16px) via
+  `_inline_paragraph_spacing`. Bewezen in ontvangen testmail.
+
+**Fable-review — 5 extra vondsten, alle gefixt + live:**
+1. AI-concept-route bouwde "Betreft: Betreft:" (eigen prefix bovenop het
+   basis-label) + antwoord-onderwerp (uit INKOMENDE mail) ging onge-escaped een
+   Markup-context in (S202-M4-klasse) → prefix weg, onderwerp ge-escaped.
+2. Stap-teksten-vulling: half label "WEDEROM SOMMATIE" matchte de prod-tekst
+   "WEDEROM SOMMATIE TOT BETALING / /" nooit → generiek label hapte de staart
+   ("WEDEROM {huisformaat}", 3 prod-stappen). Volledige labels, langste eerst;
+   vuller gedeeld met de batch-DOCX-tak (zelfde lege slots).
+3. Documenten-route + batch-DOCX-tak + custom-body hadden een eigen kale
+   Arial-wrapper (geen logo/schuldhulpblok, aanhef op naam, "Antwoord niet op
+   deze e-mail" aan de wederpartij) → kale alinea's, verzendlaag kleedt aan
+   (S186), gelijk aan alle routes.
+4. 6 reactiebrieven kregen twee handtekeningen (eigen slotgroet + aankleed-
+   handtekening) → slotgroet uit seed + 6 DB-rijen (UPDATE 6).
+5. 3 reactiebrieven openden met losse komma "<p>,</p>" → S220-aanhef.
+Plus: 3 dode sjabloon-functies (`deadline_reminder`/`payment_confirmation`/
+`status_change`, 0 aanroepers) met dezelfde foute stijl verwijderd.
+
+### Gewijzigde bestanden
+Backend: `email/{incasso_templates,subject,templates,send_service}.py`,
+`incasso/{html_renderer,service}.py`, `ai_agent/{service,unified_draft_service}.py`,
+`cases/service.py`, `documents/router.py`. Frontend: `public/kesting-logo-email.png`
+(nieuw). Tests: `test_{incasso_templates,html_renderer,unified_draft_service,
+ai_agent,cases}.py` (+8 wachters). 8 commits (`b888cf8`→`20f0c46`), backend meermaals
++ frontend 1× gedeployd (geen migratie). Prod-DB: 6 reactiebrieven (aanhef+slotgroet),
+5 open concepten (logo) — elk dry-run + GO + natelling.
+
+### Bekende issues / bewust niet gedaan
+- **A1 AI-antwoord-knop op dossier-tabblad Correspondentie NIET gebouwd** —
+  grootste openstaande klus; kruispunt-matrix + brede test verplicht (nieuwe route
+  voor effect "concept maken").
+- Testdata 2026-00007 t/m -00019 NIET opgeruimd (Arsalan: bewaren voor meer testen).
+- DMARC-instelling = Arsalan/BaseNet (buiten mijn bereik).
+- Losse testmails naar Arsalans gmail liepen buiten dossier-vastlegging (bewust,
+  geen dossier); alle échte routes leggen wél vast.
+- S221b-rest + auto-concept-gate blijven staan.
+
+### Volgende sessie
+S227: A1 AI-antwoord-knop op het dossier-tabblad Correspondentie (Opus, kruispunt-
+matrix + brede test). KvK-backfill voorrang zodra sleutel binnen (~22 juli).

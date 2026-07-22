@@ -336,3 +336,40 @@ async def test_unauthenticated_returns_401(client: AsyncClient):
     """Search without auth token returns 401."""
     resp = await client.get("/api/search?q=test")
     assert resp.status_code in (401, 403)
+
+
+@pytest.mark.asyncio
+async def test_search_finds_case_by_claim_invoice_number(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """S239 wachter: het dossier is vindbaar op het FACTUURNUMMER van een
+    vordering — dat is wat de debiteur aan de telefoon noemt. Vóór de fix zat
+    claims.invoice_number in géén enkel zoekpad (alleen een toevallige
+    PDF-bestandsnaam vond nog iets)."""
+    from app.collections.models import Claim
+
+    seeded = await _seed_data(db, test_tenant.id)
+    claim = Claim(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        case_id=seeded["case"].id,
+        description="Factuur wintercollectie",
+        principal_amount=Decimal("1250.00"),
+        default_date=date.today(),
+        invoice_number="ZONNE-2026-777",
+    )
+    db.add(claim)
+    await db.commit()
+
+    # Globale zoekbalk
+    resp = await client.get("/api/search?q=ZONNE-2026-777", headers=auth_headers)
+    assert resp.status_code == 200
+    types = [r["type"] for r in resp.json()["results"]]
+    assert "case" in types
+
+    # Dossierlijst-zoekveld
+    resp = await client.get("/api/cases?search=ZONNE-2026-777", headers=auth_headers)
+    assert resp.status_code == 200
+    body = resp.json()
+    items = body.get("items") or body.get("cases") or []
+    assert any(c["case_number"] == "2026-00042" for c in items)

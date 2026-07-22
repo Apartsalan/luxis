@@ -51,7 +51,10 @@ CASE_NUMBER_RE = re.compile(r"\b(20\d{2}-\d{5,6})\b")
 # "_"). A miss here does NOT block the sender-fallthrough — only a real Luxis
 # dossiernummer (CASE_NUMBER_RE) does — so an email that merely quotes a client's
 # own reference we don't have still gets matched on its sender.
-REFERENCE_TOKEN_RE = re.compile(r"\b([A-Za-z]{1,3}\d{5,7})\b")
+# S239: `(?=_|\b)` i.p.v. een slot-\b — een underscore is een woordteken, dus
+# uit een geciteerd samengesteld kenmerk ("D102733_I71828409") werd de kern
+# nooit gehaald en bleef zo'n mail ongesorteerd liggen.
+REFERENCE_TOKEN_RE = re.compile(r"\b([A-Za-z]{1,3}\d{5,7})(?=_|\b)")
 
 # Simple HTML tag stripper — faster than BeautifulSoup for our needs
 _HTML_TAG_RE = re.compile(r"<[^>]+>")

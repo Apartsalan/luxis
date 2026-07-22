@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import REGCONFIG
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case, CaseFile
+from app.collections.models import Claim
 from app.email.synced_email_models import SyncedEmail
 from app.invoices.models import Invoice
 from app.relations.models import Contact
@@ -44,6 +45,15 @@ async def global_search(
                 Case.reference.ilike(search_term),
                 Case.client.has(Contact.name.ilike(search_term)),
                 Case.opposing_party.has(Contact.name.ilike(search_term)),
+                # S239: vindbaar op het factuurnummer van een vordering — dat
+                # is wat de debiteur aan de telefoon noemt.
+                Case.id.in_(
+                    select(Claim.case_id).where(
+                        Claim.tenant_id == tenant_id,
+                        Claim.is_active == True,  # noqa: E712
+                        Claim.invoice_number.ilike(search_term),
+                    )
+                ),
             ),
         )
         .order_by(Case.updated_at.desc())

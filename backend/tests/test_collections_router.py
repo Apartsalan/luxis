@@ -377,3 +377,79 @@ async def test_unauthenticated_returns_401(client: AsyncClient):
     fake_id = str(uuid.uuid4())
     resp = await client.get(f"/api/cases/{fake_id}/claims")
     assert resp.status_code in (401, 403)
+
+
+# ── S239: geen boeking boven het openstaande bedrag, op géén enkele route ────
+
+
+async def _pay_off_case(client: AsyncClient, auth_headers: dict, case_id) -> Decimal:
+    """Betaal een dossier exact vol via de financiële tussenstand."""
+    summary = await client.get(f"/api/cases/{case_id}/financial-summary", headers=auth_headers)
+    outstanding = Decimal(str(summary.json()["total_outstanding"]))
+    resp = await client.post(
+        f"/api/cases/{case_id}/payments",
+        json=_payment_payload(amount=str(outstanding), description="Slotbetaling"),
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+    return outstanding
+
+
+@pytest.mark.asyncio
+async def test_payment_on_fully_paid_case_rejected(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """S239 wachter: een gewone boeking op een volbetaald dossier wordt geweigerd.
+
+    Vóór de fix keek de overbetaal-poort alleen 'als er nog iets openstaat' —
+    op een volbetaalde zaak (openstaand 0) glipte élk bedrag erdoorheen en werd
+    het totaal openstaand negatief (live gereproduceerd: −100,00)."""
+    await _seed_interest_rates(db)
+    case = await _create_case(db, test_tenant.id)
+    case_id = str(case.id)  # vóór de 400: een afgebroken request expireert ORM-objecten
+    await client.post(f"/api/cases/{case_id}/claims", json=_claim_payload(), headers=auth_headers)
+    await _pay_off_case(client, auth_headers, case_id)
+
+    resp = await client.post(
+        f"/api/cases/{case_id}/payments",
+        json=_payment_payload(amount="100.00", description="Nabetaling"),
+        headers=auth_headers,
+    )
+    assert resp.status_code == 400
+
+    summary = await client.get(
+        f"/api/cases/{case_id}/financial-summary", headers=auth_headers
+    )
+    # Nooit negatief openstaand
+    assert Decimal(str(summary.json()["total_outstanding"])) >= Decimal("0")
+
+
+@pytest.mark.asyncio
+async def test_derdengelden_payment_on_fully_paid_case_stays_surplus(
+    client: AsyncClient, auth_headers: dict, db: AsyncSession, test_tenant: Tenant
+):
+    """S239 wachter: derdengelden-route op een volbetaald dossier — het volledige
+    bedrag blijft derdengeldensaldo (surplus), er wordt niets meer toegerekend
+    en het openstaand bedrag wordt nooit negatief."""
+    await _seed_interest_rates(db)
+    case = await _create_case(db, test_tenant.id)
+    await client.post(f"/api/cases/{case.id}/claims", json=_claim_payload(), headers=auth_headers)
+    await _pay_off_case(client, auth_headers, case.id)
+
+    resp = await client.post(
+        f"/api/cases/{case.id}/payments",
+        json=_payment_payload(amount="250.00", payment_method="derdengelden"),
+        headers=auth_headers,
+    )
+    # De storting op de derdengeldenrekening is echt geld en mag geboekt worden,
+    # maar de toerekening aan de vordering is 0.
+    assert resp.status_code == 201
+    assert Decimal(resp.json()["amount"]) == Decimal("0")
+
+    bal = await client.get(f"/api/trust-funds/cases/{case.id}/balance", headers=auth_headers)
+    assert Decimal(bal.json()["total_balance"]) == Decimal("250.00")
+
+    summary = await client.get(
+        f"/api/cases/{case.id}/financial-summary", headers=auth_headers
+    )
+    assert Decimal(str(summary.json()["total_outstanding"])) >= Decimal("0")

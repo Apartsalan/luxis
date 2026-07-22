@@ -590,9 +590,53 @@ async def update_draft_status(
         draft.reviewed_by_id = user_id
     elif new_status == DraftStatus.SENT:
         draft.sent_at = datetime.now(UTC)
+    elif new_status == DraftStatus.DISCARDED:
+        # S239 (P3-uitbreiding): een vervallen concept laat geen open
+        # nakijk-taak achter op de Taken-pagina.
+        await skip_review_tasks_for_drafts(db, tenant_id, [draft.id])
 
     await db.flush()
     return draft
+
+
+async def skip_review_tasks_for_drafts(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    draft_ids: list[uuid.UUID],
+) -> int:
+    """S239: sluit open nakijk-taken ('review_ai_draft') van vervallen concepten.
+
+    Gedeeld door ALLE routes waar een concept DISCARDED wordt (handmatig
+    weggooien, zaak sluiten, stap-wissel-opruiming). Zonder dit bleef de
+    gespiegelde taak eeuwig open staan (8 spooktaken gemeten op prod, S239).
+    Taakstatus wordt 'skipped' — zelfde semantiek als een afgewezen advies.
+    """
+    if not draft_ids:
+        return 0
+    from datetime import UTC, datetime
+
+    from app.workflow.models import WorkflowTask
+
+    # ponytail: alle open review-taken van de tenant scannen en op draft_id
+    # filteren in Python — het zijn er hooguit tientallen; een JSON-query
+    # per dialect is de complexiteit niet waard.
+    result = await db.execute(
+        select(WorkflowTask).where(
+            WorkflowTask.tenant_id == tenant_id,
+            WorkflowTask.task_type == "review_ai_draft",
+            WorkflowTask.status.in_(["pending", "due", "overdue"]),
+        )
+    )
+    wanted = {str(d) for d in draft_ids}
+    skipped = 0
+    for task in result.scalars().all():
+        if (task.action_config or {}).get("draft_id") in wanted:
+            task.status = "skipped"
+            task.completed_at = datetime.now(UTC)
+            skipped += 1
+    if skipped:
+        await db.flush()
+    return skipped
 
 
 # Concepten die nog niet zijn verstuurd of weggegooid tellen als "open".
@@ -628,6 +672,8 @@ async def discard_open_drafts_on_close(
     for draft in drafts:
         draft.status = DraftStatus.DISCARDED
     if drafts:
+        # S239: nakijk-taken van deze concepten mee sluiten (P3-uitbreiding).
+        await skip_review_tasks_for_drafts(db, tenant_id, [d.id for d in drafts])
         await db.flush()
     return len(drafts)
 

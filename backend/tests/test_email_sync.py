@@ -857,6 +857,28 @@ async def test_match_on_bracketed_reference(db: AsyncSession, test_tenant: Tenan
 
 
 @pytest.mark.asyncio
+async def test_match_on_full_compound_reference(db: AsyncSession, test_tenant: Tenant):
+    """S239: de cliënt citeert het VOLLEDIGE samengestelde kenmerk
+    ('[D102733_I71828409]', met een ander factuurachtervoegsel dan bij ons
+    opgeslagen). De oude regex eiste een woordgrens ná de digits, maar een
+    underscore is een woordteken — dus werd de kern 'D102733' nooit uit het
+    samengestelde kenmerk gehaald en bleef zo'n mail 9 dagen ongesorteerd
+    (echt gebeurd: update-verzoek Invorderingsbedrijf 13-7-2026)."""
+    from app.email.sync_service import _find_case_by_case_number
+
+    case = await _create_case(db, test_tenant.id, case_number="IN100128")
+    case.reference = "D102733_I60104671"
+    await db.flush()
+
+    case_id, matched_by, has_case_number = await _find_case_by_case_number(
+        db, test_tenant.id, "Update [D102733_I71828409] Goedemorgen, graag een update."
+    )
+    assert case_id == case.id
+    assert matched_by == "client_reference"
+    assert has_case_number is True
+
+
+@pytest.mark.asyncio
 async def test_unknown_reference_does_not_block_sender(db: AsyncSession, test_tenant: Tenant):
     """S185: een IN-/kenmerk-achtig nummer dat wij niet hebben mag de afzender-
     terugval NIET blokkeren (alleen een echt Luxis-dossiernummer doet dat)."""

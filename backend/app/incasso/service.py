@@ -630,6 +630,10 @@ async def discard_stale_step_drafts(
     for draft in drafts:
         draft.status = DraftStatus.DISCARDED
     if drafts:
+        # S239: nakijk-taken van deze concepten mee sluiten (P3-uitbreiding).
+        from app.ai_agent.draft_service import skip_review_tasks_for_drafts
+
+        await skip_review_tasks_for_drafts(db, tenant_id, [d.id for d in drafts])
         await db.flush()
     return len(drafts)
 

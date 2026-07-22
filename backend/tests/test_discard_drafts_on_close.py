@@ -142,3 +142,119 @@ async def test_payment_autoclose_discards_open_drafts(
     assert draft.status == DraftStatus.DISCARDED
     await db.refresh(rec)
     assert rec.status == RecommendationStatus.SUPERSEDED
+
+
+# ── S239: een vervallen concept laat GEEN open nakijk-taak achter ────────────
+# Uitbreiding van P3: op prod stonden 8 open 'Review concept-email'-taken die
+# naar een al-weggegooid concept wezen. Route-brede wachter over alle plekken
+# waar een concept DISCARDED wordt.
+
+
+async def _review_task(db, tenant_id, case_id, draft_id):
+    from datetime import UTC, datetime
+
+    from app.workflow.models import WorkflowTask
+
+    task = WorkflowTask(
+        tenant_id=tenant_id, case_id=case_id,
+        task_type="review_ai_draft",
+        title="Review concept-email: Eerste sommatie",
+        description="test", due_date=datetime.now(UTC).date(),
+        status="pending",
+        action_config={"draft_id": str(draft_id), "step_name": "Eerste sommatie"},
+    )
+    db.add(task)
+    await db.flush()
+    await db.refresh(task)
+    return task
+
+
+@pytest.mark.asyncio
+async def test_manual_discard_skips_review_task(db, test_tenant, test_user, test_company):
+    """Route 1: handmatig weggooien via update_draft_status."""
+    from app.ai_agent.draft_service import update_draft_status
+
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user, case_number="2026-09405"
+    )
+    draft = await _open_draft(db, test_tenant.id, case.id)
+    task = await _review_task(db, test_tenant.id, case.id, draft.id)
+
+    await update_draft_status(db, test_tenant.id, draft.id, DraftStatus.DISCARDED)
+
+    await db.refresh(task)
+    assert task.status == "skipped"
+
+
+@pytest.mark.asyncio
+async def test_close_case_skips_review_task(db, test_tenant, test_user, test_company):
+    """Route 2: zaak sluiten → discard_open_drafts_on_close → taak dicht."""
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user, case_number="2026-09406"
+    )
+    draft = await _open_draft(db, test_tenant.id, case.id)
+    task = await _review_task(db, test_tenant.id, case.id, draft.id)
+
+    await update_case_status(
+        db, test_tenant.id, case.id, test_user.id,
+        CaseStatusUpdate(new_status="afgesloten", note="dicht"),
+    )
+
+    await db.refresh(draft)
+    assert draft.status == DraftStatus.DISCARDED
+    await db.refresh(task)
+    assert task.status == "skipped"
+
+
+@pytest.mark.asyncio
+async def test_step_change_stale_draft_skips_review_task(
+    db, test_tenant, test_user, test_company
+):
+    """Route 3: stap-wissel gooit stale next_step-concepten weg → taak dicht."""
+    from app.incasso.service import discard_stale_step_drafts
+
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user, case_number="2026-09407"
+    )
+    old_step = IncassoPipelineStep(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, name="Eerste sommatie",
+        sort_order=1, min_wait_days=0, max_wait_days=4,
+    )
+    new_step = IncassoPipelineStep(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, name="Tweede sommatie",
+        sort_order=2, min_wait_days=0, max_wait_days=4,
+    )
+    db.add_all([old_step, new_step])
+    await db.flush()
+    draft = await _open_draft(db, test_tenant.id, case.id, intent="next_step")
+    draft.step_id = old_step.id
+    await db.flush()
+    task = await _review_task(db, test_tenant.id, case.id, draft.id)
+
+    n = await discard_stale_step_drafts(
+        db, test_tenant.id, case.id, keep_step_id=new_step.id
+    )
+    assert n == 1
+
+    await db.refresh(task)
+    assert task.status == "skipped"
+
+
+@pytest.mark.asyncio
+async def test_sent_draft_review_task_untouched_by_other_discard(
+    db, test_tenant, test_user, test_company
+):
+    """Tegenproef: de taak van een ÁNDER (nog open) concept blijft gewoon staan."""
+    from app.ai_agent.draft_service import update_draft_status
+
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user, case_number="2026-09408"
+    )
+    draft_a = await _open_draft(db, test_tenant.id, case.id)
+    draft_b = await _open_draft(db, test_tenant.id, case.id)
+    task_b = await _review_task(db, test_tenant.id, case.id, draft_b.id)
+
+    await update_draft_status(db, test_tenant.id, draft_a.id, DraftStatus.DISCARDED)
+
+    await db.refresh(task_b)
+    assert task_b.status == "pending"

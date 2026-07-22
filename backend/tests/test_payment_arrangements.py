@@ -1181,3 +1181,113 @@ async def test_equal_installments_path_unchanged(
     assert [Decimal(i["amount"]) for i in installments] == [
         Decimal("300.00"), Decimal("300.00"), Decimal("300.00"),
     ]
+
+
+# ── S239: regeling afgerond maar zaak nog niet vol betaald → taak ────────────
+
+
+@pytest.mark.asyncio
+async def test_completed_arrangement_with_open_balance_creates_task(
+    client: AsyncClient, auth_headers: dict, test_company: Contact, db
+):
+    """S239 wachter: een regeling die volledig is nagekomen terwijl het dossier
+    nog NIET vol betaald is (rente liep door, of de regeling dekte een deel),
+    parkeerde de zaak voorheen stil op de pauzestap 'Bijhouden regeling' —
+    de follow-up-adviseur laat pauzestappen met rust, dus niemand kreeg ooit
+    een seintje. Nu: taak 'Regeling afgerond — vervolg bepalen'."""
+    from sqlalchemy import select as sa_select
+
+    from app.workflow.models import WorkflowTask
+
+    await _seed_interest_rates(db)
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
+
+    start = date.today() + timedelta(days=7)
+    arr_resp = await client.post(
+        f"/api/cases/{case_id}/arrangements",
+        json={
+            "total_amount": "600.00",
+            "installment_amount": "300.00",
+            "frequency": "monthly",
+            "start_date": start.isoformat(),
+        },
+        headers=auth_headers,
+    )
+    arr_id = arr_resp.json()["id"]
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
+    for inst in list_resp.json()[0]["installments"]:
+        resp = await client.post(
+            f"/api/cases/{case_id}/arrangements/{arr_id}/installments/{inst['id']}/record-payment",
+            json={"amount": "300.00", "payment_date": date.today().isoformat()},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+
+    # Regeling compleet, dossier nog open → er hoort precies één taak te staan
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
+    assert list_resp.json()[0]["status"] == "completed"
+
+    tasks = (
+        await db.execute(
+            sa_select(WorkflowTask).where(
+                WorkflowTask.case_id == uuid.UUID(case_id),
+                WorkflowTask.action_config["source"].astext == "arrangement_completed",
+            )
+        )
+    ).scalars().all()
+    assert len(tasks) == 1
+    assert "Regeling afgerond" in tasks[0].title
+
+
+@pytest.mark.asyncio
+async def test_completed_arrangement_fully_paying_case_creates_no_task(
+    client: AsyncClient, auth_headers: dict, test_company: Contact, db
+):
+    """Tegenproef: dekt de laatste termijn het hele dossier, dan sluit de
+    betaling-hook de zaak al ('betaald') en is een vervolg-taak overbodig."""
+    from sqlalchemy import select as sa_select
+
+    from app.workflow.models import WorkflowTask
+
+    await _seed_interest_rates(db)
+    case_id, _ = await _create_case_with_claim(client, auth_headers, str(test_company.id))
+
+    # Openstaand bedrag opvragen en een regeling maken die dat exact dekt
+    summary = await client.get(
+        f"/api/cases/{case_id}/financial-summary", headers=auth_headers
+    )
+    outstanding = Decimal(str(summary.json()["total_outstanding"]))
+
+    start = date.today() + timedelta(days=7)
+    arr_resp = await client.post(
+        f"/api/cases/{case_id}/arrangements",
+        json={
+            "total_amount": str(outstanding),
+            "installment_amount": str(outstanding),
+            "frequency": "monthly",
+            "start_date": start.isoformat(),
+        },
+        headers=auth_headers,
+    )
+    arr_id = arr_resp.json()["id"]
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
+    inst = list_resp.json()[0]["installments"][0]
+    resp = await client.post(
+        f"/api/cases/{case_id}/arrangements/{arr_id}/installments/{inst['id']}/record-payment",
+        json={"amount": str(outstanding), "payment_date": date.today().isoformat()},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200
+
+    case_resp = await client.get(f"/api/cases/{case_id}", headers=auth_headers)
+    assert case_resp.json()["status"] == "betaald"
+
+    tasks = (
+        await db.execute(
+            sa_select(WorkflowTask).where(
+                WorkflowTask.case_id == uuid.UUID(case_id),
+                WorkflowTask.action_config["source"].astext == "arrangement_completed",
+            )
+        )
+    ).scalars().all()
+    assert tasks == []

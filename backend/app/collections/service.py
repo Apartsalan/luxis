@@ -483,12 +483,20 @@ async def create_payment(
     outstanding_principal = max(Decimal("0"), total_principal - prev_principal)
 
     # ── Validate: warn if overpayment ──────────────────────────────────
+    # S239: de poort geldt óók bij openstaand 0 (volbetaalde zaak) — voorheen
+    # gleed dáár elk bedrag doorheen en werd het totaal openstaand negatief.
     total_outstanding = outstanding_costs + outstanding_interest + outstanding_principal
-    if total_outstanding > Decimal("0") and data.amount > total_outstanding:
+    if data.amount > total_outstanding:
         if cap_to_outstanding:
-            # H18 (bankimport): boek maximaal het openstaande bedrag; het
-            # overschot blijft als derdengeldensaldo staan bij de aanroeper.
+            # H18 (bankimport/derdengelden): boek maximaal het openstaande
+            # bedrag (op een volbetaalde zaak dus 0); het overschot blijft als
+            # derdengeldensaldo staan bij de aanroeper.
             data = data.model_copy(update={"amount": total_outstanding})
+        elif total_outstanding <= Decimal("0"):
+            raise BadRequestError(
+                "Dit dossier is al volledig betaald — er staat niets meer open. "
+                "Een nabetaling van de debiteur kun je als derdengelden-storting registreren."
+            )
         else:
             raise BadRequestError(
                 f"Betaling van €{data.amount} is hoger dan het openstaande bedrag "
@@ -1377,6 +1385,68 @@ async def _check_arrangement_completion(
         if arrangement and arrangement.status == "active":
             arrangement.status = "completed"
             await db.flush()
+            # S239 — regeling nagekomen maar dossier nog niet vol betaald
+            # (rente liep door, of de regeling dekte een deel): de zaak staat
+            # op de pauzestap 'Bijhouden regeling' en de adviseur laat
+            # pauzestappen met rust → zonder taak hoort niemand er ooit meer
+            # iets van. Zelfde recept als de wanprestatie-taak (S235).
+            await _ensure_arrangement_completed_task(db, tenant_id, arrangement)
+
+
+async def _ensure_arrangement_completed_task(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    arrangement: PaymentArrangement,
+) -> None:
+    """S239 — regeling afgerond, zaak nog open → eenmalige taak 'vervolg bepalen'.
+
+    Geen taak als de betaling-hook de zaak al gesloten heeft (betaald/afgesloten).
+    Deduped: één open taak per zaak (zelfde patroon als arrangement_defaulted).
+    """
+    from app.workflow.models import WorkflowTask
+
+    result = await db.execute(
+        select(Case).where(Case.id == arrangement.case_id, Case.tenant_id == tenant_id)
+    )
+    case = result.scalar_one_or_none()
+    if case is None or case.status in ("betaald", "afgesloten"):
+        return
+
+    existing = (
+        await db.execute(
+            select(WorkflowTask).where(
+                WorkflowTask.tenant_id == tenant_id,
+                WorkflowTask.case_id == case.id,
+                WorkflowTask.task_type == "manual_review",
+                WorkflowTask.status.in_(["pending", "due", "overdue"]),
+                WorkflowTask.is_active.is_(True),
+                WorkflowTask.action_config["source"].astext == "arrangement_completed",
+            )
+        )
+    ).scalar_one_or_none()
+    if existing:
+        return
+
+    db.add(
+        WorkflowTask(
+            tenant_id=tenant_id,
+            case_id=case.id,
+            assigned_to_id=case.assigned_to_id,
+            task_type="manual_review",
+            title=f"Regeling afgerond — vervolg bepalen {case.case_number}",
+            description=(
+                "De betalingsregeling is volledig nagekomen, maar het dossier is "
+                "nog niet volledig betaald (bijvoorbeeld doorgelopen rente of een "
+                "deelregeling). Bepaal het vervolg: restant innen, kwijtschelden "
+                "of het dossier afsluiten."
+            ),
+            due_date=date.today(),
+            status="due",
+            auto_execute=False,
+            action_config={"source": "arrangement_completed"},
+        )
+    )
+    await db.flush()
 
 
 async def list_upcoming_installments(

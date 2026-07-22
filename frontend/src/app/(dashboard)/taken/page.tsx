@@ -266,6 +266,19 @@ function TaskRow({
               Controleren & versturen
             </Link>
           )}
+
+        {/* S237: gespiegelde escalatie-taak van de follow-up-adviseur → door
+            naar de Follow-up-pagina waar het advies beoordeeld wordt. */}
+        {task.task_type === "manual_review" &&
+          task.action_config?.source === "followup_escalate" && (
+            <Link
+              href="/followup"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Beoordelen
+            </Link>
+          )}
       </div>
 
       {/* Skip button (open taken) */}

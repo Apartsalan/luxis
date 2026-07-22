@@ -667,8 +667,14 @@ async def supersede_open_recommendations(
     # S236 — de werklijst-taak spiegelt het advies (keuze Arsalan: Taken-pagina is
     # dé werklijst). Vervalt het advies, dan vervalt de bijbehorende verstuur-taak
     # op hetzelfde moment — anders blijft er een taak staan voor een brief die niet
-    # meer aan de beurt is.
-    await close_followup_send_tasks(db, tenant_id, case_id, status="skipped")
+    # meer aan de beurt is. S237: idem voor gespiegelde escalatie-taken.
+    await close_followup_send_tasks(
+        db,
+        tenant_id,
+        case_id,
+        status="skipped",
+        sources=("followup_send", "followup_escalate"),
+    )
     return len(recs)
 
 
@@ -1381,22 +1387,25 @@ async def close_followup_send_tasks(
     *,
     step_id: uuid.UUID | None = None,
     status: str = "completed",
+    sources: tuple[str, ...] = ("followup_send",),
 ) -> int:
-    """S236 — sluit open 'brief versturen'-taken van de follow-up-adviseur.
+    """S236/S237 — sluit open werklijst-taken van de follow-up-adviseur.
 
     De Taken-pagina is dé werklijst (keuze Arsalan S236): elk verstuur-advies
     krijgt een taak, en die taak moet dicht zodra de brief van die stap écht de
     deur uit is (status 'completed', via de gedeelde doorschuif-motor — dus óók
     bij verzending via compose/batch/AI-route) of zodra het advies vervalt
-    (status 'skipped', via supersede/afwijzen). Retourneert het aantal.
+    (status 'skipped', via supersede/afwijzen). S237: ook escalatie-adviezen
+    spiegelen als taak (source 'followup_escalate'); de motor sluit standaard
+    alléén verstuur-taken (een verzonden brief zegt niets over een
+    escalatie-beslissing), supersede/afwijzen sluiten beide. Retourneert het aantal.
     """
     query = select(WorkflowTask).where(
         WorkflowTask.tenant_id == tenant_id,
         WorkflowTask.case_id == case_id,
-        WorkflowTask.task_type == "send_letter",
         WorkflowTask.status.in_(["pending", "due", "overdue"]),
         WorkflowTask.is_active.is_(True),
-        WorkflowTask.action_config["source"].astext == "followup_send",
+        WorkflowTask.action_config["source"].astext.in_(sources),
     )
     if step_id:
         query = query.where(

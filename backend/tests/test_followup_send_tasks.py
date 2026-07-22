@@ -111,6 +111,18 @@ async def _send_tasks(db: AsyncSession, tenant_id: uuid.UUID, case_id: uuid.UUID
     return list(result.scalars().all())
 
 
+async def _escalate_tasks(db: AsyncSession, tenant_id: uuid.UUID, case_id: uuid.UUID):
+    result = await db.execute(
+        select(WorkflowTask).where(
+            WorkflowTask.tenant_id == tenant_id,
+            WorkflowTask.case_id == case_id,
+            WorkflowTask.task_type == "manual_review",
+            WorkflowTask.action_config["source"].astext == "followup_escalate",
+        )
+    )
+    return list(result.scalars().all())
+
+
 # ---------------------------------------------------------------------------
 # Aanmaak
 # ---------------------------------------------------------------------------
@@ -192,8 +204,8 @@ async def test_scan_backfills_task_for_preexisting_advice(
 async def test_no_task_for_escalate_advice(
     db: AsyncSession, test_tenant: Tenant, test_user: User
 ):
-    """Stap zonder sjabloon → escalatie-advies, géén verstuur-taak (uitvoeren
-    van dat advies maakt zijn eigen beoordeel-taak)."""
+    """Stap zonder sjabloon → escalatie-advies: géén verstuur-taak, maar (S237)
+    wél een gespiegelde 'Vervolg bepalen'-taak op de werklijst."""
     step = await _create_step(db, test_tenant.id, template_type=None)
     case = await _create_case(db, test_tenant.id, test_user.id, step)
     await db.commit()
@@ -204,6 +216,11 @@ async def test_no_task_for_escalate_advice(
     assert count == 1
     tasks = await _send_tasks(db, test_tenant.id, case.id)
     assert tasks == []
+    esc = await _escalate_tasks(db, test_tenant.id, case.id)
+    assert len(esc) == 1
+    assert esc[0].title == f"Vervolg bepalen — {case.case_number}"
+    assert esc[0].status == "due"
+    assert esc[0].action_config["step_id"] == str(step.id)
 
 
 # ---------------------------------------------------------------------------
@@ -337,6 +354,11 @@ async def test_no_send_task_for_stale_escalate_advice_on_templated_step(
 
     tasks = await _send_tasks(db, test_tenant.id, case.id)
     assert tasks == []
+    # S237: het escalatie-advies krijgt nu wél een eerlijke beoordeel-taak
+    # (i.p.v. de misleidende verstuur-taak van vóór de S236-fix).
+    esc = await _escalate_tasks(db, test_tenant.id, case.id)
+    assert len(esc) == 1
+    assert "Vervolg bepalen" in esc[0].title
 
 
 @pytest.mark.asyncio
@@ -368,3 +390,150 @@ async def test_scan_no_task_when_case_already_moved_on(
 
     tasks = await _send_tasks(db, test_tenant.id, case.id)
     assert tasks == []
+
+
+# ---------------------------------------------------------------------------
+# S237 — gespiegelde escalatie-taken
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_second_scan_does_not_duplicate_escalate_task(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Tweede scan (escalatie-advies staat nog open) → géén tweede taak."""
+    step = await _create_step(db, test_tenant.id, template_type=None)
+    case = await _create_case(db, test_tenant.id, test_user.id, step)
+    await db.commit()
+
+    await scan_for_followups(db, test_tenant.id)
+    await db.commit()
+    await scan_for_followups(db, test_tenant.id)
+    await db.commit()
+
+    esc = await _escalate_tasks(db, test_tenant.id, case.id)
+    assert len(esc) == 1
+
+
+@pytest.mark.asyncio
+async def test_reject_escalate_advice_skips_mirror_task(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Escalatie-advies afgewezen → de gespiegelde taak vervalt (skipped)."""
+    step = await _create_step(db, test_tenant.id, template_type=None)
+    case = await _create_case(db, test_tenant.id, test_user.id, step)
+    await db.commit()
+    await scan_for_followups(db, test_tenant.id)
+    await db.commit()
+
+    rec = (
+        await db.execute(
+            select(FollowupRecommendation).where(
+                FollowupRecommendation.tenant_id == test_tenant.id,
+                FollowupRecommendation.case_id == case.id,
+            )
+        )
+    ).scalar_one()
+    await reject_recommendation(db, test_tenant.id, rec.id, test_user.id, "Niet nodig")
+    await db.commit()
+
+    esc = await _escalate_tasks(db, test_tenant.id, case.id)
+    assert len(esc) == 1
+    assert esc[0].status == "skipped"
+
+
+@pytest.mark.asyncio
+async def test_step_change_skips_escalate_mirror_task(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Stap-wissel (advies superseded) → escalatie-spiegel vervalt mee."""
+    step = await _create_step(db, test_tenant.id, template_type=None)
+    other = await _create_step(
+        db, test_tenant.id, name="Tweede sommatie", sort_order=3,
+        template_type="wederom_sommatie",
+    )
+    case = await _create_case(db, test_tenant.id, test_user.id, step)
+    await db.commit()
+    await scan_for_followups(db, test_tenant.id)
+    await db.commit()
+
+    await move_case_to_step(
+        db, test_tenant.id, case, other, user_id=test_user.id, trigger_type="manual"
+    )
+    await db.commit()
+
+    esc = await _escalate_tasks(db, test_tenant.id, case.id)
+    assert len(esc) == 1
+    assert esc[0].status == "skipped"
+
+
+@pytest.mark.asyncio
+async def test_motor_send_close_leaves_escalate_task_alone(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Een verzonden brief zegt niets over een escalatie-beslissing: de
+    completed-sluiting van de doorschuif-motor raakt alleen verstuur-taken."""
+    from app.incasso.service import close_followup_send_tasks
+
+    step = await _create_step(db, test_tenant.id, template_type=None)
+    case = await _create_case(db, test_tenant.id, test_user.id, step)
+    await db.commit()
+    await scan_for_followups(db, test_tenant.id)
+    await db.commit()
+
+    # Zelfde aanroep als de motor doet (default sources = alleen followup_send).
+    closed = await close_followup_send_tasks(
+        db, test_tenant.id, case.id, step_id=step.id, status="completed"
+    )
+    await db.commit()
+
+    assert closed == 0
+    esc = await _escalate_tasks(db, test_tenant.id, case.id)
+    assert len(esc) == 1
+    assert esc[0].status == "due"
+
+
+@pytest.mark.asyncio
+async def test_execute_escalate_does_not_duplicate_mirror_task(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """'Uitvoeren' van een escalatie-advies waarvan de spiegel-taak al op de
+    werklijst staat → geen tweede review-taak."""
+    from app.ai_agent.followup_service import (
+        approve_recommendation,
+        execute_recommendation,
+    )
+
+    step = await _create_step(db, test_tenant.id, template_type=None)
+    case = await _create_case(db, test_tenant.id, test_user.id, step)
+    await db.commit()
+    await scan_for_followups(db, test_tenant.id)
+    await db.commit()
+
+    rec = (
+        await db.execute(
+            select(FollowupRecommendation).where(
+                FollowupRecommendation.tenant_id == test_tenant.id,
+                FollowupRecommendation.case_id == case.id,
+            )
+        )
+    ).scalar_one()
+    await approve_recommendation(db, test_tenant.id, rec.id, test_user.id)
+    await db.commit()
+    result = await execute_recommendation(db, test_tenant.id, rec.id, test_user.id)
+    await db.commit()
+
+    assert result is not None
+    assert "stond al op de werklijst" in (result.execution_result or "")
+    # Eén open review-taak in totaal: de spiegel; geen extra followup_advisor-taak.
+    all_reviews = (
+        await db.execute(
+            select(WorkflowTask).where(
+                WorkflowTask.tenant_id == test_tenant.id,
+                WorkflowTask.case_id == case.id,
+                WorkflowTask.task_type == "manual_review",
+            )
+        )
+    ).scalars().all()
+    assert len(all_reviews) == 1
+    assert all_reviews[0].action_config["source"] == "followup_escalate"

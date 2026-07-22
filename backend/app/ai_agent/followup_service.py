@@ -210,6 +210,8 @@ async def scan_for_followups(
     # adviezen (niet alleen verse) zodat ook adviezen van vóór deze wijziging een
     # taak krijgen. Ontdubbeld per advies (rec_id in action_config); de taak gaat
     # dicht via de gedeelde doorschuif-motor (verstuurd) of supersede/afwijzen.
+    # S237 (keuze Arsalan): escalatie-adviezen krijgen óók een gespiegelde taak
+    # ("Vervolg bepalen"); die sluit via supersede/afwijzen of handmatig.
     case_by_id = {c.id: c for c in cases}
     pending_recs = [
         r for r in existing_recs if r.status == RecommendationStatus.PENDING
@@ -222,8 +224,9 @@ async def scan_for_followups(
                     select(WorkflowTask.action_config["rec_id"].astext).where(
                         WorkflowTask.tenant_id == tenant_id,
                         WorkflowTask.case_id.in_(case_ids),
-                        WorkflowTask.task_type == "send_letter",
-                        WorkflowTask.action_config["source"].astext == "followup_send",
+                        WorkflowTask.action_config["source"].astext.in_(
+                            ["followup_send", "followup_escalate"]
+                        ),
                     )
                 )
             ).all()
@@ -235,20 +238,21 @@ async def scan_for_followups(
             if (
                 not case
                 or not step
-                # Alleen échte verstuur-adviezen: het advies moet GENERATE_DOCUMENT
-                # zijn ÉN de stap moet een sjabloon hebben. Alleen op de stap
-                # filteren was fout (S236-review): oude escalatie-adviezen van
-                # vóór de S234-briefkoppeling staan op stappen die inmiddels wél
-                # een sjabloon hebben → die kregen een misleidende verstuur-taak
-                # terwijl 'Uitvoeren' een beoordeel-taak maakt.
-                or rec.recommended_action != RecommendedAction.GENERATE_DOCUMENT
-                or not step.template_type
                 or case.incasso_step_id != rec.incasso_step_id  # zaak al doorgeschoven
                 or str(rec.id) in tasked_rec_ids
             ):
                 continue
-            db.add(
-                WorkflowTask(
+            if (
+                rec.recommended_action == RecommendedAction.GENERATE_DOCUMENT
+                and step.template_type
+            ):
+                # Verstuur-advies: het advies moet GENERATE_DOCUMENT zijn ÉN de
+                # stap moet een sjabloon hebben. Alleen op de stap filteren was
+                # fout (S236-review): oude escalatie-adviezen van vóór de
+                # S234-briefkoppeling staan op stappen die inmiddels wél een
+                # sjabloon hebben → die kregen een misleidende verstuur-taak
+                # terwijl 'Uitvoeren' een beoordeel-taak maakt.
+                task = WorkflowTask(
                     tenant_id=tenant_id,
                     case_id=case.id,
                     assigned_to_id=case.assigned_to_id,
@@ -267,12 +271,37 @@ async def scan_for_followups(
                         "step_id": str(rec.incasso_step_id),
                     },
                 )
-            )
+            elif rec.recommended_action == RecommendedAction.ESCALATE:
+                # S237 — escalatie-advies (geen sjabloon voor deze stap, of stap
+                # vraagt om een menselijke beslissing zoals 'Voorstel dagvaarding'):
+                # spiegel als beoordeel-taak op de werklijst.
+                task = WorkflowTask(
+                    tenant_id=tenant_id,
+                    case_id=case.id,
+                    assigned_to_id=case.assigned_to_id,
+                    task_type="manual_review",
+                    title=f"Vervolg bepalen — {case.case_number}",
+                    description=(
+                        f"{rec.reasoning} Beoordelen kan via de Follow-up-pagina."
+                    ),
+                    due_date=date.today(),
+                    status="due",
+                    auto_execute=False,
+                    action_config={
+                        "source": "followup_escalate",
+                        "rec_id": str(rec.id),
+                        "step_id": str(rec.incasso_step_id),
+                    },
+                )
+            else:
+                # GENERATE_DOCUMENT zonder sjabloon: stale advies, geen taak (S236).
+                continue
+            db.add(task)
             tasks_created += 1
         if tasks_created:
             await db.flush()
             logger.info(
-                "Follow-up scan: %d verstuur-taken aangemaakt op de werklijst",
+                "Follow-up scan: %d werklijst-taken aangemaakt (verstuur + escalatie)",
                 tasks_created,
             )
 
@@ -472,9 +501,15 @@ async def reject_recommendation(
     rec.reviewed_by_id = user_id
     rec.reviewed_at = datetime.now(UTC)
     rec.review_note = note
-    # S236 — advies afgewezen → de gespiegelde werklijst-taak vervalt mee.
+    # S236 — advies afgewezen → de gespiegelde werklijst-taak vervalt mee
+    # (S237: ook de escalatie-spiegel).
     await close_followup_send_tasks(
-        db, tenant_id, rec.case_id, step_id=rec.incasso_step_id, status="skipped"
+        db,
+        tenant_id,
+        rec.case_id,
+        step_id=rec.incasso_step_id,
+        status="skipped",
+        sources=("followup_send", "followup_escalate"),
     )
     await db.flush()
     return rec
@@ -710,19 +745,37 @@ async def execute_recommendation(
     elif rec.recommended_action == RecommendedAction.ESCALATE:
         from app.workflow.models import WorkflowTask
 
-        task = WorkflowTask(
-            tenant_id=tenant_id,
-            case_id=case.id,
-            assigned_to_id=case.assigned_to_id,
-            task_type="manual_review",
-            title=f"Handmatige beoordeling: {case.case_number}",
-            due_date=date.today(),
-            status="due",
-            auto_execute=False,
-            action_config={"source": "followup_advisor"},
-        )
-        db.add(task)
-        execution_parts.append("Handmatige review-taak aangemaakt")
+        # S237 — de scanner spiegelt escalatie-adviezen al als werklijst-taak;
+        # 'Uitvoeren' mag geen tweede review-taak naast die spiegel zetten.
+        existing_mirror = (
+            await db.execute(
+                select(WorkflowTask.id).where(
+                    WorkflowTask.tenant_id == tenant_id,
+                    WorkflowTask.case_id == case.id,
+                    WorkflowTask.status.in_(["pending", "due", "overdue"]),
+                    WorkflowTask.is_active.is_(True),
+                    WorkflowTask.action_config["source"].astext
+                    == "followup_escalate",
+                    WorkflowTask.action_config["rec_id"].astext == str(rec.id),
+                )
+            )
+        ).first()
+        if existing_mirror:
+            execution_parts.append("Review-taak stond al op de werklijst")
+        else:
+            task = WorkflowTask(
+                tenant_id=tenant_id,
+                case_id=case.id,
+                assigned_to_id=case.assigned_to_id,
+                task_type="manual_review",
+                title=f"Handmatige beoordeling: {case.case_number}",
+                due_date=date.today(),
+                status="due",
+                auto_execute=False,
+                action_config={"source": "followup_advisor"},
+            )
+            db.add(task)
+            execution_parts.append("Handmatige review-taak aangemaakt")
 
         activity = CaseActivity(
             tenant_id=tenant_id,

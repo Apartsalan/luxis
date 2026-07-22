@@ -2,10 +2,65 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 22 juli 2026 (S238 — expliciete schema-koppeling + native structured outputs in de AI-laag, LIVE).
-**Laatste feature/fix:** Trefwoord-schema-detectie (`_detect_schema`) weg; elke AI-aanroeper geeft zijn schema expliciet mee; native structured outputs waar de grammar het toelaat, met runtime-vangnet naar forced tool_use. Alle 7 routes live nageteld op prod. Detail: entry S238.
-**Openstaand (→ S239 e.v.):** verweer-concepten IN100592 + IN100606 en de IN100492-vraag wachten op Lisanne; opruimronde mét Lisanne (IN100607/613/521, 6 oude nakijk-taken, dubbel concept IN100592, logboekregeltje). Losse punten: gat onbekend-afzender-melding (S237), BaseNet-delisting, derde AI-testronde, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, testdata, 4 cosmetische restjes S235, sharp-CVE's.
-**Volgende sessie:** S239 — zie `docs/sessions/PROMPT-S239.md`.
+**Laatst bijgewerkt:** 23 juli 2026, nacht (S239 loopt — scenario-nachtronde afgerond: 32 scenario's, 5 fixes LIVE; ochtendgesprek over voorstel-lijst volgt).
+**Laatste feature/fix:** Scenario-nachtronde "een week uit het leven van Lisanne": 5 gefixte vondsten live (overbetaal-poort, samengesteld-kenmerk-herkenning, spooktaken bij weggegooid concept, regeling-afgerond-taak, zoeken op factuurnummer). Detail: entry S239 (tussenstand) + `docs/sessions/S239-SCENARIOS.md`.
+**Openstaand (→ vervolg S239):** voorstel-lijst 7 punten uit de nachtronde (sterkste: melding ongesorteerde bak — het S237-gat, nu gekwantificeerd); **2 echte mails wachten op antwoord (IN100128 update-verzoek 13-7, IN100586 uithanden-mail 17-6 — vannacht teruggevonden)**; verweer-concepten IN100592 + IN100606 en IN100492-vraag bij Lisanne; opruimronde mét Lisanne (nu incl. 7 resterende spooktaken + 40+ oude testdossier-taken). Losse punten: BaseNet-delisting, derde AI-testronde, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, testdata, 4 cosmetische restjes S235, sharp-CVE's.
+**Volgende sessie:** S239 loopt door (ochtend 23-7).
+
+## Sessie 239 — tussenstand (22/23 juli 2026, nacht — Fable autonoom: scenario-nachtronde + fixloop, LIVE)
+
+### Samenvatting
+Arsalans opdracht (avond 22-7): bedenk 20-30+ scenario's waar Lisanne in haar
+dagelijkse advocatenwerk tegenaan kan lopen, test ze, en los alles op — fouten +
+kleine ergernissen direct fixen, ontbrekende functies als voorstel; echte
+AI-aanroepen mochten; niets naar echte debiteuren; Arsalan sliep. Methode vooraf
+onderbouwd (persona-/scenario-testen + "soap opera testing") en aangescherpt met:
+verwacht-resultaat vóóraf per scenario, driedeling van vondsten, veilig testterrein
+met terugdraai-plicht, wachter per foutsoort, einde-criterium.
+**Let op: hele nacht op Fable gewerkt (ook de fixes) — Arsalan was er niet om naar
+Opus te wisselen; expliciet gemeld.**
+
+**32 scenario's in 5 groepen** (werkdag, rare debiteur, cliënt-kant, tijd/termijnen,
+rand/systeem), volledig logboek in `docs/sessions/S239-SCENARIOS.md`. Geld-scenario's
+live op een wegwerpdossier (2026-00020, exact teruggedraaid incl. vorderingen);
+mail/AI-scenario's met 2 geïnjecteerde testmails + echte AI-calls op 2026-00006
+(teruggedraaid); de rest gemeten op prod (read-only) of droog via code + bestaande
+wachters.
+
+**13 vondsten → 5 gefixt (commit `6f15a13`, 10 nieuwe wachters, LIVE):**
+1. Betaling op volbetaalde zaak werd stil geboekt → totaal openstaand −100 (live
+   gereproduceerd); poort gold alleen bij openstaand > 0. Derdengelden houdt
+   surplus-gedrag.
+2. Samengesteld kenmerk (`D102733_I71828409`) nooit herkend (underscore-woordgrens);
+   na de fix koppelde de sync direct 2 échte mails die 9 dagen resp. 5 weken
+   ongesorteerd lagen.
+3. Concept weggooien liet de nakijk-taak eeuwig open (8 spooktaken op prod);
+   gedeelde sluit-helper op alle 3 vervall-routes (P3-uitbreiding), live bewezen.
+4. Regeling nagekomen maar zaak niet vol betaald → bleef stil op pauzestap; nu taak
+   "Regeling afgerond — vervolg bepalen" (S235-recept, met tegenproef).
+5. Dossier onvindbaar op factuurnummer van de vordering; nu in beide zoekpaden.
+
+**Goed bevonden (o.a.):** alle geld-rekenwerk op de cent (rente, BIK-staffel,
+6:44-verdeling, herrekening na extra vordering — onafhankelijk nagerekend);
+rentetabel actueel (handelsrente 10,40% per 1-7-2026, extern geverifieerd);
+autosluiting + factureer-melding + heropening-vangnet; mail-koppeling kiest nooit
+stil een verkeerd dossier; ontdubbeling 0 dubbelen; verjaring-monitor bestaat.
+
+**Voorstel-lijst (7, niet gebouwd — scope-hek):** melding ongesorteerde bak
+(S237-gat, sterkste kandidaat), betaalbelofte-bewaking (datum+bedrag worden al
+herkend, live bewezen 0.95), meldingen-bundeling (145 ongelezen), categorie
+'onduidelijk', overbetaling-knop, cascade bij dossier-verwijderen, weekend-logica.
+
+### Verificatie
+351 tests groen (alle geraakte kruispunten), ruff schoon, backend deployd via SSH
+`--force-recreate`, containers healthy, login 200, prod-logs 0 fouten sinds deploy,
+live natellingen per fix (zie logboek). CI: liep nog bij schrijven — natrekken.
+Testsporen: wegwerpdossier volledig gewist; blijvend: ai_usage-rijen (bedoeld),
+1 spooktaak dicht (2026-00012), 2 echte mails gekoppeld (gewenst effect).
+
+### Vervolg (ochtend 23-7)
+Voorstel-lijst doornemen met Arsalan; 2 gevonden mails beantwoorden (Lisanne/Arsalan);
+opruimronde-punten; daarna verder naar Arsalans keuze.
 
 ## Sessie 238 (22 juli 2026, Opus-bouw → Fable-eindreview — expliciete schema-koppeling + native structured outputs, LIVE)
 
@@ -745,60 +800,3 @@ deploy-regels-skill (docker cp-valkuil).
 S232: sjabloon-verzendroute laten doorschuiven naar de volgende stap (zelfde regel
 als `advance_after_send`, met wachter over álle verzendroutes), daarna IN100605
 handmatig rechtzetten. Zie `docs/sessions/PROMPT-S232.md`.
-
-## Sessie 229 (18 juli 2026, Fable — grote eindkeuring van heel Luxis, read-only)
-
-### Samenvatting
-Op verzoek Arsalan één brede, zelfstandige keuring (bewezen Fable-werk). Vier sporen,
-alles alleen-lezen op prod, niets verstuurd/gewijzigd. Rapport met bewijs per bewering:
-`docs/sessions/S229-eindkeuring.md`. Nieuws deze sessie: **Fable blijft in het abonnement**
-(geen laatste dag). KvK-instructie: niet meer naar vragen/checken — Arsalan komt er zelf
-op terug (vastgelegd in memory; de vaste voorrang-check hoort uit PROMPT-S230+).
-
-**Spoor 1 — verzendroutes × huisregels: GROEN.** Route-inventaris vers via grep = exact de
-allowlists in `test_send_route_drift_guard.py`. Prod-meting sinds 15/7: 34/34 mails via
-incasso@ (M1), 0 logs zonder drieluik (M2), onderwerpen huisformaat (M4), 0 oud-adres in
-stapteksten/sjablonen, 0 open concepten/adviezen/taken op gesloten zaken (P3), 0 dubbele
-nummers, 0 wees-records, 0 B2C zonder 14-dagenbrief-bewijs.
-
-**Spoor 2 — financiële steekproef: GROEN op de cent, 2 randvondsten.** Eigen onafhankelijke
-narekening van 6 dossiers × systeem-API: **12/12 exact gelijk** (wettelijk compound over
-tariefwissel, 2%/mnd met deelmaanden, creditrente, bevriesdatums). Art. 6:44-toerekening
-klopt (IN100377, IN100180). **V1 (echte vondst):** 27 actieve B2C-zaken met vlakke-15%-
-`bik_override` boven de dwingende WIK-staffel = **€9.794,65 te veel** (grootste IN100082:
-€4.908 waar €1.102 mag); alle opdrachtgevers btw-plichtig, 12 zelfs boven staffel+21%;
-app-wachter AUDIT-23 blokkeert nieuwe invoer maar de import kwam eromheen; niemand op
-actieve mailstap. **V2:** handelsrente-rij 1-7-2026 (10,4%) ontbreekt — máár alle 7
-handelsrente-zaken zijn vóór 1-7 bevroren → **impact vandaag €0** (na navraag Arsalan
-genuanceerd; de "rentecorrectie" van 13/7 betrof de contractuele 2%/mnd, niet deze tabel).
-
-**Spoor 3 — beveiliging: GROEN.** RLS live bewezen: onder `luxis_app`-rol geeft een vreemde
-tenant 0/626 dossiers, zonder tenant-instelling faalt de query dicht; 44/44 tenant-tabellen
-RLS+FORCE+policy. Secrets-scan schoon, `/api/cases` zonder token = 401, firewall 22/80/443.
-**V4 (klein):** `/opt/luxis/.env` staat op 644 → 600 passend.
-
-**Spoor 4 — AI-antwoordkwaliteit + auto-concept-poort.** De S222-poortmeting (6 "zware
-fouten" → poort DICHT) herbeoordeeld mét feitencheck op prod: **4 van de 6 hard weerlegd**
-— "verzonnen" €40,87 (IN100418) en €22,64 (IN100122) zijn exact de échte openstaande
-bedragen (corrector telde facturen op zonder betalingen te zien); "verzonnen" IN100370
-staat letterlijk in het mail-onderwerp. Herscoord: hooguit 1 middelzware fout op 51
-generaties (~2%), 0 verzonnen bedragen. De poort werd tegengehouden door de béoordelaar,
-niet de AI. **V3-volgorde:** corrector herkalibreren → niet-debiteur-mails netjes weigeren
-i.p.v. JSON-crash → verse ronde → Lisanne-steekproef.
-
-### Gewijzigde bestanden
-Alleen docs: `docs/sessions/S229-eindkeuring.md` (nieuw, 2 commits). Geen code, geen
-migraties, geen prod-mutaties, niets verstuurd. Memory: KvK-instructie + Fable-blijft.
-
-### Bekende issues / bewust niet gedaan
-- **V1-V4 zijn werkorders, niet uitgevoerd** — elk met dry-run + GO vooraf (rapport §
-  "Werkorders deel 2"). V1 heeft als enige echt geld erachter.
-- Niet geverifieerd: of alle 27 V1-debiteuren écht consument zijn (10 gecheckt, allen
-  particulier ogend; KvK-backfill beslecht); wat de 22 wachtende classificaties/146
-  ongelezen notificaties precies zijn (observatie, geen oordeel).
-- Onverwerkt uit S228/S227: fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest,
-  DMARC, testdata 2026-00007 t/m -00019.
-
-### Volgende sessie
-S230 (Opus voor de fixes): begin met V1 (B2C-BIK-correctie, lijst met Lisanne). Dan
-V2 (handelsrente-rij), V3 (corrector + verse ronde), V4 (.env-rechten).

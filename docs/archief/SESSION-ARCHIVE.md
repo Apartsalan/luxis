@@ -915,7 +915,64 @@ Compose via Provider:
 
 ## Wat de volgende stap is
 
-### Sessie 6 — Volgende prioriteit
+### Sessie 229 (18 juli 2026, Fable — grote eindkeuring van heel Luxis, read-only)
+
+### Samenvatting
+Op verzoek Arsalan één brede, zelfstandige keuring (bewezen Fable-werk). Vier sporen,
+alles alleen-lezen op prod, niets verstuurd/gewijzigd. Rapport met bewijs per bewering:
+`docs/sessions/S229-eindkeuring.md`. Nieuws deze sessie: **Fable blijft in het abonnement**
+(geen laatste dag). KvK-instructie: niet meer naar vragen/checken — Arsalan komt er zelf
+op terug (vastgelegd in memory; de vaste voorrang-check hoort uit PROMPT-S230+).
+
+**Spoor 1 — verzendroutes × huisregels: GROEN.** Route-inventaris vers via grep = exact de
+allowlists in `test_send_route_drift_guard.py`. Prod-meting sinds 15/7: 34/34 mails via
+incasso@ (M1), 0 logs zonder drieluik (M2), onderwerpen huisformaat (M4), 0 oud-adres in
+stapteksten/sjablonen, 0 open concepten/adviezen/taken op gesloten zaken (P3), 0 dubbele
+nummers, 0 wees-records, 0 B2C zonder 14-dagenbrief-bewijs.
+
+**Spoor 2 — financiële steekproef: GROEN op de cent, 2 randvondsten.** Eigen onafhankelijke
+narekening van 6 dossiers × systeem-API: **12/12 exact gelijk** (wettelijk compound over
+tariefwissel, 2%/mnd met deelmaanden, creditrente, bevriesdatums). Art. 6:44-toerekening
+klopt (IN100377, IN100180). **V1 (echte vondst):** 27 actieve B2C-zaken met vlakke-15%-
+`bik_override` boven de dwingende WIK-staffel = **€9.794,65 te veel** (grootste IN100082:
+€4.908 waar €1.102 mag); alle opdrachtgevers btw-plichtig, 12 zelfs boven staffel+21%;
+app-wachter AUDIT-23 blokkeert nieuwe invoer maar de import kwam eromheen; niemand op
+actieve mailstap. **V2:** handelsrente-rij 1-7-2026 (10,4%) ontbreekt — máár alle 7
+handelsrente-zaken zijn vóór 1-7 bevroren → **impact vandaag €0** (na navraag Arsalan
+genuanceerd; de "rentecorrectie" van 13/7 betrof de contractuele 2%/mnd, niet deze tabel).
+
+**Spoor 3 — beveiliging: GROEN.** RLS live bewezen: onder `luxis_app`-rol geeft een vreemde
+tenant 0/626 dossiers, zonder tenant-instelling faalt de query dicht; 44/44 tenant-tabellen
+RLS+FORCE+policy. Secrets-scan schoon, `/api/cases` zonder token = 401, firewall 22/80/443.
+**V4 (klein):** `/opt/luxis/.env` staat op 644 → 600 passend.
+
+**Spoor 4 — AI-antwoordkwaliteit + auto-concept-poort.** De S222-poortmeting (6 "zware
+fouten" → poort DICHT) herbeoordeeld mét feitencheck op prod: **4 van de 6 hard weerlegd**
+— "verzonnen" €40,87 (IN100418) en €22,64 (IN100122) zijn exact de échte openstaande
+bedragen (corrector telde facturen op zonder betalingen te zien); "verzonnen" IN100370
+staat letterlijk in het mail-onderwerp. Herscoord: hooguit 1 middelzware fout op 51
+generaties (~2%), 0 verzonnen bedragen. De poort werd tegengehouden door de béoordelaar,
+niet de AI. **V3-volgorde:** corrector herkalibreren → niet-debiteur-mails netjes weigeren
+i.p.v. JSON-crash → verse ronde → Lisanne-steekproef.
+
+### Gewijzigde bestanden
+Alleen docs: `docs/sessions/S229-eindkeuring.md` (nieuw, 2 commits). Geen code, geen
+migraties, geen prod-mutaties, niets verstuurd. Memory: KvK-instructie + Fable-blijft.
+
+### Bekende issues / bewust niet gedaan
+- **V1-V4 zijn werkorders, niet uitgevoerd** — elk met dry-run + GO vooraf (rapport §
+  "Werkorders deel 2"). V1 heeft als enige echt geld erachter.
+- Niet geverifieerd: of alle 27 V1-debiteuren écht consument zijn (10 gecheckt, allen
+  particulier ogend; KvK-backfill beslecht); wat de 22 wachtende classificaties/146
+  ongelezen notificaties precies zijn (observatie, geen oordeel).
+- Onverwerkt uit S228/S227: fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest,
+  DMARC, testdata 2026-00007 t/m -00019.
+
+### Volgende sessie
+S230 (Opus voor de fixes): begin met V1 (B2C-BIK-correctie, lijst met Lisanne). Dan
+V2 (handelsrente-rij), V3 (corrector + verse ronde), V4 (.env-rechten).
+
+## Sessie 6 — Volgende prioriteit
 - **Dossier workspace verbeteringen** (G3-G15 uit DOSSIER-WERKPLEK-RESEARCH.md)
 - Of andere features uit UX-RESEARCH-A6-A7.md
 

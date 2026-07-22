@@ -2,10 +2,82 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 22 juli 2026 (S236 — werklijst = Taken-pagina + 7 eerste sommaties verstuurd + spook-inkomend-fix, LIVE).
-**Laatste feature/fix:** Verstuur-adviezen krijgen een gespiegelde taak op de Taken-pagina (keuze Arsalan); de 7 import-dossiers kregen hun eerste sommatie (alle 7 sent, doorgeschoven; IN100606 betwistte binnen 25 min → verweer-keten werkte); mails namens incasso@ komen nooit meer als "inkomende post" terug. Detail: entry S236.
-**Openstaand (→ S237 e.v.):** verweer IN100606 (concept klaar voor Lisanne); reacties op de overige 6 sommaties verwerken; IN100613 wacht op Lisanne; IN100607 heeft stale eerste-sommatie-advies terwijl hij op 'Verweer beantwoorden' staat; voorstel escalatie-adviezen óók als taak. Losse punten: BaseNet-delisting, derde AI-testronde + Lisanne-steekproef, kostenblokje, fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen, 4 cosmetische restjes S235.
-**Volgende sessie:** S237 — zie `docs/sessions/PROMPT-S237.md`.
+**Laatst bijgewerkt:** 22 juli 2026 (S237 — sommatie-reacties verwerkt + escalatie-taken op de werklijst LIVE + open-source-onderzoek).
+**Laatste feature/fix:** Escalatie-adviezen krijgen een gespiegelde "Vervolg bepalen"-taak (14/14 op prod nageteld); 2 nieuwe betwistingen verwerkt (IN100592 handmatig gekoppeld → keten liep zelf; IN100606 bekend); tools-onderzoek → `docs/TOEKOMST-REPOS.md` + agent-compatibel-bouwregel. Detail: entry S237.
+**Openstaand (→ S238 e.v.):** hoofdtaak S238 = native structured outputs-refactor; verweer-concepten IN100592 + IN100606 wachten op Lisanne; IN100492 (dicht, €0 betaald, debiteur vraagt update) → Lisanne; opruimronde mét Lisanne (IN100607/613/521, 6 oude nakijk-taken, dubbel concept IN100592, logboekregeltje). Losse punten: BaseNet-delisting, derde AI-testronde, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, testdata, 4 cosmetische restjes S235, sharp-CVE's.
+**Volgende sessie:** S238 — zie `docs/sessions/PROMPT-S238.md`.
+
+## Sessie 237 (22 juli 2026, Fable-meting → Opus-bouw → Fable-review + Fable-onderzoek — sommatie-reacties + escalatie-taken LIVE + toekomst-repos)
+
+### Samenvatting
+Startpunt PROMPT-S237. Model-cyclus expliciet gevolgd na correctie Arsalan
+("dit is denkwerk → Fable"): meting/review/onderzoek op Fable, bouw op Opus.
+
+**1. Reacties op de 7 sommaties van 22-7 (vers gemeten op prod).** 0 bounces.
+Drie afzenders reageerden:
+- **IN100606 (Maatwerk)** — bekende betwisting; concept klaar, wacht op Lisanne
+  (keuze Arsalan: laten liggen).
+- **IN100592 (Onbevreesd) — nieuwe betwisting die het systeem NIET zag:** debiteur
+  Zwartbol mailde 2× vanaf privé-hotmail (ander adres dan waar de sommatie heen
+  ging, geen dossiernummer) → ongesorteerde bak, geen melding/beoordeling. Na
+  handmatig koppelen (keuze Arsalan, via de gewone app-route) deed Luxis de rest
+  binnen 6 min zélf: 2× betwisting geclassificeerd (85%/92%), zaak → 'Verweer
+  beantwoorden', concept klaar. Bijvangst: 2 concepten + 2 nakijk-taken (elke mail
+  triggerde er één) — opruimronde. **Structureel gat genoteerd: debiteur-reactie
+  vanaf onbekend adres valt stil** (alleen zichtbaar in ongesorteerde bak).
+- **IN100492 (Petri, buiten de 7)** — debiteur vraagt update op een AFGESLOTEN
+  dossier met €0 betaald (~€1.950 open). Vraag voor Lisanne.
+
+**2. Escalatie-taken op de werklijst (keuze Arsalan, LIVE + nageteld).** Elk open
+escalatie-advies krijgt een taak "Vervolg bepalen — {zaaknummer}" (source
+`followup_escalate`), knop "Beoordelen" → /followup. Sluit mee via supersede/
+afwijzen (skipped); de doorschuif-motor sluit bewust alléén verstuur-taken
+(brief ≠ escalatie-besluit); 'Uitvoeren' dedupet tegen de spiegel-taak.
+Prod: 14 taken = exact de 14 geldige pending escalate-adviezen (waarvan 4 échte
+'Voorstel dagvaarding'); IN100521 terecht overgeslagen (advies stale — zaak al op
+'Verzoekschrift faillissement'). Fable-review: GO; idempotentie live bewezen
+(2e scan → nog steeds 14/14), 0 onterechte sluitingen. Eén cosmetisch restje:
+logboekregel zegt "taak aangemaakt" ook als de spiegel al bestond.
+
+**3. Open-source-onderzoek (verzoek Arsalan, 10 videotools + GitHub-breed).**
+Uitkomst: architectuur gevalideerd — géén lijst "werk voor niks". Enige echte
+nu-klus: **Anthropic native structured outputs** vervangt de kwetsbare trefwoord-
+schema-detectie (`kimi_client._detect_schema`) → **hoofdtaak S238**. Besluiten
+Arsalan: (a) **agent-laag komt er t.z.t.** (als Luxis zo goed als klaar is), dan op
+pydantic-ai — tot die tijd alles agent-compatibel bouwen (service-laag-eerst, nu
+Working Agreement in CLAUDE.md); (b) toekomst-adopties met triggers in
+`docs/TOEKOMST-REPOS.md` (CAMT bij 2e bank, Langfuse self-host bij AI×10, Ollama
+bij klant-eis, pgvector bij RAG-heroverweging, Docling, mail-parser-reply) mét
+attendering-plicht; (c) afgewezen zonder nieuwe feiten: LiteLLM/Outlines/Chonkie/
+Crawl4AI/Qdrant/DSPy/Marker.
+
+### Gewijzigde bestanden
+Backend: `incasso/service.py` (close_followup_send_tasks → sources-parameter),
+`ai_agent/followup_service.py` (escalatie-spiegel + execute-dedupe). Frontend:
+`taken/page.tsx` (knop "Beoordelen"). Tests: `test_followup_send_tasks.py`
+(+5, 15 totaal). Docs: `docs/TOEKOMST-REPOS.md` (nieuw), `CLAUDE.md`
+(agent-compatibel-regel). Commits `ff21d81`, `2a05a6d`; backend+frontend via SSH
+`--force-recreate` (geen migratie). Prod-mutatie: 2 mails gekoppeld aan IN100592
+via de app-API (natelling 2/2).
+
+### Verificatie
+15 wachters groen; kruispunt-run followup/advance/workflow/arrangement 152 groen;
+ruff + tsc schoon; CI groen op ff21d81 (conclusion=success via API); containers
+healthy, login 200. Werklijst-natelling prod 14/14 met tweede scan (idempotent),
+0 onterechte taak-sluitingen. Onderzoek: web-bronnen in sessieverloop.
+
+### Bekende issues / bewust niet gedaan
+- **Gat: debiteur-reactie vanaf onbekend mailadres valt stil** (geen melding) —
+  kandidaat-verbetering, niet gebouwd (scope).
+- Opruimronde wacht op Arsalan+Lisanne: IN100607/IN100613/IN100521 stale adviezen,
+  6 oude nakijk-taken van 21-7, dubbel concept+taak IN100592, logboekregeltje
+  execute-escalate.
+- "Beoordelen"-knop niet visueel doorgeklikt (zelfde patroon als S236-knop; tsc schoon).
+- Verweer-concepten IN100592/IN100606 en IN100492-vraag liggen bij Lisanne.
+
+### Volgende sessie
+S238: native structured outputs-refactor (alle AI-aanroepen, eigen sessie, Opus +
+volle kruispunt-discipline). Zie `docs/sessions/PROMPT-S238.md`.
 
 ## Sessie 236 (22 juli 2026, Opus-bouw → Fable-review → Opus-fixes — werklijst-taken + 7 sommaties verstuurd + spook-inkomend-fix, LIVE)
 
@@ -743,78 +815,3 @@ volledig groen (8/8 jobs, afsluitcheck).
   + preventie vastgelegd in memory [[feedback_deploy_via_ssh]].
 - Grouped ("Per stap") incasso-weergave + enkele detail-tabellen scrollen horizontaal
   binnen hun kader (bewust; niet elke tabel herbouwd).
-
-## Sessie 227 (17 juli 2026, Opus-bouw → Fable-review — AI-antwoord-knop op dossier + briefopmaak-veeg, LIVE)
-
-### Samenvatting
-Startpunt PROMPT-S227 (KvK-check: sleutel niet binnen → door met A1). Halverwege
-wisselde Arsalan naar Fable voor de review; les vastgelegd in memory: de cyclus
-Fable plant → Opus bouwt → Fable test+reviewt (óók visueel) is VAST — niet meer
-bespreken, en de review is een brede jacht, geen zelfcontrole.
-
-**A1 — AI-antwoord-knop op dossier-tabblad Correspondentie (LIVE + doorgeklikt).**
-De S223-dialoog is nu een gedeelde component (`components/ai-reply-dialog.tsx`);
-zelfde endpoint/dedupe/spelregels. Verschil per plek: Mail-pagina navigeert met
-`?draft=`, dossier-tab opent het concept in-page via `openDraftDialog` (BUG-73:
-`?draft=` is onbetrouwbaar bij same-page-navigatie). Beide flows visueel bewezen
-op prod, incl. dedupe-tak ("bestaand openen / nieuw maken") en force_new
-(oude concept aantoonbaar `discarded`, geen zombie).
-
-**Fable-reviewvondst — dubbele slotgroet (gefixt + live).** Het model schreef
-soms zelf "Met vriendelijke groet," terwijl de aankleding "Hoogachtend, …"
-toevoegt. Deterministische strip op het ene knooppunt (`generate_unified_draft`,
-alle intents) + 5 wachters. Route-matrix wees óók de tweede generator aan
-(`draft_service`, auto-concept/klant-update — gated/UI-dood maar op de roadmap):
-die prompt INSTRUEERDE de eigen groet → omgedraaid + prompttekst-wachter.
-
-**Vondsten Arsalan (foto + Word-referentie `Betreft.docx`):**
-1. Dialoog barstte open bij lang BaseNet-onderwerp (grid zonder `min-w-0`) —
-   gold ook al op de Mail-pagina sinds S223. Gefixt, op IN100458 gereproduceerd
-   én na de fix bewezen.
-2. Keuze combinatie (AskUser): antwoord-Betreft ín de brief = huisformaat
-   "klant / debiteur — Reactie op uw bericht — nr"; mail-onderwerp blijft
-   "Re: …" (draad intact) maar BaseNet-codes "[IN100458_I…]" worden gestript.
-3. Witregels: de kale `<p>&nbsp;</p>` tussen Betreft en aanhef kreeg per client
-   eigen marges (editor ~3 regels, Gmail niets) → vaste maat `margin:0` = exact
-   één lege regel; plus échte extra lege regel ná "Geachte …"/"Dear …" (NL+EN,
-   centraal in `_inline_paragraph_spacing`); AI-alinea-marge 12→16px gelijk.
-
-**Opmaak-veeg ("doe alles").** Vier routes bouwden nog één platte "\n→<br>"-blob
-waar de witregel-regels nooit op grepen: classificatie-antwoord, follow-up
-(verzending + preview), documenten-custom-body, .eml-fallback → alle vier door
-gedeelde `plain_paragraphs_html` (lege regel = alinea, escape ingebouwd) +
-AST-achtige wachter tegen nieuwe platte blobs. Bijvangst: een GETYPTE "Open in
-Outlook"-mail vertrok altijd al kaal (geen logo/handtekening/schuldhulpblok; de
-.eml gaat direct Outlook in) → krijgt nu `ensure_branded_body`. Live bewezen:
-.eml-route compleet (Betreft/witregels/logo/1× handtekening/schuldhulp),
-follow-up-preview 11 alinea's op maat. Bewust met rust: DB-stap-brieven
-(BaseNet-opmaak, S225 live goedgekeurd 12/12) en interne SMTP-testmail.
-
-**Verstuurd (GO Arsalan):** 1 opmaaktest-mail naar zijn gmail via 2026-00006 —
-afzender incasso@, drieluik vastgelegd. Arsalans oordeel: **"niet goed maar
-prima, laat maar — komt later"** → het opmaak-restpunt staat open voor S228,
-wat er precies schort is niet gespecificeerd.
-
-### Gewijzigde bestanden
-Frontend: `components/ai-reply-dialog.tsx` (nieuw), `correspondentie/page.tsx`,
-`zaken/[id]/{page,components/CorrespondentieTab}.tsx`. Backend:
-`email/{incasso_templates,subject,compose_router}.py`, `ai_agent/{unified_draft_
-service,draft_service,service,followup_service}.py`, `documents/router.py`.
-Tests: `test_{unified_draft_service,email_subject,incasso_templates}.py`
-(+15 wachters). 8 commits (`12bb361`→`d5dd3f4`), frontend 2× + backend 4×
-gedeployd via SSH (geen migratie). Geen prod-DB-mutaties.
-
-### Bekende issues / bewust niet gedaan
-- **Opmaak-restpunt Arsalan** (zie boven) — S228 eerst uitvragen (screenshot).
-- Classificatie-antwoord-route: alinea-fix test-gedekt, NIET live gevuurd
-  (zou echt versturen + zijn reviewwachtrij raken).
-- Test-concepten op 2026-00006 (1 open, 2 vervallen) — gaan mee met de
-  afgesproken testdata-opruiming; IN100458 alleen-lezen benaderd.
-- Klant-update-endpoint is UI-dood (S224-klasse beslispunt, niet opgeruimd).
-- Laatste 2 CI-runs liepen nog bij afsluiten (eerdere 6 groen; zelfde tests
-  draaiden lokaal groen) — uitslag komt via achtergrondtaak.
-
-### Volgende sessie
-S228: opmaak-restpunt uitvragen (screenshot van wat nog niet klopt), dan
-S221b-rest óf KvK-backfill (voorrang zodra sleutel binnen, ~22 juli).
-

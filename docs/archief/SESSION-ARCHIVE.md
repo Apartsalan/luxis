@@ -10340,3 +10340,78 @@ ai_agent,cases}.py` (+8 wachters). 8 commits (`b888cf8`→`20f0c46`), backend me
 ### Volgende sessie
 S227: A1 AI-antwoord-knop op het dossier-tabblad Correspondentie (Opus, kruispunt-
 matrix + brede test). KvK-backfill voorrang zodra sleutel binnen (~22 juli).
+
+## Sessie 227 (17 juli 2026, Opus-bouw → Fable-review — AI-antwoord-knop op dossier + briefopmaak-veeg, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S227 (KvK-check: sleutel niet binnen → door met A1). Halverwege
+wisselde Arsalan naar Fable voor de review; les vastgelegd in memory: de cyclus
+Fable plant → Opus bouwt → Fable test+reviewt (óók visueel) is VAST — niet meer
+bespreken, en de review is een brede jacht, geen zelfcontrole.
+
+**A1 — AI-antwoord-knop op dossier-tabblad Correspondentie (LIVE + doorgeklikt).**
+De S223-dialoog is nu een gedeelde component (`components/ai-reply-dialog.tsx`);
+zelfde endpoint/dedupe/spelregels. Verschil per plek: Mail-pagina navigeert met
+`?draft=`, dossier-tab opent het concept in-page via `openDraftDialog` (BUG-73:
+`?draft=` is onbetrouwbaar bij same-page-navigatie). Beide flows visueel bewezen
+op prod, incl. dedupe-tak ("bestaand openen / nieuw maken") en force_new
+(oude concept aantoonbaar `discarded`, geen zombie).
+
+**Fable-reviewvondst — dubbele slotgroet (gefixt + live).** Het model schreef
+soms zelf "Met vriendelijke groet," terwijl de aankleding "Hoogachtend, …"
+toevoegt. Deterministische strip op het ene knooppunt (`generate_unified_draft`,
+alle intents) + 5 wachters. Route-matrix wees óók de tweede generator aan
+(`draft_service`, auto-concept/klant-update — gated/UI-dood maar op de roadmap):
+die prompt INSTRUEERDE de eigen groet → omgedraaid + prompttekst-wachter.
+
+**Vondsten Arsalan (foto + Word-referentie `Betreft.docx`):**
+1. Dialoog barstte open bij lang BaseNet-onderwerp (grid zonder `min-w-0`) —
+   gold ook al op de Mail-pagina sinds S223. Gefixt, op IN100458 gereproduceerd
+   én na de fix bewezen.
+2. Keuze combinatie (AskUser): antwoord-Betreft ín de brief = huisformaat
+   "klant / debiteur — Reactie op uw bericht — nr"; mail-onderwerp blijft
+   "Re: …" (draad intact) maar BaseNet-codes "[IN100458_I…]" worden gestript.
+3. Witregels: de kale `<p>&nbsp;</p>` tussen Betreft en aanhef kreeg per client
+   eigen marges (editor ~3 regels, Gmail niets) → vaste maat `margin:0` = exact
+   één lege regel; plus échte extra lege regel ná "Geachte …"/"Dear …" (NL+EN,
+   centraal in `_inline_paragraph_spacing`); AI-alinea-marge 12→16px gelijk.
+
+**Opmaak-veeg ("doe alles").** Vier routes bouwden nog één platte "\n→<br>"-blob
+waar de witregel-regels nooit op grepen: classificatie-antwoord, follow-up
+(verzending + preview), documenten-custom-body, .eml-fallback → alle vier door
+gedeelde `plain_paragraphs_html` (lege regel = alinea, escape ingebouwd) +
+AST-achtige wachter tegen nieuwe platte blobs. Bijvangst: een GETYPTE "Open in
+Outlook"-mail vertrok altijd al kaal (geen logo/handtekening/schuldhulpblok; de
+.eml gaat direct Outlook in) → krijgt nu `ensure_branded_body`. Live bewezen:
+.eml-route compleet (Betreft/witregels/logo/1× handtekening/schuldhulp),
+follow-up-preview 11 alinea's op maat. Bewust met rust: DB-stap-brieven
+(BaseNet-opmaak, S225 live goedgekeurd 12/12) en interne SMTP-testmail.
+
+**Verstuurd (GO Arsalan):** 1 opmaaktest-mail naar zijn gmail via 2026-00006 —
+afzender incasso@, drieluik vastgelegd. Arsalans oordeel: **"niet goed maar
+prima, laat maar — komt later"** → het opmaak-restpunt staat open voor S228,
+wat er precies schort is niet gespecificeerd.
+
+### Gewijzigde bestanden
+Frontend: `components/ai-reply-dialog.tsx` (nieuw), `correspondentie/page.tsx`,
+`zaken/[id]/{page,components/CorrespondentieTab}.tsx`. Backend:
+`email/{incasso_templates,subject,compose_router}.py`, `ai_agent/{unified_draft_
+service,draft_service,service,followup_service}.py`, `documents/router.py`.
+Tests: `test_{unified_draft_service,email_subject,incasso_templates}.py`
+(+15 wachters). 8 commits (`12bb361`→`d5dd3f4`), frontend 2× + backend 4×
+gedeployd via SSH (geen migratie). Geen prod-DB-mutaties.
+
+### Bekende issues / bewust niet gedaan
+- **Opmaak-restpunt Arsalan** (zie boven) — S228 eerst uitvragen (screenshot).
+- Classificatie-antwoord-route: alinea-fix test-gedekt, NIET live gevuurd
+  (zou echt versturen + zijn reviewwachtrij raken).
+- Test-concepten op 2026-00006 (1 open, 2 vervallen) — gaan mee met de
+  afgesproken testdata-opruiming; IN100458 alleen-lezen benaderd.
+- Klant-update-endpoint is UI-dood (S224-klasse beslispunt, niet opgeruimd).
+- Laatste 2 CI-runs liepen nog bij afsluiten (eerdere 6 groen; zelfde tests
+  draaiden lokaal groen) — uitslag komt via achtergrondtaak.
+
+### Volgende sessie
+S228: opmaak-restpunt uitvragen (screenshot van wat nog niet klopt), dan
+S221b-rest óf KvK-backfill (voorrang zodra sleutel binnen, ~22 juli).
+

@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 22 juli 2026 (S236 — Taken-pagina = dé werklijst met gespiegelde verstuur-taken; de 7 import-dossiers kregen hun eerste sommatie, alle 7 verstuurd + doorgeschoven; IN100606 betwistte binnen 25 min en de verweer-keten werkte live; spook-inkomend-fix). Rapport: entry S236 in `SESSION-NOTES.md`. **Volgende = S237: reacties op de sommaties verwerken + open beslispunten.**
+**Laatst bijgewerkt:** 22 juli 2026 (S237 — sommatie-reacties verwerkt: 2 betwistingen in de verweer-keten; escalatie-adviezen als werklijst-taak LIVE 14/14; open-source-onderzoek → `docs/TOEKOMST-REPOS.md` + agent-compatibel-bouwregel). Rapport: entry S237 in `SESSION-NOTES.md`. **Volgende = S238: native structured outputs-refactor.**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,26 +53,27 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 22 juli 2026, S236)
+## 🎯 Huidige prioriteit (bijgewerkt 22 juli 2026, S237)
 
-> ✅ **S236 AFGEROND — WERKLIJST + 7 SOMMATIES + SPOOK-INKOMEND-FIX (LIVE).**
-> Taken-pagina is dé werklijst (keuze Arsalan): elk verstuur-advies krijgt een
-> gespiegelde taak die vanzelf sluit zodra de brief via wélke route dan ook verstuurd
-> is, of vervalt met het advies. De 7 import-dossiers (IN100592/98/99, 602/03/04/06)
-> kregen na volledige eigen controle (BIK-staffel 7/7 op de cent nagerekend, rente-
-> steekproef, 0 eerdere verzendingen) hun eerste sommatie: alle 7 sent, doorgeschoven
-> naar Tweede sommatie. **IN100606 betwistte binnen 25 min** → verweer-keten werkte
-> live (classificatie 0.95, auto naar 'Verweer beantwoorden', concept klaar).
-> Fix: mails namens incasso@ komen nooit meer als "inkomende post" terug (spook-
-> inkomend sinds 17-7); prod opgeruimd met exacte tellingen. Detail: entry S236.
+> ✅ **S237 AFGEROND — SOMMATIE-REACTIES + ESCALATIE-TAKEN (LIVE) + TOEKOMST-REPOS.**
+> Reacties op de 7 sommaties gemeten (0 bounces): IN100606-verweer bekend (concept
+> wacht op Lisanne); **IN100592 betwistte vanaf een onbekend privé-adres** → viel stil
+> in de ongesorteerde bak, na handmatig koppelen deed de keten alles zelf (zaak op
+> 'Verweer beantwoorden', concept klaar); IN100492 (afgesloten, €0 betaald) vraagt om
+> een update → Lisanne. Escalatie-adviezen staan nu als "Vervolg bepalen"-taak op de
+> werklijst (14/14 nageteld, waarvan 4 échte 'Voorstel dagvaarding'). Open-source-
+> onderzoek: architectuur gevalideerd; besluiten in `docs/TOEKOMST-REPOS.md`
+> (agent-laag komt t.z.t. op pydantic-ai; alles service-laag-eerst bouwen —
+> Working Agreement in CLAUDE.md). Detail: entry S237.
 >
-> 🎯 **VOLGENDE (S237):** (a) reacties op de 7 sommaties verwerken — IN100606-verweer
-> ligt bij Lisanne (concept klaar), meer reacties verwacht; (b) beslispunten: escalatie-
-> adviezen óók als taak op de werklijst? IN100607-advies superseden (staat op 'Verweer
-> beantwoorden')? IN100613 zodra Lisanne antwoordt. Daarna losse punten: BaseNet-
-> delisting, derde AI-testronde + Lisanne-steekproef, kostenblokje dashboard, fysieke-
-> telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen,
-> 4 cosmetische restjes S235. KvK: niet naar vragen.
+> 🎯 **VOLGENDE (S238): native structured outputs-refactor** — vervang de trefwoord-
+> schema-detectie in `ai_agent/kimi_client.py` (raakt álle AI-aanroepen; Opus + volle
+> kruispunt-discipline; eerst claude-api-documentatie raadplegen). Daarnaast lopend:
+> verweer-concepten IN100592/IN100606 + IN100492-vraag bij Lisanne; opruimronde
+> Arsalan+Lisanne (IN100607/613/521, 6 oude nakijk-taken, dubbel concept IN100592).
+> Losse punten: BaseNet-delisting, derde AI-testronde + Lisanne-steekproef,
+> kostenblokje, fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC,
+> testdata opruimen, 4 cosmetische restjes S235, sharp-CVE's. KvK: niet naar vragen.
 
 ## Projectdocumenten
 

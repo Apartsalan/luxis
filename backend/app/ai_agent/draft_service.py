@@ -20,7 +20,7 @@ from app.ai_agent.defense_library import (
     format_examples_for_prompt,
     get_relevant_examples,
 )
-from app.ai_agent.kimi_client import call_intake_ai
+from app.ai_agent.kimi_client import CLAUDE_SONNET_MODEL, call_intake_ai
 from app.ai_agent.models import AIDraft, DraftStatus
 from app.ai_agent.pdf_extract import extract_text_from_pdf
 from app.cases.files_service import get_file_path
@@ -73,6 +73,35 @@ Antwoord ALLEEN met valide JSON:
   "reasoning": "<1-2 zinnen waarom je dit bericht hebt geschreven>"
 }
 """
+
+# Schema hoort 1-op-1 bij de JSON-instructie in DRAFT_SYSTEM_PROMPT hierboven —
+# wijzig je de prompt-velden, wijzig dan dit schema mee (S238-huisregel).
+CASE_DRAFT_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        "subject": {"type": "string"},
+        "body": {"type": "string"},
+        "tone": {"type": "string", "enum": ["formeel", "vriendelijk", "streng"]},
+        "sources": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": ["email", "factuur", "av", "overeenkomst", "wet"],
+                    },
+                    "reference": {"type": "string"},
+                },
+                "required": ["type", "reference"],
+                "additionalProperties": False,
+            },
+        },
+        "reasoning": {"type": "string"},
+    },
+    "required": ["subject", "body", "tone", "sources", "reasoning"],
+    "additionalProperties": False,
+}
 
 
 def _serialize_decimal(v: Decimal | float | int | None) -> str | None:
@@ -443,7 +472,13 @@ async def generate_draft(
         len(user_message),
     )
 
-    result, model = await call_intake_ai(DRAFT_SYSTEM_PROMPT, user_message)
+    result, model = await call_intake_ai(
+        DRAFT_SYSTEM_PROMPT,
+        user_message,
+        schema=CASE_DRAFT_SCHEMA,
+        purpose="compose_draft",
+        model=CLAUDE_SONNET_MODEL,
+    )
 
     logger.info("AI draft generated for %s via %s", context["case_number"], model)
 

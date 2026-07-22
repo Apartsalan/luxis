@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.ai_agent.kimi_client import call_intake_ai
+from app.ai_agent.kimi_client import CLASSIFICATION_SCHEMA, call_intake_ai
 from app.ai_agent.models import (
     ACTION_LABELS,
     CATEGORY_LABELS,
@@ -47,7 +47,12 @@ async def _call_classification_ai(user_message: str) -> dict:
     Uses Claude Haiku 4.5 via kimi_client.call_intake_ai (Claude-only sinds S159).
     Returns the parsed JSON dict from the AI response.
     """
-    result, model = await call_intake_ai(CLASSIFICATION_SYSTEM_PROMPT, user_message)
+    result, model = await call_intake_ai(
+        CLASSIFICATION_SYSTEM_PROMPT,
+        user_message,
+        schema=CLASSIFICATION_SCHEMA,
+        purpose="extract_classification",
+    )
     logger.info("Classification AI: used %s", model)
     return result
 

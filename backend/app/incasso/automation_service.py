@@ -599,7 +599,7 @@ async def generate_draft_for_step(
     """
     from app.ai_agent.draft_service import DraftStatus
     from app.ai_agent.incasso_email_prompts import build_full_prompt
-    from app.ai_agent.kimi_client import call_draft_ai
+    from app.ai_agent.kimi_client import INCASSO_DRAFT_SCHEMA, call_draft_ai
     from app.ai_agent.models import AIDraft
 
     # Pak target step (= stap waarvoor we draft genereren)
@@ -695,6 +695,8 @@ async def generate_draft_for_step(
         system_prompt,
         user_prompt,
         av_pdf_path=av_pdf_path if use_pdf_route else None,
+        schema=INCASSO_DRAFT_SCHEMA,
+        purpose="generate_incasso_email",
     )
 
     from app.email.subject import build_email_subject
@@ -753,6 +755,8 @@ async def generate_draft_for_step(
             system_prompt,
             user_prompt,
             av_pdf_path=av_pdf_path if use_pdf_route else None,
+            schema=INCASSO_DRAFT_SCHEMA,
+            purpose="generate_incasso_email",
         )
         body = _post_process(result)
         fidelity_issues = _issues_for(body)

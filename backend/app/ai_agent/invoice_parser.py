@@ -17,7 +17,7 @@ from app.ai_agent.invoice_prompts import (
     INVOICE_PARSE_SYSTEM_PROMPT,
     build_invoice_parse_prompt,
 )
-from app.ai_agent.kimi_client import call_claude_with_pdf, call_intake_ai
+from app.ai_agent.kimi_client import INVOICE_SCHEMA, call_claude_with_pdf, call_intake_ai
 from app.ai_agent.pdf_extract import extract_text_from_pdf
 
 logger = logging.getLogger(__name__)
@@ -417,7 +417,12 @@ async def parse_invoice_pdf(file_content: bytes, filename: str) -> dict:
             enriched_text = _enrich_prompt_with_blocks(pdf_text, address_blocks)
 
             user_message = build_invoice_parse_prompt(enriched_text)
-            raw_result, model_name = await call_intake_ai(INVOICE_PARSE_SYSTEM_PROMPT, user_message)
+            raw_result, model_name = await call_intake_ai(
+                INVOICE_PARSE_SYSTEM_PROMPT,
+                user_message,
+                schema=INVOICE_SCHEMA,
+                purpose="extract_invoice",
+            )
             logger.info("Raw AI result for %s: %s", filename, raw_result)
 
             # Post-process: validate and auto-correct
@@ -437,6 +442,8 @@ async def parse_invoice_pdf(file_content: bytes, filename: str) -> dict:
                         "Retourneer het resultaat als JSON."
                     ),
                     pdf_path=tmp_path,
+                    schema=INVOICE_SCHEMA,
+                    purpose="extract_invoice",
                 )
                 model_name = "claude-native-pdf"
             except Exception as e:

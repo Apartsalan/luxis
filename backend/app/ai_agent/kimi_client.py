@@ -7,7 +7,7 @@ EU-verwerkersovereenkomst) of de gratis Gemini-tier (AVG-blocker B1, zie
 docs/research/readiness-audit.md). Alle routes draaien nu uitsluitend op Claude.
 
 INTAKE / CLASSIFICATIE / INVOICE (high volume, pattern matching):
-  Claude Haiku 4.5 — goedkoop, snel, JSON-output via tool_use (forced).
+  Claude Haiku 4.5 — goedkoop, snel.
 
 DRAFT GENERATIE (juridische kwaliteit kritiek — emails naar wederpartij):
   Claude Sonnet 4.6 → Claude Haiku 4.5 (last-resort).
@@ -15,11 +15,13 @@ DRAFT GENERATIE (juridische kwaliteit kritiek — emails naar wederpartij):
   Bij Verweer beantwoorden + AV-PDF beschikbaar: native PDF input
   (lost truncatie-probleem op, Sonnet leest PDF direct).
 
-COMPOSE-DIALOG / CLIENT-UPDATE (concepten zonder schema — unified_draft/draft_service):
-  Claude Sonnet 4.6 (S173) — zelfde juridische kwaliteit als de pipeline-concepten;
-  het kostenverschil met Haiku is verwaarloosbaar (besluit Arsalan S173).
-
-AI-TECH-03: Tool_use forced as structured output → guarantees valid JSON.
+S238: elke aanroeper geeft zijn JSON-schema EXPLICIET mee (schema= + purpose=).
+De oude trefwoord-detectie op de prompttekst (_detect_schema) is verwijderd —
+een gewijzigde promptzin kan de schema-koppeling niet meer stil breken.
+Tekst-routes gebruiken native structured outputs (output_config.format,
+GA voor Sonnet 4.6 + Haiku 4.5); de PDF-route houdt forced tool_use mét
+strict=True omdat de docs structured outputs + document-input niet
+garanderen (geverifieerd 22-7-2026, platform.claude.com structured-outputs).
 """
 
 import json
@@ -113,7 +115,10 @@ async def _record_usage(purpose: str, model: str, response: Any) -> None:
     except Exception:
         logger.exception("AI usage: registratie mislukt voor %s", purpose)
 
-# ── JSON schemas for structured output (tool_use) ────────────────────────────
+# ── JSON schemas voor structured output ──────────────────────────────────────
+# Huisregel (S238): elk schema dekt EXACT de velden die zijn prompt vraagt —
+# additionalProperties=false blokkeert alles daarbuiten. Wijzig je een
+# prompt-JSON-instructie, wijzig dan hetzelfde schema mee.
 
 CLASSIFICATION_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -133,6 +138,10 @@ CLASSIFICATION_SCHEMA: dict[str, Any] = {
         },
         "confidence": {"type": "number"},
         "reasoning": {"type": "string"},
+        "sentiment": {
+            "type": "string",
+            "enum": ["meewerkend", "neutraal", "gefrustreerd", "boos", "wanhopig"],
+        },
         "suggested_action": {
             "type": "string",
             "enum": [
@@ -148,8 +157,10 @@ CLASSIFICATION_SCHEMA: dict[str, Any] = {
         "suggested_reminder_days": {"type": ["integer", "null"]},
         "promise_date": {"type": ["string", "null"]},
         "promise_amount": {"type": ["number", "null"]},
+        "defense_type": {"type": ["string", "null"]},
     },
     "required": ["category", "confidence", "reasoning", "suggested_action"],
+    "additionalProperties": False,
 }
 
 INTAKE_SCHEMA: dict[str, Any] = {
@@ -171,6 +182,7 @@ INTAKE_SCHEMA: dict[str, Any] = {
         "reasoning": {"type": "string"},
     },
     "required": ["debtor_name", "debtor_type", "confidence", "reasoning"],
+    "additionalProperties": False,
 }
 
 INCASSO_DRAFT_SCHEMA: dict[str, Any] = {
@@ -186,183 +198,81 @@ INCASSO_DRAFT_SCHEMA: dict[str, Any] = {
         },
     },
     "required": ["subject", "body"],
+    "additionalProperties": False,
 }
+
+# Alle velden die INVOICE_PARSE_SYSTEM_PROMPT vraagt (invoice_prompts.py) —
+# 28 stuks; het confidence-object spiegelt dezelfde lijst.
+_INVOICE_FIELDS: list[str] = [
+    *(
+        f"debtor_{f}"
+        for f in (
+            "name", "contact_person", "type", "address", "postcode", "city",
+            "postal_address", "postal_postcode", "postal_city", "kvk", "email",
+        )
+    ),
+    *(
+        f"creditor_{f}"
+        for f in (
+            "name", "contact_person", "type", "address", "postcode", "city",
+            "postal_address", "postal_postcode", "postal_city", "kvk", "btw", "email",
+        )
+    ),
+    "invoice_number", "invoice_date", "due_date", "principal_amount", "description",
+]
 
 INVOICE_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
-        "debtor_name": {"type": ["string", "null"]},
+        **{f: {"type": ["string", "null"]} for f in _INVOICE_FIELDS},
         "debtor_type": {"type": "string", "enum": ["company", "person"]},
-        "debtor_address": {"type": ["string", "null"]},
-        "debtor_postcode": {"type": ["string", "null"]},
-        "debtor_city": {"type": ["string", "null"]},
-        "debtor_kvk": {"type": ["string", "null"]},
-        "debtor_email": {"type": ["string", "null"]},
-        "creditor_name": {"type": ["string", "null"]},
-        "creditor_btw": {"type": ["string", "null"]},
-        "invoice_number": {"type": ["string", "null"]},
-        "invoice_date": {"type": ["string", "null"]},
-        "due_date": {"type": ["string", "null"]},
         "principal_amount": {"type": ["number", "null"]},
-        "description": {"type": ["string", "null"]},
         "confidence": {
             "type": "object",
-            "properties": {
-                "debtor_name": {"type": "number"},
-                "debtor_type": {"type": "number"},
-                "debtor_address": {"type": "number"},
-                "debtor_postcode": {"type": "number"},
-                "debtor_city": {"type": "number"},
-                "debtor_kvk": {"type": "number"},
-                "debtor_email": {"type": "number"},
-                "creditor_name": {"type": "number"},
-                "creditor_btw": {"type": "number"},
-                "invoice_number": {"type": "number"},
-                "invoice_date": {"type": "number"},
-                "due_date": {"type": "number"},
-                "principal_amount": {"type": "number"},
-                "description": {"type": "number"},
-            },
+            "properties": {f: {"type": "number"} for f in _INVOICE_FIELDS},
+            "required": [],
+            "additionalProperties": False,
         },
     },
     "required": ["debtor_name", "debtor_type", "confidence"],
-}
-
-# Map system prompts to their schemas (matched by first line keyword)
-_PROMPT_SCHEMA_MAP = {
-    "classificeert": ("extract_classification", CLASSIFICATION_SCHEMA),
-    "incassodossier willen aanmaken": ("extract_intake", INTAKE_SCHEMA),
-    "pdf-facturen": ("extract_invoice", INVOICE_SCHEMA),
-    "email-assistent": ("generate_incasso_email", INCASSO_DRAFT_SCHEMA),
+    "additionalProperties": False,
 }
 
 
-def _detect_schema(system_prompt: str) -> tuple[str, dict[str, Any]] | None:
-    """Detect which JSON schema to use based on system prompt content."""
-    prompt_lower = system_prompt.lower()
-    for keyword, schema_pair in _PROMPT_SCHEMA_MAP.items():
-        if keyword.lower() in prompt_lower:
-            return schema_pair
-    return None
+async def _call_structured(
+    model: str,
+    system_prompt: str,
+    user_message: str,
+    schema: dict[str, Any],
+    purpose: str,
+    max_tokens: int = 16384,
+) -> dict:
+    """Eén Claude-aanroep met native structured outputs (output_config.format).
 
-
-async def _call_haiku(system_prompt: str, user_message: str) -> dict:
-    """Call Claude Haiku (or Sonnet bij complexe schemas) als fallback met tool_use.
-
-    AI-TECH-03: Uses tool_use with forced tool_choice to guarantee valid JSON.
-    Falls back to plain text + _parse_json if schema detection fails.
-    Voor incasso-draft generatie wordt Sonnet 4.5 gebruikt — Haiku kopieert
-    HTML-sjablonen letterlijk in plaats van placeholders te vervangen.
+    De API garandeert dan een text-block met schema-geldige JSON — geen
+    tekst-parsing of markdown-strip meer nodig.
     """
     if not settings.anthropic_api_key:
         raise ValueError("ANTHROPIC_API_KEY is not configured")
 
     client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-    schema_info = _detect_schema(system_prompt)
-    # Draft-generatie heeft een complexer prompt + grote HTML-output — Sonnet hier
-    is_draft = bool(schema_info and schema_info[0] == "generate_incasso_email")
-    model_name = CLAUDE_SONNET_MODEL if is_draft else CLAUDE_HAIKU_MODEL
-
-    if schema_info:
-        tool_name, schema = schema_info
-        response = await client.messages.create(
-            model=model_name,
-            max_tokens=16384,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_message}],
-            tools=[
-                {
-                    "name": tool_name,
-                    "description": "Extract structured data from the input.",
-                    "input_schema": schema,
-                }
-            ],
-            tool_choice={"type": "tool", "name": tool_name},
-        )
-        await _record_usage(tool_name, model_name, response)
-        # With forced tool_choice, the response is guaranteed to be a tool_use block
-        for block in response.content:
-            if block.type == "tool_use":
-                logger.info("Haiku structured output: tool_use block received")
-                return block.input  # type: ignore[return-value]
-        # Shouldn't happen with forced tool_choice, but fallback
-        logger.warning("Haiku: no tool_use block in response, falling back to text parse")
-
-    # Fallback: plain text response (no schema detected, or tool_use failed).
-    # S173: de compose-dialog (unified_draft) en client-updates (draft_service) routeren
-    # hierlangs (geen schema-match) → nu op Sonnet i.p.v. Haiku, voor juridische kwaliteit
-    # van concepten naar wederpartij/cliënt. Kosten verwaarloosbaar (besluit Arsalan S173).
-    # max_tokens ruim: bij verweer krijgen ze de volledige AV + voorbeelden mee (langere
-    # concepten; 1024 kapte die eerder af → afgekapte JSON → "AI provider failed").
     response = await client.messages.create(
-        model=CLAUDE_SONNET_MODEL,
-        max_tokens=16384,
+        model=model,
+        max_tokens=max_tokens,
         system=system_prompt,
         messages=[{"role": "user", "content": user_message}],
+        output_config={"format": {"type": "json_schema", "schema": schema}},
     )
-    await _record_usage("compose_text", CLAUDE_SONNET_MODEL, response)
-    raw_text = response.content[0].text.strip()
-    return _parse_json(raw_text)
+    await _record_usage(purpose, model, response)
 
-
-async def _call_sonnet(system_prompt: str, user_message: str) -> dict:
-    """Call Claude Sonnet 4.5 met tool_use voor structured JSON output.
-
-    Gebruikt voor incasso-draft generatie — Nederlandse juridische taal +
-    AV-citaten kwaliteit (Harvey BigLaw Bench).
-    Logs token-usage voor cost-monitoring per draft.
-    """
-    if not settings.anthropic_api_key:
-        raise ValueError("ANTHROPIC_API_KEY is not configured")
-
-    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-    schema_info = _detect_schema(system_prompt)
-
-    if schema_info:
-        tool_name, schema = schema_info
-        response = await client.messages.create(
-            model=CLAUDE_SONNET_MODEL,
-            max_tokens=16384,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_message}],
-            tools=[
-                {
-                    "name": tool_name,
-                    "description": "Generate structured email draft.",
-                    "input_schema": schema,
-                }
-            ],
-            tool_choice={"type": "tool", "name": tool_name},
-        )
-        await _record_usage(tool_name, CLAUDE_SONNET_MODEL, response)
-        for block in response.content:
-            if block.type == "tool_use":
-                return block.input  # type: ignore[return-value]
-        logger.warning("Sonnet: no tool_use block in response, fallback to text")
-
-    # Fallback: plain text JSON
-    response = await client.messages.create(
-        model=CLAUDE_SONNET_MODEL,
-        max_tokens=16384,
-        system=system_prompt,
-        messages=[{"role": "user", "content": user_message}],
-    )
-    await _record_usage("sonnet_text", CLAUDE_SONNET_MODEL, response)
-    raw_text = response.content[0].text.strip()
-    return _parse_json(raw_text)
-
-
-def _parse_json(raw_text: str) -> dict:
-    """Parse JSON from AI response, handling markdown code blocks."""
-    try:
-        return json.loads(raw_text)
-    except json.JSONDecodeError:
-        if "```" in raw_text:
-            json_part = raw_text.split("```")[1]
-            if json_part.startswith("json"):
-                json_part = json_part[4:]
-            return json.loads(json_part.strip())
-        raise ValueError(f"AI returned invalid JSON: {raw_text[:200]}")
+    if response.stop_reason == "max_tokens":
+        raise ValueError(f"AI output afgekapt op max_tokens ({purpose})")
+    if response.stop_reason == "refusal":
+        raise ValueError(f"AI weigerde de aanvraag ({purpose})")
+    for block in response.content:
+        if block.type == "text":
+            return json.loads(block.text)
+    raise ValueError(f"AI gaf geen text-block terug ({purpose})")
 
 
 async def call_claude_with_pdf(
@@ -370,21 +280,27 @@ async def call_claude_with_pdf(
     user_message: str,
     pdf_path: str,
     model: str = CLAUDE_SONNET_MODEL,
+    *,
+    schema: dict[str, Any],
+    purpose: str,
 ) -> dict:
     """AI-TECH-02: Send a PDF directly to Claude for deep analysis.
 
     Uses Claude's native PDF understanding (base64-encoded document block).
-    Intended for heavy analysis (contract disputes, complex documents) — not
-    for daily high-volume work which uses Haiku.
+    Structured output via forced tool_use met strict=True — de docs garanderen
+    structured outputs (output_config) niet in combinatie met document-input,
+    dus deze route houdt bewust de tool_use-vorm (S238).
 
     Args:
         system_prompt: System instructions for the analysis.
         user_message: User message / context about what to analyze.
         pdf_path: Absolute path to the PDF file.
         model: Claude model to use (default: Sonnet for cost/quality balance).
+        schema: JSON-schema van het verwachte resultaat (verplicht, expliciet).
+        purpose: Label voor ai_usage-registratie én de tool-naam.
 
     Returns:
-        Parsed JSON dict from Claude's response.
+        Parsed dict uit het tool_use-block.
     """
     import base64
     from pathlib import Path
@@ -401,81 +317,65 @@ async def call_claude_with_pdf(
     logger.info("Claude PDF analysis: %s (%.1f MB), model=%s", pdf_file.name, file_size_mb, model)
 
     client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-
-    # Try structured output first
-    schema_info = _detect_schema(system_prompt)
-
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {
-                    "type": "document",
-                    "source": {
-                        "type": "base64",
-                        "media_type": "application/pdf",
-                        "data": pdf_b64,
-                    },
-                },
-                {"type": "text", "text": user_message},
-            ],
-        }
-    ]
-
-    if schema_info:
-        tool_name, schema = schema_info
-        response = await client.messages.create(
-            model=model,
-            max_tokens=2048,
-            system=system_prompt,
-            messages=messages,
-            tools=[
-                {
-                    "name": tool_name,
-                    "description": "Extract structured data from the document.",
-                    "input_schema": schema,
-                }
-            ],
-            tool_choice={"type": "tool", "name": tool_name},
-        )
-        await _record_usage(f"pdf_{tool_name}", model, response)
-        for block in response.content:
-            if block.type == "tool_use":
-                return block.input  # type: ignore[return-value]
-
-    # Fallback: plain text
     response = await client.messages.create(
         model=model,
-        max_tokens=2048,
+        max_tokens=16384,
         system=system_prompt,
-        messages=messages,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "document",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "application/pdf",
+                            "data": pdf_b64,
+                        },
+                    },
+                    {"type": "text", "text": user_message},
+                ],
+            }
+        ],
+        tools=[
+            {
+                "name": purpose,
+                "description": "Extract structured data from the document.",
+                "strict": True,
+                "input_schema": schema,
+            }
+        ],
+        tool_choice={"type": "tool", "name": purpose},
     )
-    await _record_usage("pdf_text", model, response)
-    raw_text = response.content[0].text.strip()
-    return _parse_json(raw_text)
+    await _record_usage(f"pdf_{purpose}", model, response)
+    for block in response.content:
+        if block.type == "tool_use":
+            return block.input  # type: ignore[return-value]
+    raise ValueError(f"AI gaf geen tool_use-block terug (pdf_{purpose})")
 
 
-async def call_intake_ai(system_prompt: str, user_message: str) -> tuple[dict, str]:
-    """Call AI for intake/classificatie/invoice extraction. Claude-only (S159).
+async def call_intake_ai(
+    system_prompt: str,
+    user_message: str,
+    *,
+    schema: dict[str, Any],
+    purpose: str,
+    model: str = CLAUDE_HAIKU_MODEL,
+) -> tuple[dict, str]:
+    """Structured AI-aanroep voor extractie/classificatie/concepten.
 
-    Routeert naar Claude Haiku 4.5 (of Sonnet voor draft-schema's) via
-    `_call_haiku`. Kimi/Gemini-fallback verwijderd — AVG-blocker B1.
+    De aanroeper geeft zijn schema en purpose expliciet mee (S238) — geen
+    trefwoord-detectie meer. Default-model Haiku (high volume); concept-routes
+    geven zelf CLAUDE_SONNET_MODEL mee.
 
     Returns (parsed_result, model_name).
     """
     try:
-        result = await _call_haiku(system_prompt, user_message)
-        schema_info = _detect_schema(system_prompt)
-        is_draft = bool(schema_info and schema_info[0] == "generate_incasso_email")
-        # S173: compose/concept-prompts zonder schema-match (unified_draft + draft_service)
-        # draaien op Sonnet; alleen classificatie/intake/invoice (schema-match, geen draft)
-        # blijft Haiku. Model-naam moet daarop kloppen voor de kosten-/dashboard-logging.
-        uses_sonnet = is_draft or schema_info is None
-        model_name = CLAUDE_SONNET_MODEL if uses_sonnet else CLAUDE_HAIKU_MODEL
-        logger.info("Intake AI: %s extraction successful", model_name)
-        return result, model_name
+        result = await _call_structured(model, system_prompt, user_message, schema, purpose)
+        logger.info("Intake AI: %s extraction successful (%s)", model, purpose)
+        return result, model
     except Exception as e:
-        logger.error("Intake AI: Claude extraction failed: %s", e)
+        logger.error("Intake AI: Claude extraction failed (%s): %s", purpose, e)
         raise ValueError(f"AI provider failed: {e}") from e
 
 
@@ -483,13 +383,15 @@ async def call_draft_ai(
     system_prompt: str,
     user_message: str,
     av_pdf_path: str | None = None,
+    *,
+    schema: dict[str, Any],
+    purpose: str,
 ) -> tuple[dict, str]:
     """Call AI for incasso draft generation. Claude-only (S159).
 
     Priority: Claude Sonnet 4.6 → Claude Haiku 4.5 (last-resort).
     Bij `av_pdf_path` gegeven: native Sonnet PDF input — leest AV-PDF direct
     zonder text-extract truncatie (voor Verweer beantwoorden met AV-citatie).
-    Gemini-fallback verwijderd — AVG-blocker B1.
 
     Returns (parsed_result, model_name).
     """
@@ -499,6 +401,7 @@ async def call_draft_ai(
             result = await call_claude_with_pdf(
                 system_prompt, user_message, av_pdf_path,
                 model=CLAUDE_SONNET_MODEL,
+                schema=schema, purpose=purpose,
             )
             logger.info("Draft AI: Sonnet+PDF generation successful")
             return result, f"{CLAUDE_SONNET_MODEL}+pdf"
@@ -510,7 +413,9 @@ async def call_draft_ai(
     # Sonnet primary (geen PDF, of PDF-pad gefaald)
     if settings.anthropic_api_key:
         try:
-            result = await _call_sonnet(system_prompt, user_message)
+            result = await _call_structured(
+                CLAUDE_SONNET_MODEL, system_prompt, user_message, schema, purpose
+            )
             logger.info("Draft AI: Sonnet generation successful")
             return result, CLAUDE_SONNET_MODEL
         except Exception as e:
@@ -518,7 +423,9 @@ async def call_draft_ai(
 
     # Last resort
     try:
-        result = await _call_haiku(system_prompt, user_message)
+        result = await _call_structured(
+            CLAUDE_HAIKU_MODEL, system_prompt, user_message, schema, purpose
+        )
         logger.info("Draft AI: Haiku last-resort successful")
         return result, CLAUDE_HAIKU_MODEL
     except Exception as e:

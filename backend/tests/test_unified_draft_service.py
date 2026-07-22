@@ -226,7 +226,7 @@ def fake_base_context() -> dict:
 def _patch_ai(monkeypatch, *, subject: str, body: str, tone: str = "formeel"):
     """Patch the AI call inside unified_draft_service."""
 
-    async def fake_call(_system, _user):
+    async def fake_call(_system, _user, **_kwargs):
         return ({"subject": subject, "body": body, "tone": tone}, "fake-model")
 
     monkeypatch.setattr(
@@ -457,7 +457,7 @@ def _patch_ai_capture(monkeypatch, holder, *, subject="X", body="Y", tone="forme
     """Als _patch_ai, maar bewaart de user-prompt zodat we kunnen bewijzen dat de
     kennis (AV/bibliotheek) er wél/niet in zit."""
 
-    async def fake_call(_system, _user):
+    async def fake_call(_system, _user, **_kwargs):
         holder["system"] = _system
         holder["user"] = _user
         return ({"subject": subject, "body": body, "tone": tone}, "fake-model")
@@ -924,7 +924,7 @@ async def test_reply_prompt_includes_dossier_facts(
 def _patch_ai_attach(monkeypatch, attach_value):
     """AI-antwoord dat het factuur-signaal meegeeft (of weglaat als None)."""
 
-    async def fake_call(_system, _user):
+    async def fake_call(_system, _user, **_kwargs):
         result = {"subject": "Re:", "body": "Antwoord.", "tone": "zakelijk"}
         if attach_value is not None:
             result["attach_invoices"] = attach_value

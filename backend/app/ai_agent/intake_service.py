@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from app.ai_agent.intake_models import IntakeRequest, IntakeStatus
 from app.ai_agent.intake_prompts import INTAKE_SYSTEM_PROMPT, build_intake_prompt
-from app.ai_agent.kimi_client import call_intake_ai
+from app.ai_agent.kimi_client import INTAKE_SCHEMA, call_intake_ai
 from app.ai_agent.pdf_extract import extract_text_from_pdf
 from app.ai_agent.prompts import strip_html
 from app.cases.models import Case, CaseActivity
@@ -297,7 +297,12 @@ async def process_intake(
 
     # Call AI
     try:
-        ai_result, model_name = await call_intake_ai(INTAKE_SYSTEM_PROMPT, user_message)
+        ai_result, model_name = await call_intake_ai(
+            INTAKE_SYSTEM_PROMPT,
+            user_message,
+            schema=INTAKE_SCHEMA,
+            purpose="extract_intake",
+        )
     except Exception as e:
         logger.error("Intake AI failed for %s: %s", intake_id, e)
         intake.status = IntakeStatus.FAILED

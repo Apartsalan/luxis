@@ -29,8 +29,11 @@ import logging
 
 logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
-from app.ai_agent.kimi_client import call_intake_ai  # noqa: E402
-from app.ai_agent.unified_draft_service import _REPLY_PROMPT  # noqa: E402
+from app.ai_agent.kimi_client import CLAUDE_SONNET_MODEL, call_intake_ai  # noqa: E402
+from app.ai_agent.unified_draft_service import (  # noqa: E402
+    _REPLY_PROMPT,
+    UNIFIED_DRAFT_SCHEMA,
+)
 
 # ── Zelfgeschreven proefset ────────────────────────────────────────────────
 # Een compacte, representatieve startset (Fable breidt uit). Elk geval draagt een
@@ -236,6 +239,25 @@ _CORRECTOR_PROMPT = (
     "}"
 )
 
+# Schema hoort 1-op-1 bij de JSON-instructie in _CORRECTOR_PROMPT hierboven (S238).
+_CORRECTOR_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        "beantwoordt_de_vraag": {"type": "boolean"},
+        "feiten_kloppen": {"type": "boolean"},
+        "geen_toezegging": {"type": "boolean"},
+        "escaleert_indien_nodig": {"type": "boolean"},
+        "toon_passend": {"type": "boolean"},
+        "zware_fout": {"type": "boolean"},
+        "toelichting": {"type": "string"},
+    },
+    "required": [
+        "beantwoordt_de_vraag", "feiten_kloppen", "geen_toezegging",
+        "escaleert_indien_nodig", "toon_passend", "zware_fout", "toelichting",
+    ],
+    "additionalProperties": False,
+}
+
 
 async def _correct(case: dict, answer_body: str) -> dict:
     user = (
@@ -243,7 +265,11 @@ async def _correct(case: dict, answer_body: str) -> dict:
         f"--- Concept-antwoord ---\n{answer_body}"
     )
     try:
-        result, _ = await call_intake_ai(_CORRECTOR_PROMPT, user)
+        result, _ = await call_intake_ai(
+            _CORRECTOR_PROMPT, user,
+            schema=_CORRECTOR_SCHEMA, purpose="testronde_corrector",
+            model=CLAUDE_SONNET_MODEL,
+        )
         return result
     except Exception as e:  # corrector-fout mag de ronde niet stoppen
         return {"corrector_error": str(e)}
@@ -252,7 +278,11 @@ async def _correct(case: dict, answer_body: str) -> dict:
 async def _run_case(case: dict, *, corrector: bool) -> dict:
     user_msg = _build_user_msg(case)
     try:
-        result, model = await call_intake_ai(_REPLY_PROMPT, user_msg)
+        result, model = await call_intake_ai(
+            _REPLY_PROMPT, user_msg,
+            schema=UNIFIED_DRAFT_SCHEMA, purpose="testronde_reply",
+            model=CLAUDE_SONNET_MODEL,
+        )
     except Exception as e:
         return {"id": case["id"], "error": str(e)}
     answer_body = (result.get("body") or "").strip()

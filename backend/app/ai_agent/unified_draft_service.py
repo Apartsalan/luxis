@@ -23,7 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.ai_agent.kimi_client import call_intake_ai
+from app.ai_agent.kimi_client import CLAUDE_SONNET_MODEL, call_intake_ai
 from app.ai_agent.models import AIDraft, DraftStatus, EmailClassification
 from app.ai_agent.prompts import strip_html
 from app.cases.models import Case, CaseParty
@@ -59,6 +59,21 @@ _NO_HTML_RULE = (
     "- Antwoord ALLEEN met valide JSON: "
     '{"subject": "<onderwerp>", "body": "<platte tekst>", "tone": "<formeel|vriendelijk|streng>"}'
 )
+
+# Schema hoort 1-op-1 bij de JSON-instructie in _NO_HTML_RULE (+ de
+# attach_invoices-sleutel van de antwoordroute) — wijzig je de prompt-velden,
+# wijzig dan dit schema mee (S238-huisregel).
+UNIFIED_DRAFT_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        "subject": {"type": "string"},
+        "body": {"type": "string"},
+        "tone": {"type": "string", "enum": ["formeel", "vriendelijk", "streng"]},
+        "attach_invoices": {"type": "boolean"},
+    },
+    "required": ["subject", "body", "tone"],
+    "additionalProperties": False,
+}
 
 _NEXT_STEP_PROMPT = (
     "Je bent juridisch assistent voor Kesting Legal (incassokantoor te Amsterdam, "
@@ -637,7 +652,13 @@ async def generate_unified_draft(
         tone,
     )
 
-    result, model = await call_intake_ai(system_prompt, user_msg)
+    result, model = await call_intake_ai(
+        system_prompt,
+        user_msg,
+        schema=UNIFIED_DRAFT_SCHEMA,
+        purpose="compose_unified",
+        model=CLAUDE_SONNET_MODEL,
+    )
 
     subject = (result.get("subject") or "").strip()
     body = _strip_trailing_closing((result.get("body") or "").strip())

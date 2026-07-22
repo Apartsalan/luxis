@@ -75,9 +75,10 @@ weerlegd als controleur-missers (rapport: `docs/sessions/S238-antwoord-testronde
   IN100492-vraag, opruimronde.
 
 ### Volgende sessie
-S239: antwoorden van Lisanne verwerken (verweer-concepten, IN100492, opruimronde
-mét dry-run + GO) of nieuw hoofdonderwerp naar keuze Arsalan.
-Zie `docs/sessions/PROMPT-S239.md`.
+S239: **Arsalan legt de hoofdtaak bij start zelf uit** (aangekondigd bij dit
+sessie-einde). Achtergrond-punten die er nog liggen (Lisanne-antwoorden,
+opruimronde, onbekend-afzender-gat) staan als context in
+`docs/sessions/PROMPT-S239.md`.
 
 ## Sessie 237 (22 juli 2026, Fable-meting → Opus-bouw → Fable-review + Fable-onderzoek — sommatie-reacties + escalatie-taken LIVE + toekomst-repos)
 

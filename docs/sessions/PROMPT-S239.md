@@ -1,17 +1,18 @@
 cd Documents\luxis && claude --dangerously-skip-permissions
 
-Sessie 239 — Lisanne-antwoorden + opruimronde (of nieuw hoofdonderwerp)
+Sessie 239 — taak volgt van Arsalan bij start
 
 ## Start
 Draai eerst `/sessie-start` (leest roadmap + sessienotities via subagent, scant modules,
-laadt de verbindingskaart). Ga daarna zonder te wachten door met de taak hieronder.
-Extra taak-context (alleen wat `/sessie-start` NIET al leest): entries S237 + S238 in
-`SESSION-NOTES.md`. Model: **vraag Arsalan bij start welke taak** — opruimronde/datafixes
-= Opus (klikwerk), onderzoek of ontwerp = Fable (wissel ACTIEF signaleren — memory
-`feedback_model_choice`).
+laadt de verbindingskaart). Extra taak-context (alleen wat `/sessie-start` NIET al
+leest): entries S237 + S238 in `SESSION-NOTES.md`.
 
-## Taak — kies bij start met Arsalan
-**A. Lisanne-antwoorden verwerken (als ze gereageerd heeft):**
+**Arsalan legt de hoofdtaak bij start zelf uit — wacht daarop.** Check daarna welk
+model past: bouwen/klikwerk/datafixes = Opus, onderzoek/ontwerp/review = Fable
+(wissel ACTIEF signaleren — memory `feedback_model_choice`).
+
+## Achtergrond — dit ligt er nog (ter context, geen opdracht)
+**A. Lisanne-antwoorden (als ze gereageerd heeft):**
 - Verweer-concepten IN100592 + IN100606: na haar GO controleren + versturen
   (per dossier vers meten vóór verzending; GO per verzending blijft gelden).
 - IN100492 (afgesloten, €0 betaald, debiteur vraagt update): haar besluit uitvoeren.
@@ -21,9 +22,9 @@ Extra taak-context (alleen wat `/sessie-start` NIET al leest): entries S237 + S2
   dubbel concept + dubbele taak op IN100592; logboekregeltje execute-escalate
   (zegt "taak aangemaakt" ook als de spiegel al bestond — cosmetisch codefixje).
 
-**C. Nieuw hoofdonderwerp naar keuze Arsalan.** Kandidaat uit S237: debiteur-reactie
-vanaf een onbekend mailadres valt nu stil (alleen zichtbaar in de ongesorteerde bak)
-— melding/aanwijzing bouwen zodat dit niet meer gemist wordt.
+**C. Kandidaat-onderwerp uit S237:** debiteur-reactie vanaf een onbekend mailadres
+valt nu stil (alleen zichtbaar in de ongesorteerde bak) — melding/aanwijzing bouwen
+zodat dit niet meer gemist wordt.
 
 ## Constraints
 Geen echte debiteuren mailen zonder expliciete GO per verzending; testkanaal 2026-00006.

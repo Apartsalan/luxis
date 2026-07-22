@@ -242,6 +242,42 @@ INVOICE_SCHEMA: dict[str, Any] = {
 }
 
 
+# Grammar-limieten van structured outputs / strict tool_use — live gemeten
+# op de API (S238, 22-7-2026): 400 bij >24 optionele velden en 400 bij >16
+# nullable/union-getypeerde velden. Past een schema daar niet in (alleen het
+# factuurschema), dan valt de aanroep terug op niet-strict forced tool_use —
+# het oude, in de praktijk bewezen gedrag, maar mét expliciet schema.
+_GRAMMAR_MAX_OPTIONAL = 24
+_GRAMMAR_MAX_UNIONS = 16
+
+
+def _grammar_fits(schema: dict[str, Any]) -> bool:
+    """Past dit schema binnen de grammar-limieten van structured outputs?"""
+    optional = 0
+    unions = 0
+
+    def walk(node: Any) -> None:
+        nonlocal optional, unions
+        if isinstance(node, dict):
+            if node.get("type") == "object":
+                props = node.get("properties", {})
+                required = set(node.get("required", []))
+                optional += sum(1 for p in props if p not in required)
+                for prop_schema in props.values():
+                    if isinstance(prop_schema, dict) and (
+                        isinstance(prop_schema.get("type"), list) or "anyOf" in prop_schema
+                    ):
+                        unions += 1
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(schema)
+    return optional <= _GRAMMAR_MAX_OPTIONAL and unions <= _GRAMMAR_MAX_UNIONS
+
+
 async def _call_structured(
     model: str,
     system_prompt: str,
@@ -250,32 +286,55 @@ async def _call_structured(
     purpose: str,
     max_tokens: int = 16384,
 ) -> dict:
-    """Eén Claude-aanroep met native structured outputs (output_config.format).
+    """Eén Claude-aanroep met gegarandeerd schema-gebonden JSON-resultaat.
 
-    De API garandeert dan een text-block met schema-geldige JSON — geen
-    tekst-parsing of markdown-strip meer nodig.
+    Primair native structured outputs (output_config.format) — de API
+    garandeert dan een text-block met schema-geldige JSON. Past het schema
+    niet binnen de grammar-limieten (zie _grammar_fits), dan forced tool_use
+    zonder strict — zelfde resultaatvorm, iets zwakkere garantie.
     """
     if not settings.anthropic_api_key:
         raise ValueError("ANTHROPIC_API_KEY is not configured")
 
     client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-    response = await client.messages.create(
-        model=model,
-        max_tokens=max_tokens,
-        system=system_prompt,
-        messages=[{"role": "user", "content": user_message}],
-        output_config={"format": {"type": "json_schema", "schema": schema}},
-    )
+    if _grammar_fits(schema):
+        response = await client.messages.create(
+            model=model,
+            max_tokens=max_tokens,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_message}],
+            output_config={"format": {"type": "json_schema", "schema": schema}},
+        )
+    else:
+        logger.info("Structured output via forced tool_use (%s): schema te groot voor grammar", purpose)
+        response = await client.messages.create(
+            model=model,
+            max_tokens=max_tokens,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_message}],
+            tools=[
+                {
+                    "name": purpose,
+                    "description": "Extract structured data from the input.",
+                    "input_schema": schema,
+                }
+            ],
+            tool_choice={"type": "tool", "name": purpose},
+        )
     await _record_usage(purpose, model, response)
 
     if response.stop_reason == "max_tokens":
         raise ValueError(f"AI output afgekapt op max_tokens ({purpose})")
     if response.stop_reason == "refusal":
         raise ValueError(f"AI weigerde de aanvraag ({purpose})")
+    # Eerst tool_use (tool-pad kan een text-block vóór het resultaat zetten)
+    for block in response.content:
+        if block.type == "tool_use":
+            return block.input  # type: ignore[return-value]
     for block in response.content:
         if block.type == "text":
             return json.loads(block.text)
-    raise ValueError(f"AI gaf geen text-block terug ({purpose})")
+    raise ValueError(f"AI gaf geen bruikbaar resultaat-block terug ({purpose})")
 
 
 async def call_claude_with_pdf(
@@ -290,9 +349,10 @@ async def call_claude_with_pdf(
     """AI-TECH-02: Send a PDF directly to Claude for deep analysis.
 
     Uses Claude's native PDF understanding (base64-encoded document block).
-    Structured output via forced tool_use met strict=True — de docs garanderen
-    structured outputs (output_config) niet in combinatie met document-input,
-    dus deze route houdt bewust de tool_use-vorm (S238).
+    Structured output via forced tool_use — de docs garanderen structured
+    outputs (output_config) niet in combinatie met document-input, dus deze
+    route houdt bewust de tool_use-vorm (S238). strict=True alléén als het
+    schema binnen de grammar-limieten past (zie _grammar_fits).
 
     Args:
         system_prompt: System instructions for the analysis.
@@ -344,7 +404,7 @@ async def call_claude_with_pdf(
             {
                 "name": purpose,
                 "description": "Extract structured data from the document.",
-                "strict": True,
+                "strict": _grammar_fits(schema),
                 "input_schema": schema,
             }
         ],

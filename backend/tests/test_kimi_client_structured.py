@@ -33,6 +33,7 @@ from app.ai_agent.kimi_client import (
     INTAKE_SCHEMA,
     INVOICE_SCHEMA,
     _call_structured,
+    _grammar_fits,
     call_claude_with_pdf,
     call_draft_ai,
     call_intake_ai,
@@ -175,3 +176,33 @@ async def test_call_structured_weigert_afgekapte_output(monkeypatch):
 
     with pytest.raises(ValueError, match="max_tokens"):
         await _call_structured("m", "sys", "user", {"type": "object"}, "test_purpose")
+
+
+# ── 5. Grammar-limieten: groot schema → forced tool_use-terugval ───────────
+# Live gemeten (S238): de API weigert schemas met >24 optionele of >16
+# union-getypeerde velden voor structured outputs én strict tool_use.
+
+def test_grammar_fits_kent_de_live_gemeten_limieten():
+    # Factuurschema: 27 nullable velden → past niet in de grammar
+    assert _grammar_fits(INVOICE_SCHEMA) is False
+    # Alle andere schemas passen wél
+    for naam, schema in ALL_SCHEMAS.items():
+        if naam != "invoice":
+            assert _grammar_fits(schema) is True, f"{naam} hoort te passen"
+
+
+async def test_te_groot_schema_valt_terug_op_forced_tool_use(monkeypatch):
+    response = SimpleNamespace(
+        content=[SimpleNamespace(type="tool_use", input={"debtor_name": "X"})],
+        stop_reason="tool_use",
+        usage=None,
+    )
+    fake = _fake_anthropic(monkeypatch, response)
+
+    result = await _call_structured("m", "sys", "user", INVOICE_SCHEMA, "extract_invoice")
+
+    assert result == {"debtor_name": "X"}
+    sent = fake.messages.kwargs
+    assert "output_config" not in sent
+    assert sent["tool_choice"] == {"type": "tool", "name": "extract_invoice"}
+    assert "strict" not in sent["tools"][0]

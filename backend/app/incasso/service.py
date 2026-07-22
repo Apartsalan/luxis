@@ -663,6 +663,12 @@ async def supersede_open_recommendations(
         rec.review_note = f"Automatisch gesloten: {reason} (advies verouderd)."
     if recs:
         await db.flush()
+
+    # S236 — de werklijst-taak spiegelt het advies (keuze Arsalan: Taken-pagina is
+    # dé werklijst). Vervalt het advies, dan vervalt de bijbehorende verstuur-taak
+    # op hetzelfde moment — anders blijft er een taak staan voor een brief die niet
+    # meer aan de beurt is.
+    await close_followup_send_tasks(db, tenant_id, case_id, status="skipped")
     return len(recs)
 
 
@@ -903,6 +909,12 @@ async def advance_after_step_send(
     if record_send:
         await mark_current_step_communication_sent(
             db, tenant_id, case, document_id=document_id
+        )
+        # S236 — de brief van deze stap is de deur uit: vink de werklijst-taak
+        # ("{stap} versturen") af. Op de gedeelde motor, zodat álle verzendroutes
+        # (compose/send, AI-concept, batch, follow-up) de taak sluiten.
+        await close_followup_send_tasks(
+            db, tenant_id, case.id, step_id=case.incasso_step_id, status="completed"
         )
 
     rule = (
@@ -1359,6 +1371,46 @@ async def _auto_complete_tasks(
     if tasks:
         await db.flush()
 
+    return len(tasks)
+
+
+async def close_followup_send_tasks(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    *,
+    step_id: uuid.UUID | None = None,
+    status: str = "completed",
+) -> int:
+    """S236 — sluit open 'brief versturen'-taken van de follow-up-adviseur.
+
+    De Taken-pagina is dé werklijst (keuze Arsalan S236): elk verstuur-advies
+    krijgt een taak, en die taak moet dicht zodra de brief van die stap écht de
+    deur uit is (status 'completed', via de gedeelde doorschuif-motor — dus óók
+    bij verzending via compose/batch/AI-route) of zodra het advies vervalt
+    (status 'skipped', via supersede/afwijzen). Retourneert het aantal.
+    """
+    query = select(WorkflowTask).where(
+        WorkflowTask.tenant_id == tenant_id,
+        WorkflowTask.case_id == case_id,
+        WorkflowTask.task_type == "send_letter",
+        WorkflowTask.status.in_(["pending", "due", "overdue"]),
+        WorkflowTask.is_active.is_(True),
+        WorkflowTask.action_config["source"].astext == "followup_send",
+    )
+    if step_id:
+        query = query.where(
+            WorkflowTask.action_config["step_id"].astext == str(step_id)
+        )
+
+    tasks = list((await db.execute(query)).scalars().all())
+    now = datetime.now(UTC)
+    for task in tasks:
+        task.status = status
+        if status == "completed":
+            task.completed_at = now
+    if tasks:
+        await db.flush()
     return len(tasks)
 
 

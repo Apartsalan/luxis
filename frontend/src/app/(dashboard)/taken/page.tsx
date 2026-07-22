@@ -253,6 +253,19 @@ function TaskRow({
             Concept openen
           </Link>
         )}
+
+        {/* S236: verstuur-taak van de follow-up-adviseur → direct door naar de
+            Follow-up-pagina waar de brief gecontroleerd en verstuurd wordt. */}
+        {task.task_type === "send_letter" &&
+          task.action_config?.source === "followup_send" && (
+            <Link
+              href="/followup"
+              className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Controleren & versturen
+            </Link>
+          )}
       </div>
 
       {/* Skip button (open taken) */}

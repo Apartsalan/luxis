@@ -40,9 +40,11 @@ from app.incasso.models import CaseStepHistory, IncassoPipelineStep
 from app.incasso.service import (
     _auto_complete_tasks,
     advance_after_step_send,
+    close_followup_send_tasks,
     list_pipeline_steps,
 )
 from app.shared.exceptions import BadRequestError
+from app.workflow.models import WorkflowTask
 
 logger = logging.getLogger(__name__)
 
@@ -196,11 +198,76 @@ async def scan_for_followups(
             status=RecommendationStatus.PENDING,
         )
         db.add(rec)
+        existing_recs.append(rec)
         created += 1
 
     if created:
         await db.flush()
         logger.info("Follow-up scan for tenant: %d nieuwe aanbevelingen aangemaakt", created)
+
+    # S236 — de Taken-pagina is dé werklijst (keuze Arsalan): elk openstaand
+    # verstuur-advies krijgt een taak "{stap} versturen". Loopt over ALLE pending
+    # adviezen (niet alleen verse) zodat ook adviezen van vóór deze wijziging een
+    # taak krijgen. Ontdubbeld per advies (rec_id in action_config); de taak gaat
+    # dicht via de gedeelde doorschuif-motor (verstuurd) of supersede/afwijzen.
+    case_by_id = {c.id: c for c in cases}
+    pending_recs = [
+        r for r in existing_recs if r.status == RecommendationStatus.PENDING
+    ]
+    if pending_recs:
+        tasked_rec_ids = {
+            row[0]
+            for row in (
+                await db.execute(
+                    select(WorkflowTask.action_config["rec_id"].astext).where(
+                        WorkflowTask.tenant_id == tenant_id,
+                        WorkflowTask.case_id.in_(case_ids),
+                        WorkflowTask.task_type == "send_letter",
+                        WorkflowTask.action_config["source"].astext == "followup_send",
+                    )
+                )
+            ).all()
+        }
+        tasks_created = 0
+        for rec in pending_recs:
+            case = case_by_id.get(rec.case_id)
+            step = step_by_id.get(rec.incasso_step_id)
+            if (
+                not case
+                or not step
+                or not step.template_type  # alleen verstuur-adviezen, geen escalaties
+                or case.incasso_step_id != rec.incasso_step_id  # zaak al doorgeschoven
+                or str(rec.id) in tasked_rec_ids
+            ):
+                continue
+            db.add(
+                WorkflowTask(
+                    tenant_id=tenant_id,
+                    case_id=case.id,
+                    assigned_to_id=case.assigned_to_id,
+                    task_type="send_letter",
+                    title=f"{step.name} versturen — {case.case_number}",
+                    description=(
+                        f"{rec.reasoning} Controleren en versturen kan via de "
+                        "Follow-up-pagina."
+                    ),
+                    due_date=date.today(),
+                    status="due",
+                    auto_execute=False,
+                    action_config={
+                        "source": "followup_send",
+                        "rec_id": str(rec.id),
+                        "step_id": str(rec.incasso_step_id),
+                    },
+                )
+            )
+            tasks_created += 1
+        if tasks_created:
+            await db.flush()
+            logger.info(
+                "Follow-up scan: %d verstuur-taken aangemaakt op de werklijst",
+                tasks_created,
+            )
 
     return created
 
@@ -398,6 +465,10 @@ async def reject_recommendation(
     rec.reviewed_by_id = user_id
     rec.reviewed_at = datetime.now(UTC)
     rec.review_note = note
+    # S236 — advies afgewezen → de gespiegelde werklijst-taak vervalt mee.
+    await close_followup_send_tasks(
+        db, tenant_id, rec.case_id, step_id=rec.incasso_step_id, status="skipped"
+    )
     await db.flush()
     return rec
 

@@ -191,6 +191,44 @@ def test_grammar_fits_kent_de_live_gemeten_limieten():
             assert _grammar_fits(schema) is True, f"{naam} hoort te passen"
 
 
+async def test_grammar_400_valt_runtime_terug_op_forced_tool_use(monkeypatch):
+    """Live gezien (S238): 'Grammar compilation timed out' op een schema dat
+    binnen de limieten past — élke 400 op het structured-pad moet naar de
+    tool_use-herkansing, nooit hard falen."""
+    import anthropic as anthropic_mod
+    import httpx
+
+    calls = []
+
+    class _Msgs:
+        async def create(self, **kwargs):
+            calls.append(kwargs)
+            if "output_config" in kwargs:
+                raise anthropic_mod.BadRequestError(
+                    "Grammar compilation timed out.",
+                    response=httpx.Response(400, request=httpx.Request("POST", "http://x")),
+                    body=None,
+                )
+            return SimpleNamespace(
+                content=[SimpleNamespace(type="tool_use", input={"ok": True})],
+                stop_reason="tool_use",
+                usage=None,
+            )
+
+    fake = SimpleNamespace(messages=_Msgs())
+    monkeypatch.setattr(kimi_client.anthropic, "AsyncAnthropic", lambda api_key: fake)
+    monkeypatch.setattr(kimi_client.settings, "anthropic_api_key", "test-key")
+    schema = {"type": "object", "properties": {"ok": {"type": "boolean"}},
+              "required": ["ok"], "additionalProperties": False}
+
+    result = await _call_structured("m", "sys", "user", schema, "test_purpose")
+
+    assert result == {"ok": True}
+    assert len(calls) == 2
+    assert "output_config" in calls[0]
+    assert calls[1]["tool_choice"] == {"type": "tool", "name": "test_purpose"}
+
+
 async def test_te_groot_schema_valt_terug_op_forced_tool_use(monkeypatch):
     response = SimpleNamespace(
         content=[SimpleNamespace(type="tool_use", input={"debtor_name": "X"})],

@@ -297,16 +297,30 @@ async def _call_structured(
         raise ValueError("ANTHROPIC_API_KEY is not configured")
 
     client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+    response = None
     if _grammar_fits(schema):
-        response = await client.messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_message}],
-            output_config={"format": {"type": "json_schema", "schema": schema}},
-        )
+        try:
+            response = await client.messages.create(
+                model=model,
+                max_tokens=max_tokens,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_message}],
+                output_config={"format": {"type": "json_schema", "schema": schema}},
+            )
+        except anthropic.BadRequestError as e:
+            # Runtime-vangnet (S238-review): de grammar kan óók falen binnen de
+            # limieten ("Grammar compilation timed out", live gezien op het
+            # intake-schema). Elke 400 hier → forced tool_use, nooit hard stuk.
+            logger.warning(
+                "Structured output geweigerd (%s) — terugval op forced tool_use: %s",
+                purpose, e,
+            )
     else:
-        logger.info("Structured output via forced tool_use (%s): schema te groot voor grammar", purpose)
+        logger.info(
+            "Structured output via forced tool_use (%s): schema te groot voor grammar",
+            purpose,
+        )
+    if response is None:
         response = await client.messages.create(
             model=model,
             max_tokens=max_tokens,
@@ -380,36 +394,52 @@ async def call_claude_with_pdf(
     logger.info("Claude PDF analysis: %s (%.1f MB), model=%s", pdf_file.name, file_size_mb, model)
 
     client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-    response = await client.messages.create(
-        model=model,
-        max_tokens=16384,
-        system=system_prompt,
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "document",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "application/pdf",
-                            "data": pdf_b64,
+
+    async def _pdf_request(strict: bool):
+        return await client.messages.create(
+            model=model,
+            max_tokens=16384,
+            system=system_prompt,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "document",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "application/pdf",
+                                "data": pdf_b64,
+                            },
                         },
-                    },
-                    {"type": "text", "text": user_message},
-                ],
-            }
-        ],
-        tools=[
-            {
-                "name": purpose,
-                "description": "Extract structured data from the document.",
-                "strict": _grammar_fits(schema),
-                "input_schema": schema,
-            }
-        ],
-        tool_choice={"type": "tool", "name": purpose},
-    )
+                        {"type": "text", "text": user_message},
+                    ],
+                }
+            ],
+            tools=[
+                {
+                    "name": purpose,
+                    "description": "Extract structured data from the document.",
+                    "strict": strict,
+                    "input_schema": schema,
+                }
+            ],
+            tool_choice={"type": "tool", "name": purpose},
+        )
+
+    if _grammar_fits(schema):
+        try:
+            response = await _pdf_request(strict=True)
+        except anthropic.BadRequestError as e:
+            # Zelfde vangnet als _call_structured: grammar-compilatie kan ook
+            # binnen de limieten falen → één herkansing zonder strict.
+            logger.warning(
+                "Strict tool_use geweigerd (pdf_%s) — herkansing zonder strict: %s",
+                purpose, e,
+            )
+            response = await _pdf_request(strict=False)
+    else:
+        response = await _pdf_request(strict=False)
     await _record_usage(f"pdf_{purpose}", model, response)
     for block in response.content:
         if block.type == "tool_use":

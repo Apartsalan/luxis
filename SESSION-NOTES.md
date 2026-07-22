@@ -2,10 +2,101 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 21 juli 2026 (S234 — incassostappen: één doorschuif-motor + situatie-guards + AI-kosten uit bij stilte, LIVE).
-**Laatste feature/fix:** Alle vier verzendroutes (compose/send, AI-concept, batch, follow-up) schuiven nu door via één motor met dezelfde waarborgen (gesloten/verweer/eindstap/consument-naar-zakelijk). Derde + laatste sommatie kregen een brief → schuiven ook door. Kostenpunt Arsalan: bij een debiteur die niet reageert maakt het systeem geen duur AI-concept meer (was 21 op 21-7) — de follow-up-adviseur seint met een sjabloon. Detail: entry S234.
-**Openstaand (-> S235 e.v.):** S235 = betalingsregeling herkennen + flexibel termijnschema. **2 vragen voor Arsalan (zie entry S234):** (a) IN100613 staat afgesloten maar op stap 'Tweede sommatie' — vraag voor Lisanne klaargezet; (b) systeem sluit een dossier AL automatisch af bij volledige betaling — Arsalan koos "taak i.p.v. automatisch", dat is dus een wijziging van bestaand gedrag → bevestigen vóór bouw. Losse punten: BaseNet-delisting, derde AI-testronde + Lisanne-steekproef, kostenblokje, fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen.
-**Volgende sessie:** S235 — betalingsregeling + flexibel termijnschema (`docs/sessions/PROMPT-S235.md`).
+**Laatst bijgewerkt:** 22 juli 2026 (S235 — betalingsregeling: flexibel schema + pijplijnkoppeling + mail→taak + afsluit-melding, LIVE + volledig live getest).
+**Laatste feature/fix:** Flexibel termijnschema (2× €200, daarna €1.000) invoerbaar; nieuwe regeling zet de zaak op 'Bijhouden regeling'; wanprestatie → taak "vervolg bepalen"; regeling-mail → direct taak "Betalingsregeling vastleggen"; auto-afsluiten geeft nu de melding "wil je de cliënt factureren?". Alles end-to-end op prod-testdossiers bewezen (incl. echte AI-classificatie) en teruggedraaid. Detail: entry S235.
+**Openstaand (→ S236 e.v.):** IN100613 wacht op antwoord Lisanne (afgesloten maar op 'Tweede sommatie'); beslispunt takenpagina vs follow-up-pagina als werklijst (doorschuiven maakt sinds S232/S234 geen taak meer); 7 import-dossiers op 'Eerste sommatie' hebben hun eerste sommatie nog nooit gehad — adviezen staan klaar (Luxis is de waarheid, BaseNet doet geen incasso meer). Losse punten: BaseNet-delisting, derde AI-testronde + Lisanne-steekproef, kostenblokje, fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen.
+**Volgende sessie:** S236 — zie `docs/sessions/PROMPT-S236.md`.
+
+## Sessie 235 (22 juli 2026, Fable-review ontwerp+S234 → Opus-bouw → Fable-review + volledige live-test — betalingsregeling compleet, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S235. Vooraf twee Fable-reviews: (1) het S235-ontwerp tegen de bron
+gehouden → 3 correcties (Gat B-meting te rooskleurig: regeling-mail deed automatisch
+NIETS; Gat C zou letterlijk gebouwd altijd geweigerd worden door de hold-stap-blokkade in
+`advance_guard_reason`; wanprestatie heeft twee routes + 2 NOT NULL-velden vergen een
+keuze); (2) S234 nagereviewd → scanner-skip-motivatie klopte niet (zie gecorrigeerde
+entry S234), beslispunt werklijst, budgetfix. Daarna Opus-bouw in 5 blokken, daarna
+**alles end-to-end live getest op prod-testdossiers** (wens Arsalan: "volledig testen,
+niet een deel") en per test exact teruggedraaid.
+
+**Blok 1 — melding bij auto-afsluiten (besluit Arsalan 22-7, LIVE + live bewezen).**
+Nieuw meldingstype `case_closed_invoice`: sluit een dossier automatisch na volledige
+betaling, dan krijgen alle actieve gebruikers "Dossier {nr} volledig betaald en
+afgesloten — wil je de cliënt factureren?" met doorklik naar de facturen-tab
+(`notifications/service.py::create_case_closed_invoice_notification`, aangeroepen in
+`workflow/hooks.py::on_payment_received`; frontend-type + tab-route). Live bewezen op
+2026-00019: echte betaling €358,69 → zaak betaald + rente bevroren + concept discarded +
+advies superseded + melding bij béíde gebruikers; doorklik landde op de facturen-tab.
+Terugdraai-bijvangst: betaling verwijderen heropent de zaak automatisch (bestaand
+vangnet `_reopen_case_if_no_longer_paid` — bevestigd werkend).
+
+**Blok 2 — Gat A flexibel termijnschema (LIVE + live bewezen).** `ArrangementCreate`
+accepteert `installments[{due_date,amount}]`; som moet exact het totaalbedrag zijn
+(Decimal; 400 bij mismatch, wachter-getest), termijnen letterlijk overgenomen (gesorteerd
+op datum), `installment_amount` = eerste termijn (NOT NULL, ontwerpkeuze), start/eind =
+eerste/laatste termijn. UI (`BetalingsregelingSection`): schakelaar "Handmatig schema" →
+rijen-editor (datum+bedrag) + lopende telling in centen; Aanmaken disabled tot de som
+klopt; kaart toont "Flexibel schema" i.p.v. frequentie bij ongelijke bedragen. Live
+bewezen op 2026-00007 (2×200+1000, expres ongesorteerd aangeleverd → exact goed).
+
+**Blok 3 — Gat C pijplijnkoppeling (LIVE + live bewezen).** Nieuwe regeling →
+`_move_case_to_regeling_step`: zaak naar hold-stap 'Bijhouden regeling' via
+`move_case_to_step` (trigger_type "arrangement"); bewust NIET via `advance_guard_reason`
+(blokkeert hold-doelen), wél gesloten/verweer-checks; stap ontbreekt → log + niets.
+Wanprestatie → `_ensure_arrangement_defaulted_task` op het gedeelde punt van BEIDE
+routes (`default_arrangement` + `update_arrangement`), gededuped; annuleren/afronden
+geen taak. Live: 2026-00007 verhuisde Derde sommatie → Bijhouden regeling; wanprestatie
+gaf direct de taak "Regeling verbroken — vervolg bepalen".
+
+**Blok 4 — Gat B regeling-mail → taak (LIVE + live bewezen mét echte AI).** Nieuwe
+orchestrator-handler `handle_email_classified_arrangement` op het classified-event:
+categorie `betalingsregeling_verzoek` → `ensure_arrangement_request_task` ("Betalingsregeling
+vastleggen — {zaak}", due vandaag) op het moment van herkennen — niet in de dode
+goedkeur-wachtrij. Geen taak bij actieve regeling/gesloten zaak/open taak. Kruispunt: de
+escalate-tak van `execute_classification` slaat zijn escalatie-taak over zolang de
+gerichte taak open staat. Live: testmail "ik wil een betalingsregeling in drie termijnen"
+op 2026-00006 → echte AI classificeerde `betalingsregeling_verzoek` (0.95) → taak stond
+er direct; 0 nieuwe AI-concepten (verweer-route bleef terecht stil).
+
+**Blok 5 — budgetfix (Fable-reviewpunt S234).** Sjabloon-skips in de dagelijkse AI-batch
+worden nu vóór de budget-slice weggefilterd — een skip kost geen AI-oproep en verdringt
+geen echte sjabloonloze gevallen meer (`workflow/scheduler.py`).
+
+### Gewijzigde bestanden
+Backend: `notifications/service.py`, `workflow/hooks.py`, `workflow/scheduler.py`,
+`collections/{service,schemas}.py`, `ai_agent/{orchestrator,service}.py`. Frontend:
+`use-notifications.ts`, `use-collections.ts`, `app-header.tsx`,
+`BetalingsregelingSection.tsx`. Tests (16 nieuwe wachters):
+`test_case_closed_notification.py` (2), `test_arrangement_pipeline.py` (6),
+`test_arrangement_request_task.py` (5), `test_payment_arrangements.py` (+3).
+Docs: S235-ONTWERP.md (3 correcties), S234-entry gecorrigeerd. Commits `53d52e5`
+(ontwerp-review), `5f3dc67` (S234-correctie), `41497aa` (bouw). Backend+frontend
+gedeployd via SSH `--force-recreate` (geen migratie — alles additief op bestaande tabellen).
+
+### Verificatie
+221 tests groen (brede -k-run installment/regeling/payment/followup/arrangement);
+ruff + tsc schoon; CI groen op alle 3 commits (incl. GitHub-Deploy, geen race dit keer);
+containers healthy; login+API 200. Live-testronde op prod-testdossiers (2026-00007/-00019/
+-00006): alle vier ketens end-to-end bewezen, daarna per keten in één transactie
+teruggedraaid en nageteld (staphistorie hersteld, betaling weg, zaak heropend,
+meldingen/taken/testmail gewist). Enig blijvend spoor: 1 rij in `ai_usage` (de echte
+classificatie-call, ~¢) — dat is juist het doel van die tabel.
+
+### Bekende issues / bewust niet gedaan
+- **4 cosmetische restjes** (Fable-review, geen fix nodig): (a) geannuleerd formulier
+  onthoudt de handmatige rijen bij heropenen; (b) etiket "Flexibel schema" verschijnt
+  alleen bij ongelijke bedragen; (c) som-mismatch-melding toont bedragen met punt
+  (1400.00) i.p.v. NL-notatie; (d) status "nieuw" wordt "in_behandeling" bij regeling
+  (gevolg van de stap-zet — correct maar goed om te weten).
+- **IN100613** blijft wachten op Lisanne (niet aangeraakt).
+- **Beslispunt werklijst** (taken- vs follow-up-pagina) ligt bij Arsalan/Lisanne.
+- De 7 'Eerste sommatie'-import-dossiers hebben hun sommatie nog nooit gehad — de 7
+  pending follow-up-adviezen zijn terecht en wachten op verwerking (GO per verzending).
+
+### Volgende sessie
+S236: verwerk het antwoord van Lisanne over IN100613 (dry-run + GO + natelling) en het
+werklijst-beslispunt; daarna losse punten of nieuw hoofdonderwerp naar keuze Arsalan.
+Zie `docs/sessions/PROMPT-S236.md`.
 
 ## Sessie 234 (21 juli 2026, Fable-onderzoek/ontwerp → Opus-bouw → Fable-review — incassostappen situatie-gestuurd afgemaakt, LIVE)
 
@@ -717,85 +808,3 @@ ai_agent,cases}.py` (+8 wachters). 8 commits (`b888cf8`→`20f0c46`), backend me
 ### Volgende sessie
 S227: A1 AI-antwoord-knop op het dossier-tabblad Correspondentie (Opus, kruispunt-
 matrix + brede test). KvK-backfill voorrang zodra sleutel binnen (~22 juli).
-
-## Sessie 225 (17 juli 2026, Opus-bouw — beslispunten B1/B2/B3 + eerste S221b-UX-restpunten)
-
-### Samenvatting
-Bouwsprint op de S224-veegsessie. Voorrang-check KvK: sleutel niet op de VPS →
-door. Beslispunten met Arsalan afgestemd (zie kop); daarna gebouwd, getest,
-gedeployd via SSH en geverifieerd.
-
-**B1 — facturen via kantoorkanaal (LIVE).** `send_invoice` kreeg
-`send_as_tenant_account=True` → een factuur aan de opdrachtgever gaat nu via
-incasso@ i.p.v. het persoonlijke account van de klikker. Onderwerp blijft bewust
-eigen formaat "Factuur {nr}" (allowlist-motivering M4 bijgewerkt).
-
-**B2 + B3 — twee dode verzendroutes verwijderd (LIVE).** (B2) AI-tool
-`email_compose` uit de tools-registry + handler weg (registry had geen aanroepers;
-tool-count 34→33). (B3) legacy endpoint `/api/email/cases/{id}/send` + schema's +
-hook `useSendCaseEmail` weg — die route was UI-dood maar wél levend (SMTP
-geconfigureerd, geen 14-dagenbrief-gate, half drieluik). De spinner die aan de
-dode mutation hing draait nu op een echte lokale verzend-vlag. Beide
-wachter-allowlists (`test_send_route_drift_guard.py`) meegetrokken; eerlijkheids-
-test dwong dat af. **Prod bewezen:** legacy endpoint geeft nu 404, `/email/status`
-leeft (401).
-
-**B4 — Bayar IN100613 NIET aangeraakt.** Uitgezocht: het dossier is 15/7 om 17:27
-handmatig vanuit Arsalans account gesloten (BaseNet-origin nog 'Lopend', 0
-betalingen) — dus géén BaseNet-afsluiting. Arsalan wil het eerst zelf bekijken →
-dossier + wees-advies ongemoeid.
-
-**S221b-UX-restant (eerste lichting, LIVE):**
-- **Follow-up "Dagen" live:** de kolom toonde de bevroren waarde van toen de
-  aanbeveling werd aangemaakt (import stempelde overal 0d). Nu live berekend uit
-  `step_entered_at` zolang de zaak nog op de stap van de aanbeveling staat; is de
-  zaak doorgeschoven, dan blijft de historische waarde. **Prod bewezen:** 10
-  openstaande adviezen 0d→8d. +2 tests. Dossiernummer nu direct klikbaar in de rij.
-- **Soft-delete-banner:** een verwijderd dossier (via directe URL leesbaar) krijgt
-  een rode "dit dossier is verwijderd"-balk op alle tabs.
-- **Agenda lege staat:** overkoepelende hint met "Nieuw event" + Outlook-sync i.p.v.
-  een kaal raster.
-
-### Gewijzigde bestanden
-Backend: `invoices/service.py`, `ai_agent/tools/{definitions,handlers/email}.py`,
-`email/router.py` (+ `email/schemas.py` verwijderd), `ai_agent/followup_service.py`.
-Tests: `test_send_route_drift_guard.py`, `test_ai_tools/test_registry.py`,
-`test_email_router.py`, `test_followup.py` (+2). Frontend: `hooks/{use-documents,
-use-cases}.ts`, `zaken/[id]/page.tsx`, `zaken/[id]/components/DocumentenTab.tsx`,
-`followup/page.tsx`, `agenda/page.tsx`. 2 commits, backend+frontend gedeployd
-(geen migratie).
-
-### Testronde (Fable, zelfde dag — wens Arsalan: "20 aanklikken en alles klopt")
-Volledig rapport: `docs/sessions/S225-testronde.md`. Kern: 13 testzaken
-aangemaakt (debiteur = Arsalans gmail), batch via de échte UI gedraaid.
-**Bewezen:** 12/12 mails bezorgd in gmail (afzender incasso@, huisformaat,
-rente-PDF, huisstijl); bedragen op de cent onafhankelijk nagerekend (€292,11 /
-€140,50 / €191,12); consument zonder 14-dagenbrief correct geblokkeerd mét
-wetsartikel; alle zaken doorgeschoven naar Tweede sommatie; per zaak automatisch
-een nieuwe taak (+4 dgn); alles zichtbaar op incasso/dossier/tijdlijn/Mail/
-Taken/follow-up. **Word-tak (B6) live gevuurd** via tijdelijke TEST-stap
-(DOCX→PDF-mail bezorgd door SMTP-server geaccepteerd; stap daarna verwijderd,
-pijplijn weer 15 stappen). **B1 live bewezen** met testfactuur F2026-00001
-(afzender incasso@, daarna geannuleerd).
-
-### Bekende issues / bewust niet gedaan
-- **⚠️ Vondst testronde: dossiernummer-hergebruik** — nummers van verwijderde
-  dossiers worden hergebruikt en de mailsync koppelt oude mails met dat nummer
-  aan het nieuwe dossier (2× waargenomen). Fixvoorstel in rapport §3.1.
-- Word-tak-mail (dagvaarding-PDF) na ~20 min nog niet in gmail bezorgd (wel
-  verstuurd + geaccepteerd + geen bounce; 12 andere mails zelfde kanaal kwamen
-  direct aan) → nachecken S226.
-- Rechtsvorm-afkorting "bv" valt op de veilige kant (bijlage mee); volle
-  KvK-benamingen na de backfill lossen dit op.
-- Testdata 2026-00007 t/m -00019 + TEST-contacten + 12 taken: opruimen later
-  (afspraak Arsalan).
-- S221b-rest niet gebouwd: review-scherm classificatie+concept, voortgangsindicator
-  bij genereren, échte HTML-tabellen (injectie-oppervlak), tijdlijn-mailregel
-  klikbaar (id-betekenis eerst verifiëren — deep-link naar correspondentie),
-  follow-up sorteerbare koppen (vergt server-side sortering), intake-detectie
-  dempen, Blok 6-beslismemo b2b/b2c.
-- V2c (klein): classificatie-antwoord-onderwerp naar `build_reply_subject`.
-
-### Volgende sessie
-S226: nummer-hergebruik-vondst + testdata-opruiming + S221b-rest. KvK-backfill
-voorrang zodra de sleutel binnen is (~22 juli).

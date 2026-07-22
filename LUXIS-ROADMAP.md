@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 21 juli 2026 (S234 — incassostappen: één doorschuif-motor + situatie-guards + AI-kosten uit bij stilte, LIVE). Alle vier verzendroutes schuiven nu door via één motor met dezelfde waarborgen (gesloten/verweer/eindstap/consument→zakelijk); derde + laatste sommatie kregen een brief (2 prod-UPDATEs); en bij een niet-reagerende debiteur maakt het systeem geen duur AI-concept meer (was 21 op 21-7) — de follow-up-adviseur seint met een sjabloon. Rapport: entry S234 in `SESSION-NOTES.md`. **Volgende = S235: betalingsregeling herkennen uit mail + flexibel termijnschema. Eerst 2 open vragen (IN100613; auto-afsluiten bij betaling).**
+**Laatst bijgewerkt:** 22 juli 2026 (S235 — betalingsregeling compleet: flexibel termijnschema + pijplijnkoppeling + regeling-mail→taak + afsluit-melding, LIVE). Alles end-to-end op prod-testdossiers bewezen (incl. echte AI-classificatie 0.95) en per keten teruggedraaid. Rapport: entry S235 in `SESSION-NOTES.md`. **Volgende = S236: IN100613 (antwoord Lisanne) + werklijst-beslispunt, dan losse punten.**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,29 +53,24 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 21 juli 2026, S234)
+## 🎯 Huidige prioriteit (bijgewerkt 22 juli 2026, S235)
 
-> ✅ **S234 AFGEROND — INCASSOSTAPPEN SITUATIE-GESTUURD AFGEMAAKT (LIVE).** Geen nieuw
-> stappen-model (het is onder water al situatie-gestuurd); de gaten gedicht. **Blok A:**
-> één doorschuif-motor (`advance_after_step_send`) voor álle vier verzendroutes met
-> gedeelde waarborgen (gesloten/verweer/eindstap/**consument→zakelijke stap**);
-> `_try_auto_advance` verwijderd. **Blok B:** derde + laatste sommatie kregen een brief
-> → schuiven ook door (2 prod-UPDATEs, nageteld). **Blok D (kostenpunt Arsalan):** de
-> dagelijkse AI-conceptbatch maakt geen dure concepten meer bij stilte (was 21 op 21-7)
-> — de follow-up-adviseur seint met een sjabloon; de scanner adviseert geen al-verstuurde
-> brief meer; `evaluate_timeout_rules` filtert gesloten zaken (IN100613 kreeg elke
-> ochtend een concept op een afgesloten zaak). Commit `bd81744`. Detail: SESSION-NOTES
-> entry S234.
+> ✅ **S235 AFGEROND — BETALINGSREGELING COMPLEET (LIVE + volledig live getest).**
+> Flexibel termijnschema (2× €200, daarna €1.000) invoerbaar met som-op-de-cent-controle;
+> nieuwe regeling zet de zaak automatisch op 'Bijhouden regeling' (hold); wanprestatie
+> geeft via beide routes één taak "Regeling verbroken — vervolg bepalen"; een herkende
+> regeling-mail maakt direct de taak "Betalingsregeling vastleggen" (niet meer via de
+> dode goedkeur-wachtrij); automatisch afsluiten na volledige betaling geeft de melding
+> "wil je de cliënt factureren?" met doorklik naar de facturen-tab. Alle vier ketens
+> end-to-end op prod-testdossiers bewezen en teruggedraaid. 16 nieuwe wachters, CI groen.
+> Commit `41497aa`. Detail: SESSION-NOTES entry S235.
 >
-> ⚠️ **2 vragen open vóór S235:** (a) IN100613 = afgesloten maar op stap 'Tweede sommatie'
-> (vraag voor Lisanne klaargezet; zaak-data onaangeraakt); (b) systeem sluit AL
-> automatisch af bij volledige betaling — Arsalans keuze "taak i.p.v. automatisch" is een
-> gedragswijziging → bevestigen.
->
-> 🎯 **VOLGENDE (S235):** betalingsregeling herkennen uit mail (classificatie bestaat al)
-> + flexibel termijnschema. Daarna: BaseNet-delisting, derde AI-testronde + Lisanne-
-> steekproef, kostenblokje dashboard. Onverwerkt: fysieke-telefoon-check, opmaak-restpunt
-> S227, S221b-rest, DMARC, testdata opruimen. KvK: niet naar vragen.
+> 🎯 **VOLGENDE (S236):** (a) IN100613 rechtzetten zodra Lisanne antwoordt (dry-run + GO +
+> natelling); (b) beslispunt takenpagina vs follow-up-pagina als werklijst; (c) de 7
+> import-dossiers op 'Eerste sommatie' — adviezen staan klaar, verzending per GO. Daarna:
+> BaseNet-delisting, derde AI-testronde + Lisanne-steekproef, kostenblokje dashboard,
+> fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen.
+> KvK: niet naar vragen.
 
 ## Projectdocumenten
 

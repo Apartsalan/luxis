@@ -1308,3 +1308,30 @@ i.p.v. "debiteur heeft niet betaald". Meenemen in de fase-2-beslislijst na D-C.
 > S228/S227: fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata.
 > KvK: niet naar vragen (Arsalan komt er zelf op terug).
 
+
+
+<!-- Gearchiveerd 22 juli 2026 (S235-afsluiting) -->
+
+## 🎯 Huidige prioriteit (bijgewerkt 21 juli 2026, S234)
+
+> ✅ **S234 AFGEROND — INCASSOSTAPPEN SITUATIE-GESTUURD AFGEMAAKT (LIVE).** Geen nieuw
+> stappen-model (het is onder water al situatie-gestuurd); de gaten gedicht. **Blok A:**
+> één doorschuif-motor (`advance_after_step_send`) voor álle vier verzendroutes met
+> gedeelde waarborgen (gesloten/verweer/eindstap/**consument→zakelijke stap**);
+> `_try_auto_advance` verwijderd. **Blok B:** derde + laatste sommatie kregen een brief
+> → schuiven ook door (2 prod-UPDATEs, nageteld). **Blok D (kostenpunt Arsalan):** de
+> dagelijkse AI-conceptbatch maakt geen dure concepten meer bij stilte (was 21 op 21-7)
+> — de follow-up-adviseur seint met een sjabloon; de scanner adviseert geen al-verstuurde
+> brief meer; `evaluate_timeout_rules` filtert gesloten zaken (IN100613 kreeg elke
+> ochtend een concept op een afgesloten zaak). Commit `bd81744`. Detail: SESSION-NOTES
+> entry S234.
+>
+> ⚠️ **2 vragen open vóór S235:** (a) IN100613 = afgesloten maar op stap 'Tweede sommatie'
+> (vraag voor Lisanne klaargezet; zaak-data onaangeraakt); (b) systeem sluit AL
+> automatisch af bij volledige betaling — Arsalans keuze "taak i.p.v. automatisch" is een
+> gedragswijziging → bevestigen.
+>
+> 🎯 **VOLGENDE (S235):** betalingsregeling herkennen uit mail (classificatie bestaat al)
+> + flexibel termijnschema. Daarna: BaseNet-delisting, derde AI-testronde + Lisanne-
+> steekproef, kostenblokje dashboard. Onverwerkt: fysieke-telefoon-check, opmaak-restpunt
+> S227, S221b-rest, DMARC, testdata opruimen. KvK: niet naar vragen.

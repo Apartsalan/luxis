@@ -10178,3 +10178,85 @@ S225: beslispunten B1-B6 met Arsalan afhandelen, dan S221b-UX-restant (Opus:
 review-scherm, voortgangsindicator, HTML-tabellen, Blok 5-rest, Blok 6-memo).
 KvK-backfill voorrang zodra de sleutel binnen is (~22 juli).
 
+
+## Sessie 225 (17 juli 2026, Opus-bouw — beslispunten B1/B2/B3 + eerste S221b-UX-restpunten)
+
+### Samenvatting
+Bouwsprint op de S224-veegsessie. Voorrang-check KvK: sleutel niet op de VPS →
+door. Beslispunten met Arsalan afgestemd (zie kop); daarna gebouwd, getest,
+gedeployd via SSH en geverifieerd.
+
+**B1 — facturen via kantoorkanaal (LIVE).** `send_invoice` kreeg
+`send_as_tenant_account=True` → een factuur aan de opdrachtgever gaat nu via
+incasso@ i.p.v. het persoonlijke account van de klikker. Onderwerp blijft bewust
+eigen formaat "Factuur {nr}" (allowlist-motivering M4 bijgewerkt).
+
+**B2 + B3 — twee dode verzendroutes verwijderd (LIVE).** (B2) AI-tool
+`email_compose` uit de tools-registry + handler weg (registry had geen aanroepers;
+tool-count 34→33). (B3) legacy endpoint `/api/email/cases/{id}/send` + schema's +
+hook `useSendCaseEmail` weg — die route was UI-dood maar wél levend (SMTP
+geconfigureerd, geen 14-dagenbrief-gate, half drieluik). De spinner die aan de
+dode mutation hing draait nu op een echte lokale verzend-vlag. Beide
+wachter-allowlists (`test_send_route_drift_guard.py`) meegetrokken; eerlijkheids-
+test dwong dat af. **Prod bewezen:** legacy endpoint geeft nu 404, `/email/status`
+leeft (401).
+
+**B4 — Bayar IN100613 NIET aangeraakt.** Uitgezocht: het dossier is 15/7 om 17:27
+handmatig vanuit Arsalans account gesloten (BaseNet-origin nog 'Lopend', 0
+betalingen) — dus géén BaseNet-afsluiting. Arsalan wil het eerst zelf bekijken →
+dossier + wees-advies ongemoeid.
+
+**S221b-UX-restant (eerste lichting, LIVE):**
+- **Follow-up "Dagen" live:** de kolom toonde de bevroren waarde van toen de
+  aanbeveling werd aangemaakt (import stempelde overal 0d). Nu live berekend uit
+  `step_entered_at` zolang de zaak nog op de stap van de aanbeveling staat; is de
+  zaak doorgeschoven, dan blijft de historische waarde. **Prod bewezen:** 10
+  openstaande adviezen 0d→8d. +2 tests. Dossiernummer nu direct klikbaar in de rij.
+- **Soft-delete-banner:** een verwijderd dossier (via directe URL leesbaar) krijgt
+  een rode "dit dossier is verwijderd"-balk op alle tabs.
+- **Agenda lege staat:** overkoepelende hint met "Nieuw event" + Outlook-sync i.p.v.
+  een kaal raster.
+
+### Gewijzigde bestanden
+Backend: `invoices/service.py`, `ai_agent/tools/{definitions,handlers/email}.py`,
+`email/router.py` (+ `email/schemas.py` verwijderd), `ai_agent/followup_service.py`.
+Tests: `test_send_route_drift_guard.py`, `test_ai_tools/test_registry.py`,
+`test_email_router.py`, `test_followup.py` (+2). Frontend: `hooks/{use-documents,
+use-cases}.ts`, `zaken/[id]/page.tsx`, `zaken/[id]/components/DocumentenTab.tsx`,
+`followup/page.tsx`, `agenda/page.tsx`. 2 commits, backend+frontend gedeployd
+(geen migratie).
+
+### Testronde (Fable, zelfde dag — wens Arsalan: "20 aanklikken en alles klopt")
+Volledig rapport: `docs/sessions/S225-testronde.md`. Kern: 13 testzaken
+aangemaakt (debiteur = Arsalans gmail), batch via de échte UI gedraaid.
+**Bewezen:** 12/12 mails bezorgd in gmail (afzender incasso@, huisformaat,
+rente-PDF, huisstijl); bedragen op de cent onafhankelijk nagerekend (€292,11 /
+€140,50 / €191,12); consument zonder 14-dagenbrief correct geblokkeerd mét
+wetsartikel; alle zaken doorgeschoven naar Tweede sommatie; per zaak automatisch
+een nieuwe taak (+4 dgn); alles zichtbaar op incasso/dossier/tijdlijn/Mail/
+Taken/follow-up. **Word-tak (B6) live gevuurd** via tijdelijke TEST-stap
+(DOCX→PDF-mail bezorgd door SMTP-server geaccepteerd; stap daarna verwijderd,
+pijplijn weer 15 stappen). **B1 live bewezen** met testfactuur F2026-00001
+(afzender incasso@, daarna geannuleerd).
+
+### Bekende issues / bewust niet gedaan
+- **⚠️ Vondst testronde: dossiernummer-hergebruik** — nummers van verwijderde
+  dossiers worden hergebruikt en de mailsync koppelt oude mails met dat nummer
+  aan het nieuwe dossier (2× waargenomen). Fixvoorstel in rapport §3.1.
+- Word-tak-mail (dagvaarding-PDF) na ~20 min nog niet in gmail bezorgd (wel
+  verstuurd + geaccepteerd + geen bounce; 12 andere mails zelfde kanaal kwamen
+  direct aan) → nachecken S226.
+- Rechtsvorm-afkorting "bv" valt op de veilige kant (bijlage mee); volle
+  KvK-benamingen na de backfill lossen dit op.
+- Testdata 2026-00007 t/m -00019 + TEST-contacten + 12 taken: opruimen later
+  (afspraak Arsalan).
+- S221b-rest niet gebouwd: review-scherm classificatie+concept, voortgangsindicator
+  bij genereren, échte HTML-tabellen (injectie-oppervlak), tijdlijn-mailregel
+  klikbaar (id-betekenis eerst verifiëren — deep-link naar correspondentie),
+  follow-up sorteerbare koppen (vergt server-side sortering), intake-detectie
+  dempen, Blok 6-beslismemo b2b/b2c.
+- V2c (klein): classificatie-antwoord-onderwerp naar `build_reply_subject`.
+
+### Volgende sessie
+S226: nummer-hergebruik-vondst + testdata-opruiming + S221b-rest. KvK-backfill
+voorrang zodra de sleutel binnen is (~22 juli).

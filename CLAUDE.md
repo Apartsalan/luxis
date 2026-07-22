@@ -97,6 +97,11 @@ Na goedkeuring.
 
 ## Working Agreements
 
+- **Agent-laag-compatibel bouwen (besluit Arsalan 22-7, S237):** nieuwe businesslogica
+  altijd in de service-laag (router dun). De slapende agent-laag (`ai_agent/tools/`)
+  wordt later gebouwd op pydantic-ai; elke service-functie moet dan direct als
+  tool-handler kunnen dienen. Toekomst-adopties + triggers: `docs/TOEKOMST-REPOS.md` —
+  **raakt een sessie zo'n trigger, meld het bij Arsalan vóór het bouwen.**
 - Zelfstandig werken, geen toestemming (behalve destructieve acties)
 - Nieuwe features: altijd 4-stappen werkwijze
 - Juridische twijfel: flaggen, niet stoppen

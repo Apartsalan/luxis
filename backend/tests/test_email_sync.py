@@ -3,9 +3,11 @@
 import json
 import uuid
 from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import Tenant, User
@@ -944,7 +946,7 @@ def test_determine_direction_handles_none_from_email():
 
     msg = EmailMessage(provider_message_id="x", from_email=None)
     # Should not raise; an unknown sender is treated as inbound.
-    assert _determine_direction(msg, "lisanne@kestinglegal.nl") == "inbound"
+    assert _determine_direction(msg, {"lisanne@kestinglegal.nl"}) == "inbound"
 
 
 def test_determine_direction_outbound_matches_account():
@@ -953,7 +955,20 @@ def test_determine_direction_outbound_matches_account():
     from app.email.sync_service import _determine_direction
 
     msg = EmailMessage(provider_message_id="x", from_email="Lisanne@KestingLegal.nl")
-    assert _determine_direction(msg, "lisanne@kestinglegal.nl") == "outbound"
+    assert _determine_direction(msg, {"lisanne@kestinglegal.nl"}) == "outbound"
+
+
+def test_determine_direction_outbound_matches_office_address():
+    """S236 — een mail namens het kántooradres (incasso@, 'Verzenden als') op het
+    account van een gebruiker (seidony@) is een eigen verzonden mail, geen
+    inkomende post. Zonder deze regel kwam elke via het kantoorkanaal verstuurde
+    sommatie als 'inbound' terug het systeem in (7× op 22-7, incl. AI-call per stuk)."""
+    from app.email.providers.base import EmailMessage
+    from app.email.sync_service import _determine_direction
+
+    msg = EmailMessage(provider_message_id="x", from_email="Incasso@KestingLegal.nl")
+    own = {"seidony@kestinglegal.nl", "incasso@kestinglegal.nl"}
+    assert _determine_direction(msg, own) == "outbound"
 
 
 @pytest.mark.asyncio
@@ -977,6 +992,108 @@ async def test_oauth_status_surfaces_sync_error(
     assert data["connected"] is True
     assert data["last_sync_error"] == "invalid_grant: token expired"
     assert data["last_sync_at"] is not None
+
+
+# ── S236: kantooradres-mails in de sync (richting + ontdubbeling) ────────────
+
+
+def _fake_provider_with(messages):
+    provider = MagicMock()
+    provider.list_messages = AsyncMock(return_value=(messages, None))
+    return provider
+
+
+@pytest.mark.asyncio
+async def test_sync_office_address_mail_merges_into_outbound_record(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """S236 — de Verzonden Items-kopie van een mail namens het kantooradres moet
+    samenvloeien met het synthetische uitgaande record (echte Graph-id erop),
+    niet als nieuwe 'inkomende' mail worden opgeslagen."""
+    from app.email.providers.base import EmailMessage
+    from app.email.sync_service import sync_emails_for_account
+
+    test_tenant.email = "incasso@kestinglegal.nl"
+    account = await _create_email_account(db, test_tenant.id, test_user.id)
+    account.email_address = "seidony@kestinglegal.nl"
+
+    # Synthetisch uitgaand record zoals het verzendpad dat achterlaat.
+    outbound = SyncedEmail(
+        tenant_id=test_tenant.id,
+        email_account_id=account.id,
+        provider_message_id="outlook-sent-123-Sommatie IN100592",
+        subject="Sommatie IN100592",
+        from_email="incasso@kestinglegal.nl",
+        to_emails="[]",
+        cc_emails="[]",
+        direction="outbound",
+        email_date=datetime.now(UTC),
+        synced_at=datetime.now(UTC),
+    )
+    db.add(outbound)
+    await db.commit()
+
+    msg = EmailMessage(
+        provider_message_id="REAL-GRAPH-ID",
+        thread_id="THREAD-1",
+        subject="Sommatie IN100592",
+        from_email="incasso@kestinglegal.nl",
+        to_emails=["debiteur@example.com"],
+    )
+    with (
+        patch("app.email.sync_service.get_provider", return_value=_fake_provider_with([msg])),
+        patch("app.email.sync_service.get_valid_access_token", new_callable=AsyncMock,
+              return_value="tok"),
+    ):
+        await sync_emails_for_account(db, account)
+    await db.commit()
+
+    rows = (
+        await db.execute(
+            select(SyncedEmail).where(SyncedEmail.email_account_id == account.id)
+        )
+    ).scalars().all()
+    assert len(rows) == 1  # samengevloeid, geen duplicaat
+    assert rows[0].direction == "outbound"
+    assert rows[0].provider_message_id == "REAL-GRAPH-ID"
+    assert rows[0].provider_thread_id == "THREAD-1"
+
+
+@pytest.mark.asyncio
+async def test_sync_office_address_mail_without_send_record_is_outbound(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """S236 — ook zónder synthetisch verzendrecord (bv. handmatig vanuit Outlook
+    als incasso@ gestuurd) is een kantooradres-mail 'outbound', nooit inkomende
+    post met notificatie/AI-beoordeling."""
+    from app.email.providers.base import EmailMessage
+    from app.email.sync_service import sync_emails_for_account
+
+    test_tenant.email = "incasso@kestinglegal.nl"
+    account = await _create_email_account(db, test_tenant.id, test_user.id)
+    account.email_address = "seidony@kestinglegal.nl"
+    await db.commit()
+
+    msg = EmailMessage(
+        provider_message_id="REAL-GRAPH-ID-2",
+        subject="Losse mail vanuit Outlook",
+        from_email="Incasso@KestingLegal.nl",
+        to_emails=["debiteur@example.com"],
+    )
+    with (
+        patch("app.email.sync_service.get_provider", return_value=_fake_provider_with([msg])),
+        patch("app.email.sync_service.get_valid_access_token", new_callable=AsyncMock,
+              return_value="tok"),
+    ):
+        await sync_emails_for_account(db, account)
+    await db.commit()
+
+    row = (
+        await db.execute(
+            select(SyncedEmail).where(SyncedEmail.email_account_id == account.id)
+        )
+    ).scalar_one()
+    assert row.direction == "outbound"
 
 
 # ── Log-injectie via gevouwen headers/bestandsnaam (S202 L6) ─────────────────

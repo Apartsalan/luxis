@@ -324,11 +324,34 @@ def _parse_email_date(date_str: str) -> datetime:
         return datetime.now(UTC)
 
 
-def _determine_direction(email_msg: EmailMessage, account_email: str) -> str:
-    """Determine if an email is inbound or outbound based on the account email."""
-    if (email_msg.from_email or "").lower() == account_email.lower():
+def _determine_direction(email_msg: EmailMessage, own_addresses: set[str]) -> str:
+    """Determine if an email is inbound or outbound.
+
+    S236 — 'van ons' is méér dan het accountadres alleen: mails namens het
+    kantooradres (incasso@, 'Verzenden als') staan in de Verzonden Items van het
+    vervoerende account met een ándere afzender dan het accountadres. Zonder die
+    kennis kwam elke via het kantoorkanaal verstuurde mail als 'inbound' terug
+    (eigen sommaties als inkomende post + AI-beoordeling per stuk).
+    """
+    if (email_msg.from_email or "").lower() in own_addresses:
         return "outbound"
     return "inbound"
+
+
+async def _own_sender_addresses(db: AsyncSession, account: EmailAccount) -> set[str]:
+    """Adressen die voor dit account als 'eigen afzender' tellen: het accountadres
+    plus het kantooradres van de tenant (Tenant.email — dezelfde bron als
+    resolve_office_channel gebruikt voor 'Verzenden als')."""
+    from app.auth.models import Tenant
+
+    own = {(account.email_address or "").lower()}
+    office = (
+        await db.execute(select(Tenant.email).where(Tenant.id == account.tenant_id))
+    ).scalar()
+    if office:
+        own.add(office.strip().lower())
+    own.discard("")
+    return own
 
 
 async def _get_case_contact_emails(
@@ -522,6 +545,9 @@ async def sync_emails_for_account(
     stats = {"fetched": len(messages), "new": 0, "linked": 0, "skipped": 0}
     new_emails_with_attachments: list[tuple[EmailMessage, uuid.UUID]] = []
 
+    # S236 — eigen afzenders (accountadres + kantooradres) één keer per sync.
+    own_addresses = await _own_sender_addresses(db, account)
+
     for msg in messages:
         # Check if already synced (dedup by provider_message_id)
         existing = await db.execute(
@@ -579,8 +605,10 @@ async def sync_emails_for_account(
         # Secondary dedup: outbound emails sent via provider get a synthetic
         # message ID ("outlook-sent-..."). When the sync later picks up the
         # same email from Sent Items with a real Graph ID, merge instead of
-        # creating a duplicate.
-        if msg.from_email and msg.from_email.lower() == account.email_address.lower():
+        # creating a duplicate. S236: ook mails namens het kántooradres
+        # ('Verzenden als' incasso@) zijn eigen verzendingen — die droegen een
+        # andere afzender dan het accountadres en vielen buiten deze poort.
+        if msg.from_email and msg.from_email.lower() in own_addresses:
             from sqlalchemy import func as sa_func
 
             dedup_result = await db.execute(
@@ -616,11 +644,11 @@ async def sync_emails_for_account(
                 email = email[email.index("<") + 1 : email.index(">")]
             all_addresses.append(email.lower())
 
-        # Remove the account's own email from matching
-        all_addresses = [a for a in all_addresses if a != account.email_address.lower()]
+        # Remove our own addresses (account + kantooradres) from matching
+        all_addresses = [a for a in all_addresses if a not in own_addresses]
 
         # ── Matching pipeline ──────────────────────────────────────────────
-        direction = _determine_direction(msg, account.email_address)
+        direction = _determine_direction(msg, own_addresses)
         email_date = _parse_email_date(msg.date)
         case_id = None
         matched_by = None

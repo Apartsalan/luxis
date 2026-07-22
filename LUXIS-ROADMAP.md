@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 22 juli 2026 (S237 — sommatie-reacties verwerkt: 2 betwistingen in de verweer-keten; escalatie-adviezen als werklijst-taak LIVE 14/14; open-source-onderzoek → `docs/TOEKOMST-REPOS.md` + agent-compatibel-bouwregel). Rapport: entry S237 in `SESSION-NOTES.md`. **Volgende = S238: native structured outputs-refactor.**
+**Laatst bijgewerkt:** 22 juli 2026 (S238 — expliciete schema-koppeling + native structured outputs in de AI-laag LIVE; trefwoord-detectie weg, runtime-vangnet naar forced tool_use, alle 7 routes op prod nageteld). Rapport: entry S238 in `SESSION-NOTES.md`. **Volgende = S239: Lisanne-antwoorden + opruimronde, of nieuw hoofdonderwerp.**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -55,25 +55,24 @@
 
 ## 🎯 Huidige prioriteit (bijgewerkt 22 juli 2026, S237)
 
-> ✅ **S237 AFGEROND — SOMMATIE-REACTIES + ESCALATIE-TAKEN (LIVE) + TOEKOMST-REPOS.**
-> Reacties op de 7 sommaties gemeten (0 bounces): IN100606-verweer bekend (concept
-> wacht op Lisanne); **IN100592 betwistte vanaf een onbekend privé-adres** → viel stil
-> in de ongesorteerde bak, na handmatig koppelen deed de keten alles zelf (zaak op
-> 'Verweer beantwoorden', concept klaar); IN100492 (afgesloten, €0 betaald) vraagt om
-> een update → Lisanne. Escalatie-adviezen staan nu als "Vervolg bepalen"-taak op de
-> werklijst (14/14 nageteld, waarvan 4 échte 'Voorstel dagvaarding'). Open-source-
-> onderzoek: architectuur gevalideerd; besluiten in `docs/TOEKOMST-REPOS.md`
-> (agent-laag komt t.z.t. op pydantic-ai; alles service-laag-eerst bouwen —
-> Working Agreement in CLAUDE.md). Detail: entry S237.
+> ✅ **S238 AFGEROND — EXPLICIETE SCHEMA-KOPPELING + NATIVE STRUCTURED OUTPUTS (LIVE).**
+> De trefwoord-schema-detectie in `ai_agent/kimi_client.py` is weg: elke AI-aanroeper
+> (classificatie, intake, factuur, concepten ×3, PDF, testronde-script) geeft zijn
+> JSON-schema en purpose nu expliciet mee. Tekst-routes op native structured outputs;
+> drie live gevonden grammar-grenzen afgedekt met een statische poort + runtime-vangnet
+> naar forced tool_use (nooit meer harde AI-uitval door een schemagrens). Schema's
+> kloppend gemaakt met hun prompts (classificatie miste sentiment/defense_type,
+> factuur miste 13 velden). 20 nieuwe wachters; alle 7 routes live op prod nageteld;
+> CI groen op alle 4 commits. Detail: entry S238.
 >
-> 🎯 **VOLGENDE (S238): native structured outputs-refactor** — vervang de trefwoord-
-> schema-detectie in `ai_agent/kimi_client.py` (raakt álle AI-aanroepen; Opus + volle
-> kruispunt-discipline; eerst claude-api-documentatie raadplegen). Daarnaast lopend:
-> verweer-concepten IN100592/IN100606 + IN100492-vraag bij Lisanne; opruimronde
-> Arsalan+Lisanne (IN100607/613/521, 6 oude nakijk-taken, dubbel concept IN100592).
-> Losse punten: BaseNet-delisting, derde AI-testronde + Lisanne-steekproef,
-> kostenblokje, fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC,
-> testdata opruimen, 4 cosmetische restjes S235, sharp-CVE's. KvK: niet naar vragen.
+> 🎯 **VOLGENDE (S239): Lisanne-antwoorden + opruimronde** — verweer-concepten
+> IN100592/IN100606 + IN100492-vraag verwerken zodra Lisanne reageert; opruimronde
+> mét dry-run + GO (IN100607/613/521, 6 oude nakijk-taken, dubbel concept IN100592,
+> logboekregeltje execute-escalate). Of nieuw hoofdonderwerp naar keuze Arsalan
+> (kandidaat: gat onbekend-afzender-melding uit S237). Losse punten: BaseNet-delisting,
+> derde AI-testronde + Lisanne-steekproef, kostenblokje, fysieke-telefoon-check,
+> opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen, 4 cosmetische restjes
+> S235, sharp-CVE's. KvK: niet naar vragen.
 
 ## Projectdocumenten
 

@@ -10415,3 +10415,88 @@ gedeployd via SSH (geen migratie). Geen prod-DB-mutaties.
 S228: opmaak-restpunt uitvragen (screenshot van wat nog niet klopt), dan
 S221b-rest óf KvK-backfill (voorrang zodra sleutel binnen, ~22 juli).
 
+## Sessie 228 (17 juli 2026, Fable-bouw — Luxis werkbaar op telefoon + tablet, LIVE)
+
+### Samenvatting
+Op verzoek Arsalan: één grondig onderzoek + compleet bouwplan (`docs/sessions/
+PLAN-S228-MOBIEL.md`) en dat in dezelfde sessie uitgevoerd (Fable, geen Opus-wissel).
+Doel: Lisanne werkt straks dagelijks vanaf haar telefoon → alles moet op telefoon
+(voorrang) en tablet netjes werken. Startmeting live op prod via Playwright op
+390×844 (telefoon) en 820×1180 (tablet): 8 pagina's/vensters kapot of met overloop.
+GitHub-onderzoek naar beste bouwstenen → **Vaul/shadcn Drawer** (onderschuif-paneel,
+past in de bestaande componentenset) + Next.js ingebouwde PWA (géén extra pakket voor
+het app-icoon). Konsta/Ionic/service-workers bewust afgewezen.
+
+**Uitgevoerd in 8 blokken (elk: bouwen → tsc → live meten op 390+820 → deploy):**
+- **Blok 0 fundament:** `manifest.webmanifest` + app-iconen (weegschaal-logo, huisblauw)
+  + apple-touch-icon (iOS negeert manifest-iconen); `viewportFit: cover` + safe-area-
+  helpers; knoppen/inputs/selects grotere tikdoelen (h-11 <md) + 16px op telefoon;
+  floating-timer boven de onderbalk; meldingen-popover schermvullend op telefoon;
+  zoek-icoon in de balk op telefoon; **bovenbalk-overloop weg** (links krimpt met
+  min-w-0 + truncate kruimelpad, rechts shrink-0) — dit fixte overloop op álle pagina's.
+- **Blok 1 dialogen:** `dialog.tsx` schermvullend onder sm (vangnet, wint van
+  consumer-max-w; consumer kan met max-sm: overrulen); `vaul` geïnstalleerd + `drawer.tsx`
+  + `responsive-dialog.tsx` (Dialog ≥md, Drawer <md) als infra; compose-dialoog
+  voetknoppen stapelen, **Verstuurknop volledig zichtbaar** (was half buiten beeld).
+- **Blok 2 dossier-detail:** Correspondentie-tab lijst↔lezen-wissel onder lg (+ Terug
+  naar lijst, wrappende actieknoppen) — **was twee onleesbare kolommetjes**; Overzicht-
+  tab overloop (814→390) via DetailsTab `grid-cols-1` + `min-w-0`.
+- **Blok 3 mail:** toolbar (zoek/nieuwe mail/sync) stapelt + tabs wrappen (867→390).
+- **Blok 4 incasso + lijsten:** incasso-werkstroom **kaartweergave op telefoon**
+  (tabel md:block) + floating batch-actiebalk volle breedte, wrapt, boven de onderbalk;
+  zaken-filters/betalingen-tabs/uren-nav wrappen (622/404/404→390).
+- **Blok 5 restpagina's:** dashboard + relatie-detail grid-overloop (grid-cols-1 +
+  min-w-0 op elke flex-tussenlaag); alle overige routes gemeten = 390.
+- **Blok 6 onderbalk:** `mobile-nav.tsx` (5 items, <md, safe-area, tellers Mail/Taken,
+  Menu opent de bestaande lade); content krijgt onderruimte. Desktop: geen onderbalk.
+- **Blok 7 wachter:** `e2e/mobile-overflow.spec.ts` + mobiel Playwright-project — alle
+  16 routes × 390/820 assert `scrollWidth ≤ clientWidth` (fout-SOORT-wachter breed-testen).
+
+**Bewijs (live op prod, telefoon 390 + tablet 820):** 16 routes = exact schermbreedte
+(geen overloop); compose-Verstuurknop volledig in beeld; dossier-Correspondentie leest
+als één paneel; incasso-kaarten + volle-breedte batch-balk; onderbalk + Menu-lade werken;
+manifest/iconen geven 200; **desktop 1440 ongewijzigd** (volledige zijbalk, geen onderbalk).
+
+### Gewijzigde bestanden
+Nieuw: `frontend/src/hooks/use-is-mobile.ts`, `components/ui/{drawer,responsive-dialog}.tsx`,
+`components/layout/mobile-nav.tsx`, `public/{manifest.webmanifest,icon-192,icon-512,
+apple-touch-icon}.png`, `e2e/mobile-overflow.spec.ts`. Gewijzigd: `app/layout.tsx`,
+`app/globals.css`, `app/(dashboard)/layout.tsx`, `components/ui/{dialog,button,input,select}.tsx`,
+`components/{floating-timer,email-compose-dialog}.tsx`, `components/layout/app-header.tsx`,
+`app/(dashboard)/{page,zaken/page,zaken/nieuw n.v.t.,correspondentie/page,incasso/page,
+betalingen/page,uren/page,relaties/[id]/page}.tsx`, `zaken/[id]/components/{CorrespondentieTab,
+DetailsTab}.tsx`, `components/relations/detail/ContactInfoSection.tsx`, `playwright.config.ts`,
+`frontend/package.json` (+vaul). ~10 commits, frontend meermaals via SSH gedeployd (geen
+migratie, geen prod-DB-mutatie).
+
+### Fable-reviewronde (zelfde sessie, brede jacht — 3 vondsten, alle gefixt + live herbewezen)
+1. **Onderruimte viel weg op 640-767px** (telefoon liggend/klein tablet): de onderbalk
+   dekte daar de laatste inhoud af (gemeten: 24px i.p.v. 64px op 700px breed) →
+   pb-regel ook binnen het sm-blok; herbewezen 64px.
+2. **iOS-zoom-gat:** de 16px-fix zat op de UI-componenten, maar 89 kale `<select>`'s
+   (+ losse inputs) droegen nog 14px → globale max-md-regel in globals.css
+   (input/select/textarea 16px, !important); herbewezen 16px op de zaken-filters.
+3. **Kleine vensters uitgerekt:** het schermvullende vangnet verdeelde de lege ruimte
+   over de rijen (notitie: titel boven, veld midden, knoppen zwevend) →
+   `max-sm:content-start`; herbewezen compact. Compose-Verstuurknop na de fix opnieuw
+   gemeten: volledig in beeld (bounding box 374/744 binnen 390/844).
+Ook gecontroleerd, geen fout: meldingen-klok (volle breedte, leesbaar), zoekknop
+telefoon (opent commando-palet), incasso "Per stap" (scrollt binnen kader, krap maar
+werkbaar — kaart-lijst is de hoofdroute), desktop 1440 ongewijzigd. CI na reviewfixes
+volledig groen (8/8 jobs, afsluitcheck).
+
+### Bekende issues / bewust niet gedaan
+- **Fysiek toestel niet getest** — gemeten in desktop-Chrome met mobiele viewport. iOS-
+  Safari-zoom, 100dvh, safe-area, beginscherm-icoon: op regels-kennis meegenomen, pas
+  bewezen na doorklikken op Arsalans telefoon (→ S229).
+- **Overloop-wachter niet automatisch-gated:** CI draait geen Playwright-e2e (alleen
+  lint/typecheck/build). De spec compileert schoon en is een handmatig/lokaal vangnet;
+  de assertie is deze sessie live op alle 16 routes bevestigd.
+- **Vaul-Drawer alleen als infra** — het schermvullende dialoog-vangnet lost de
+  bruikbaarheid al op; de snelle-actie-dialogen (notitie/taak/uren) zijn nog niet één
+  voor één naar de Drawer omgezet (kan later, puur gevoel-polish).
+- **Deploy-race ontdekt:** GitHub "Deploy to VPS" draait óók bij elke push en botst met
+  handmatige SSH-deploy (container-naamconflict → rode Deploy-run, app draait wel). Herstel
+  + preventie vastgelegd in memory [[feedback_deploy_via_ssh]].
+- Grouped ("Per stap") incasso-weergave + enkele detail-tabellen scrollen horizontaal
+  binnen hun kader (bewust; niet elke tabel herbouwd).

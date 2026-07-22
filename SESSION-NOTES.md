@@ -2,10 +2,79 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 22 juli 2026 (S237 — sommatie-reacties verwerkt + escalatie-taken op de werklijst LIVE + open-source-onderzoek).
-**Laatste feature/fix:** Escalatie-adviezen krijgen een gespiegelde "Vervolg bepalen"-taak (14/14 op prod nageteld); 2 nieuwe betwistingen verwerkt (IN100592 handmatig gekoppeld → keten liep zelf; IN100606 bekend); tools-onderzoek → `docs/TOEKOMST-REPOS.md` + agent-compatibel-bouwregel. Detail: entry S237.
-**Openstaand (→ S238 e.v.):** hoofdtaak S238 = native structured outputs-refactor; verweer-concepten IN100592 + IN100606 wachten op Lisanne; IN100492 (dicht, €0 betaald, debiteur vraagt update) → Lisanne; opruimronde mét Lisanne (IN100607/613/521, 6 oude nakijk-taken, dubbel concept IN100592, logboekregeltje). Losse punten: BaseNet-delisting, derde AI-testronde, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, testdata, 4 cosmetische restjes S235, sharp-CVE's.
-**Volgende sessie:** S238 — zie `docs/sessions/PROMPT-S238.md`.
+**Laatst bijgewerkt:** 22 juli 2026 (S238 — expliciete schema-koppeling + native structured outputs in de AI-laag, LIVE).
+**Laatste feature/fix:** Trefwoord-schema-detectie (`_detect_schema`) weg; elke AI-aanroeper geeft zijn schema expliciet mee; native structured outputs waar de grammar het toelaat, met runtime-vangnet naar forced tool_use. Alle 7 routes live nageteld op prod. Detail: entry S238.
+**Openstaand (→ S239 e.v.):** verweer-concepten IN100592 + IN100606 en de IN100492-vraag wachten op Lisanne; opruimronde mét Lisanne (IN100607/613/521, 6 oude nakijk-taken, dubbel concept IN100592, logboekregeltje). Losse punten: gat onbekend-afzender-melding (S237), BaseNet-delisting, derde AI-testronde, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, testdata, 4 cosmetische restjes S235, sharp-CVE's.
+**Volgende sessie:** S239 — zie `docs/sessions/PROMPT-S239.md`.
+
+## Sessie 238 (22 juli 2026, Opus-bouw → Fable-eindreview — expliciete schema-koppeling + native structured outputs, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S238. Model-cyclus expliciet gevolgd (wissel zelf gesignaleerd
+vóór start — les S237): bouw op Opus, eindreview op Fable.
+
+**Hoofdtaak — de kwetsbaarste laag van het AI-fundament vervangen.**
+`kimi_client` raadde welk JSON-schema bij een aanroep hoorde via een Nederlands
+trefwoord in de prompttekst (`_detect_schema`); een gewijzigde promptzin liet zo'n
+aanroep stil terugvallen op tekst-parsen. Nu geeft **elke aanroeper zijn schema en
+purpose expliciet mee** (verplichte keyword-args, geen defaults): classificatie,
+intake, factuur (tekst + PDF), stap-concepten (`call_draft_ai`), dossier-concepten
+(`draft_service`), compose/antwoord (`unified_draft_service`) en het testronde-
+script. `_detect_schema`, `_PROMPT_SCHEMA_MAP`, `_parse_json`, `_call_haiku` en
+`_call_sonnet` zijn weg. Model-routing ongewijzigd (Haiku extractie, Sonnet
+concepten); `ai_usage`-registratie blijft per aanroep werken.
+
+**Native structured outputs + drie live gevonden API-grenzen.** Tekst-routes
+draaien op `output_config.format` (GA voor Sonnet 4.6/Haiku 4.5; API garandeert
+schema-geldige JSON); de PDF-route houdt forced tool_use (docs garanderen de
+combinatie met document-input niet), waar mogelijk met `strict`. De prod-natelling
+ving drie niet-gedocumenteerde grammar-grenzen: (1) max 24 optionele velden
+(factuurschema: 54 → alle velden verplicht gemaakt, nullable), (2) max 16
+nullable/union-velden (factuurschema: 27 → statische poort `_grammar_fits` kiest
+dan forced tool_use), (3) **"Grammar compilation timed out" op het intake-schema
+dat binnen de limieten past** (Fable-reviewvondst) → runtime-vangnet: elke 400 op
+het structured-pad krijgt één herkansing via niet-strict forced tool_use — het
+oude bewezen gedrag, maar mét expliciet schema. Nooit meer een harde AI-uitval
+door een schemagrens.
+
+**Schema's kloppend gemaakt met hun prompts.** De classificatie vroeg `sentiment`
+en `defense_type` die het oude schema niet kende; het factuurschema miste 13 van
+de 28 promptvelden (o.a. contactpersonen, crediteur-postadres) — met
+`additionalProperties=false` zouden die stil zijn weggefilterd. Nieuwe schema's
+naast hun prompt: `CASE_DRAFT_SCHEMA`, `UNIFIED_DRAFT_SCHEMA`, `_CORRECTOR_SCHEMA`.
+
+### Gewijzigde bestanden
+Backend: `ai_agent/kimi_client.py` (herschreven), `ai_agent/{service,intake_service,
+invoice_parser,draft_service,unified_draft_service}.py`, `incasso/automation_service.py`,
+`scripts/ai/antwoord_testronde.py`. Tests: `test_kimi_client_structured.py` (nieuw, 20
+wachters: verplichte keyword-args, schema-geldigheid, prompt↔schema-sync per route,
+grammar-poort, runtime-terugval), `test_unified_draft_service.py` (mock-signaturen).
+Commits `e278a51`, `6cf04a8`, `0687306`, `80786f1`; backend 4× via SSH
+`--force-recreate` (geen migratie, geen frontend).
+
+### Verificatie
+20 nieuwe wachters groen; brede AI-run 239 groen (kimi/unified_draft/ai_agent/
+intake/invoice) + followup/draft-suites 193 en incasso_pipeline 55 groen; ruff
+schoon; CI groen op alle 4 commits (conclusion=success via API nagetrokken).
+**Live natelling op prod: alle 7 routes** (classificatie, intake, factuur-tekst,
+compose/antwoord, dossier-concept, stap-concept, PDF) — elk 1 echte AI-call, resultaat
+schema-conform, 7 rijen in `ai_usage` met kosten. Prod-logs sinds deploy: 0 AI-fouten;
+containers healthy, login-API 200.
+
+### Bekende issues / bewust niet gedaan
+- **Intake-route loopt structureel via het tool_use-vangnet** ("Grammar compilation
+  timed out" reproduceerde 2×) — functioneel identiek resultaat; als Anthropic de
+  grammar-compilatie verbetert gaat de route vanzelf native. Geen actie nodig.
+- De verweer-PDF-route (`call_draft_ai` mét AV-PDF) is niet apart live afgevuurd —
+  zelfde codepad als de wel-geteste PDF-route (enige verschil: het schema, en
+  INCASSO_DRAFT_SCHEMA is live bewezen op de tekst-route).
+- Lopende zaken onaangeraakt (bij Lisanne): verweer-concepten IN100592/IN100606,
+  IN100492-vraag, opruimronde.
+
+### Volgende sessie
+S239: antwoorden van Lisanne verwerken (verweer-concepten, IN100492, opruimronde
+mét dry-run + GO) of nieuw hoofdonderwerp naar keuze Arsalan.
+Zie `docs/sessions/PROMPT-S239.md`.
 
 ## Sessie 237 (22 juli 2026, Fable-meting → Opus-bouw → Fable-review + Fable-onderzoek — sommatie-reacties + escalatie-taken LIVE + toekomst-repos)
 
@@ -729,89 +798,3 @@ migraties, geen prod-mutaties, niets verstuurd. Memory: KvK-instructie + Fable-b
 ### Volgende sessie
 S230 (Opus voor de fixes): begin met V1 (B2C-BIK-correctie, lijst met Lisanne). Dan
 V2 (handelsrente-rij), V3 (corrector + verse ronde), V4 (.env-rechten).
-
-## Sessie 228 (17 juli 2026, Fable-bouw — Luxis werkbaar op telefoon + tablet, LIVE)
-
-### Samenvatting
-Op verzoek Arsalan: één grondig onderzoek + compleet bouwplan (`docs/sessions/
-PLAN-S228-MOBIEL.md`) en dat in dezelfde sessie uitgevoerd (Fable, geen Opus-wissel).
-Doel: Lisanne werkt straks dagelijks vanaf haar telefoon → alles moet op telefoon
-(voorrang) en tablet netjes werken. Startmeting live op prod via Playwright op
-390×844 (telefoon) en 820×1180 (tablet): 8 pagina's/vensters kapot of met overloop.
-GitHub-onderzoek naar beste bouwstenen → **Vaul/shadcn Drawer** (onderschuif-paneel,
-past in de bestaande componentenset) + Next.js ingebouwde PWA (géén extra pakket voor
-het app-icoon). Konsta/Ionic/service-workers bewust afgewezen.
-
-**Uitgevoerd in 8 blokken (elk: bouwen → tsc → live meten op 390+820 → deploy):**
-- **Blok 0 fundament:** `manifest.webmanifest` + app-iconen (weegschaal-logo, huisblauw)
-  + apple-touch-icon (iOS negeert manifest-iconen); `viewportFit: cover` + safe-area-
-  helpers; knoppen/inputs/selects grotere tikdoelen (h-11 <md) + 16px op telefoon;
-  floating-timer boven de onderbalk; meldingen-popover schermvullend op telefoon;
-  zoek-icoon in de balk op telefoon; **bovenbalk-overloop weg** (links krimpt met
-  min-w-0 + truncate kruimelpad, rechts shrink-0) — dit fixte overloop op álle pagina's.
-- **Blok 1 dialogen:** `dialog.tsx` schermvullend onder sm (vangnet, wint van
-  consumer-max-w; consumer kan met max-sm: overrulen); `vaul` geïnstalleerd + `drawer.tsx`
-  + `responsive-dialog.tsx` (Dialog ≥md, Drawer <md) als infra; compose-dialoog
-  voetknoppen stapelen, **Verstuurknop volledig zichtbaar** (was half buiten beeld).
-- **Blok 2 dossier-detail:** Correspondentie-tab lijst↔lezen-wissel onder lg (+ Terug
-  naar lijst, wrappende actieknoppen) — **was twee onleesbare kolommetjes**; Overzicht-
-  tab overloop (814→390) via DetailsTab `grid-cols-1` + `min-w-0`.
-- **Blok 3 mail:** toolbar (zoek/nieuwe mail/sync) stapelt + tabs wrappen (867→390).
-- **Blok 4 incasso + lijsten:** incasso-werkstroom **kaartweergave op telefoon**
-  (tabel md:block) + floating batch-actiebalk volle breedte, wrapt, boven de onderbalk;
-  zaken-filters/betalingen-tabs/uren-nav wrappen (622/404/404→390).
-- **Blok 5 restpagina's:** dashboard + relatie-detail grid-overloop (grid-cols-1 +
-  min-w-0 op elke flex-tussenlaag); alle overige routes gemeten = 390.
-- **Blok 6 onderbalk:** `mobile-nav.tsx` (5 items, <md, safe-area, tellers Mail/Taken,
-  Menu opent de bestaande lade); content krijgt onderruimte. Desktop: geen onderbalk.
-- **Blok 7 wachter:** `e2e/mobile-overflow.spec.ts` + mobiel Playwright-project — alle
-  16 routes × 390/820 assert `scrollWidth ≤ clientWidth` (fout-SOORT-wachter breed-testen).
-
-**Bewijs (live op prod, telefoon 390 + tablet 820):** 16 routes = exact schermbreedte
-(geen overloop); compose-Verstuurknop volledig in beeld; dossier-Correspondentie leest
-als één paneel; incasso-kaarten + volle-breedte batch-balk; onderbalk + Menu-lade werken;
-manifest/iconen geven 200; **desktop 1440 ongewijzigd** (volledige zijbalk, geen onderbalk).
-
-### Gewijzigde bestanden
-Nieuw: `frontend/src/hooks/use-is-mobile.ts`, `components/ui/{drawer,responsive-dialog}.tsx`,
-`components/layout/mobile-nav.tsx`, `public/{manifest.webmanifest,icon-192,icon-512,
-apple-touch-icon}.png`, `e2e/mobile-overflow.spec.ts`. Gewijzigd: `app/layout.tsx`,
-`app/globals.css`, `app/(dashboard)/layout.tsx`, `components/ui/{dialog,button,input,select}.tsx`,
-`components/{floating-timer,email-compose-dialog}.tsx`, `components/layout/app-header.tsx`,
-`app/(dashboard)/{page,zaken/page,zaken/nieuw n.v.t.,correspondentie/page,incasso/page,
-betalingen/page,uren/page,relaties/[id]/page}.tsx`, `zaken/[id]/components/{CorrespondentieTab,
-DetailsTab}.tsx`, `components/relations/detail/ContactInfoSection.tsx`, `playwright.config.ts`,
-`frontend/package.json` (+vaul). ~10 commits, frontend meermaals via SSH gedeployd (geen
-migratie, geen prod-DB-mutatie).
-
-### Fable-reviewronde (zelfde sessie, brede jacht — 3 vondsten, alle gefixt + live herbewezen)
-1. **Onderruimte viel weg op 640-767px** (telefoon liggend/klein tablet): de onderbalk
-   dekte daar de laatste inhoud af (gemeten: 24px i.p.v. 64px op 700px breed) →
-   pb-regel ook binnen het sm-blok; herbewezen 64px.
-2. **iOS-zoom-gat:** de 16px-fix zat op de UI-componenten, maar 89 kale `<select>`'s
-   (+ losse inputs) droegen nog 14px → globale max-md-regel in globals.css
-   (input/select/textarea 16px, !important); herbewezen 16px op de zaken-filters.
-3. **Kleine vensters uitgerekt:** het schermvullende vangnet verdeelde de lege ruimte
-   over de rijen (notitie: titel boven, veld midden, knoppen zwevend) →
-   `max-sm:content-start`; herbewezen compact. Compose-Verstuurknop na de fix opnieuw
-   gemeten: volledig in beeld (bounding box 374/744 binnen 390/844).
-Ook gecontroleerd, geen fout: meldingen-klok (volle breedte, leesbaar), zoekknop
-telefoon (opent commando-palet), incasso "Per stap" (scrollt binnen kader, krap maar
-werkbaar — kaart-lijst is de hoofdroute), desktop 1440 ongewijzigd. CI na reviewfixes
-volledig groen (8/8 jobs, afsluitcheck).
-
-### Bekende issues / bewust niet gedaan
-- **Fysiek toestel niet getest** — gemeten in desktop-Chrome met mobiele viewport. iOS-
-  Safari-zoom, 100dvh, safe-area, beginscherm-icoon: op regels-kennis meegenomen, pas
-  bewezen na doorklikken op Arsalans telefoon (→ S229).
-- **Overloop-wachter niet automatisch-gated:** CI draait geen Playwright-e2e (alleen
-  lint/typecheck/build). De spec compileert schoon en is een handmatig/lokaal vangnet;
-  de assertie is deze sessie live op alle 16 routes bevestigd.
-- **Vaul-Drawer alleen als infra** — het schermvullende dialoog-vangnet lost de
-  bruikbaarheid al op; de snelle-actie-dialogen (notitie/taak/uren) zijn nog niet één
-  voor één naar de Drawer omgezet (kan later, puur gevoel-polish).
-- **Deploy-race ontdekt:** GitHub "Deploy to VPS" draait óók bij elke push en botst met
-  handmatige SSH-deploy (container-naamconflict → rode Deploy-run, app draait wel). Herstel
-  + preventie vastgelegd in memory [[feedback_deploy_via_ssh]].
-- Grouped ("Per stap") incasso-weergave + enkele detail-tabellen scrollen horizontaal
-  binnen hun kader (bewust; niet elke tabel herbouwd).

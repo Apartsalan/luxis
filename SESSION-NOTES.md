@@ -37,9 +37,16 @@ regels bestaan al. `STEP_TEMPLATE_FAMILIES` kreeg een eigen derde-familie.
 AI-conceptbatch slaat nu elke match over waarvan de doelstap een sjabloon heeft → 0 AI-oproepen
 voor stilte (was 21 op 21-7); verweer-concepten (mail-hook) + handmatige AI-knoppen blijven.
 De follow-up-adviseur (elke 30 min, géén AI) is het seintje "tijd voor {volgende sommatie}" +
-sjabloon-verzending. Reparatie: de scanner adviseerde een brief die al verstuurd was (de 7
-echte 'Eerste sommatie'-dossiers, brief 12 dagen weg) → nu skip op open staphistorie met
-email_sent (kruispunt-signaal dat álle routes zetten). `evaluate_timeout_rules` filtert
+sjabloon-verzending. Scanner-skip op open staphistorie met email_sent toegevoegd (geen
+her-advies van een via de app verstuurde brief). **CORRECTIE (Fable-review 22-7): de
+motivatie voor die skip klopte niet** — voor de 7 'Eerste sommatie'-dossiers is in Luxis
+nooit iets verstuurd (0 mail-logs/documenten/uitgaande mails) en ze hebben als
+import-dossiers géén staphistorie, dus de skip raakt ze per definitie niet. "Brief 12
+dagen weg" was vermoedelijk de ouderdom van het openstaande advies (aangemaakt 9-7). De
+7 pending adviezen zijn TERECHT (bevestigd Arsalan 22-7: BaseNet doet geen incasso meer,
+Luxis is de waarheid) en wachten op verwerking. De skip zelf is onschadelijk en blijft
+(dekt toekomstige echte verstuurd-maar-niet-doorgeschoven-gevallen).
+`evaluate_timeout_rules` filtert
 gesloten/verweer/b2c→b2b — **IN100613** (afgesloten, maar op 'Tweede sommatie') kreeg daardoor
 elke ochtend een nieuw sommatie-concept; die stroom is nu dicht (de zaak zelf onaangeraakt).
 
@@ -70,6 +77,14 @@ doorschuif-regels Derde→Laatste→Faillissement aanwezig. CI-afsluitcheck: zie
   2026-00006 (zijn gmail) zelf natrekken.
 - **Generate-only batch schuift nog steeds door zonder verzending** (bestaand gedrag, bewust
   behouden via `record_send=False`) — latente eigenaardigheid, buiten S234-scope.
+- **Uit de Fable-review 22-7 (naast de scanner-correctie hierboven):** (a) doorschuiven
+  maakt geen taak meer aan op de nieuwe stap (`_create_tasks_for_step` verdween uit de
+  batch/follow-up-route; compose/AI hadden 'm sinds S232 al niet) — takenpagina leunt nu
+  volledig op de follow-up-adviseur; **beslispunt voor Arsalan/Lisanne** welke pagina de
+  werklijst is. (b) In de dagelijkse AI-batch tellen sjabloon-skips mee voor het
+  50/dag-budget (randgeval, éénregel-fix, kan mee in S235). (c) De b2c-"vervolg
+  bepalen"-taak wordt niet aangemaakt als de doelstap óók hold/terminaal is
+  (guard-volgorde) — speelt met de huidige prod-stappen niet.
 
 ### Volgende sessie
 S235: betalingsregeling herkennen uit mail (classificatie bestaat al) + flexibel termijnschema.

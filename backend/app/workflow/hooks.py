@@ -111,6 +111,14 @@ async def on_payment_received(
             db, tenant_id, case.id, reason="Zaak gesloten (volledig betaald)"
         )
 
+        # S235 (keuze Arsalan 22-7): maak het automatische afsluiten zichtbaar én
+        # herinner aan de eigen declaratie naar de cliënt.
+        from app.notifications.service import create_case_closed_invoice_notification
+
+        await create_case_closed_invoice_notification(
+            db, tenant_id, case_id=case.id, case_number=case.case_number
+        )
+
         logger.info(
             f"Workflow hook: case {case.case_number} auto-transitioned to 'betaald' "
             f"after payment of EUR {payment_amount}"

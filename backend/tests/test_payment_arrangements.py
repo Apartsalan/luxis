@@ -1077,3 +1077,107 @@ async def test_upcoming_installments_tenant_isolation(
     )
     assert resp.status_code == 200
     assert [i for i in resp.json() if i["case_id"] == case_id] == []
+
+
+# ── S235: flexibel termijnschema ─────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_flexible_schedule_stored_exactly(
+    client: AsyncClient, auth_headers: dict, test_company: Contact
+):
+    """Flexibel schema (2× €200, daarna €1.000) wordt letterlijk overgenomen."""
+    case_id, _ = await _create_case_with_claim(
+        client, auth_headers, str(test_company.id), principal="1400.00"
+    )
+
+    d1 = date.today() + timedelta(days=7)
+    d2 = date.today() + timedelta(days=37)
+    d3 = date.today() + timedelta(days=67)
+    resp = await client.post(
+        f"/api/cases/{case_id}/arrangements",
+        json={
+            "total_amount": "1400.00",
+            "start_date": d1.isoformat(),
+            "installments": [
+                # Bewust ongesorteerd aangeleverd — service sorteert op datum
+                {"due_date": d3.isoformat(), "amount": "1000.00"},
+                {"due_date": d1.isoformat(), "amount": "200.00"},
+                {"due_date": d2.isoformat(), "amount": "200.00"},
+            ],
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+    arr = resp.json()
+    assert Decimal(arr["total_amount"]) == Decimal("1400.00")
+    assert arr["start_date"] == d1.isoformat()
+    assert arr["end_date"] == d3.isoformat()
+
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
+    installments = list_resp.json()[0]["installments"]
+    assert [Decimal(i["amount"]) for i in installments] == [
+        Decimal("200.00"), Decimal("200.00"), Decimal("1000.00"),
+    ]
+    assert [i["due_date"] for i in installments] == [
+        d1.isoformat(), d2.isoformat(), d3.isoformat(),
+    ]
+    assert [i["installment_number"] for i in installments] == [1, 2, 3]
+    assert all(i["status"] == "pending" for i in installments)
+
+
+@pytest.mark.asyncio
+async def test_flexible_schedule_sum_mismatch_rejected(
+    client: AsyncClient, auth_headers: dict, test_company: Contact
+):
+    """Som van termijnen ≠ totaalbedrag → geweigerd, niets opgeslagen."""
+    case_id, _ = await _create_case_with_claim(
+        client, auth_headers, str(test_company.id), principal="1400.00"
+    )
+
+    resp = await client.post(
+        f"/api/cases/{case_id}/arrangements",
+        json={
+            "total_amount": "1400.00",
+            "start_date": date.today().isoformat(),
+            "installments": [
+                {"due_date": date.today().isoformat(), "amount": "200.00"},
+                {"due_date": (date.today() + timedelta(days=30)).isoformat(), "amount": "1000.00"},
+            ],
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 400
+    assert "niet gelijk aan het totaalbedrag" in resp.json()["detail"]
+
+    # Niets opgeslagen
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
+    assert list_resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_equal_installments_path_unchanged(
+    client: AsyncClient, auth_headers: dict, test_company: Contact
+):
+    """Zonder flexibel schema blijft de gelijke-termijnen-weg exact werken."""
+    case_id, _ = await _create_case_with_claim(
+        client, auth_headers, str(test_company.id), principal="900.00"
+    )
+
+    resp = await client.post(
+        f"/api/cases/{case_id}/arrangements",
+        json={
+            "total_amount": "900.00",
+            "num_installments": 3,
+            "frequency": "monthly",
+            "start_date": (date.today() + timedelta(days=7)).isoformat(),
+        },
+        headers=auth_headers,
+    )
+    assert resp.status_code == 201
+
+    list_resp = await client.get(f"/api/cases/{case_id}/arrangements", headers=auth_headers)
+    installments = list_resp.json()[0]["installments"]
+    assert [Decimal(i["amount"]) for i in installments] == [
+        Decimal("300.00"), Decimal("300.00"), Decimal("300.00"),
+    ]

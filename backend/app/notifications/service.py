@@ -17,6 +17,7 @@ NOTIF_TRUST_APPROVAL_PENDING = "trust_approval_pending"  # CONN-2: vier-ogen wac
 NOTIF_TRUST_STALE = "trust_stale"  # FIN-2: derdengelden staan te lang stil
 NOTIF_INSTALLMENT_OVERDUE = "installment_overdue"  # regeling-alarm: termijn gemist
 NOTIF_BIK_ABOVE_STAFFEL = "bik_above_staffel"  # S230/V1: B2C-kosten boven WIK-staffel
+NOTIF_CASE_CLOSED_INVOICE = "case_closed_invoice"  # S235: auto-afgesloten → cliënt factureren?
 
 # A5/A11 (S198): meldings-typen die uit de meldingenlijst + ongelezen-teller worden
 # gefilterd. De classificatielijn staat op pauze en 'classification_done' verzoop de
@@ -407,6 +408,37 @@ async def create_installment_overdue_notification(
         tenant_id,
         NotificationCreate(
             type=NOTIF_INSTALLMENT_OVERDUE,
+            title=title,
+            message=message,
+            case_id=case_id,
+            case_number=case_number,
+        ),
+        dedup_minutes=24 * 60,
+    )
+
+
+async def create_case_closed_invoice_notification(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    case_id: uuid.UUID,
+    case_number: str,
+) -> int:
+    """S235 (keuze Arsalan 22-7): een dossier dat automatisch sluit na volledige
+    betaling moet zichtbaar zijn — én herinneren aan de eigen declaratie naar de
+    cliënt. Het afsluiten zelf blijft automatisch (rente-bevriezing, concept-opruiming).
+
+    Notifies all active tenant users, matching the sibling financial alarms.
+    Deduped per (user, case, title) within 24h — the hook only fires on the payment
+    that brings the balance to €0, so this is a double-run guard, not a spam filter.
+    """
+    title = f"Dossier {case_number} volledig betaald en afgesloten"
+    message = "Wil je de cliënt factureren? Bekijk de facturen-tab van het dossier."
+    return await _notify_all_tenant_users(
+        db,
+        tenant_id,
+        NotificationCreate(
+            type=NOTIF_CASE_CLOSED_INVOICE,
             title=title,
             message=message,
             case_id=case_id,

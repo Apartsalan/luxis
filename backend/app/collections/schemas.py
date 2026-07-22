@@ -134,6 +134,13 @@ class PaymentResponse(BaseModel):
 # ── Payment Arrangement Schemas ──────────────────────────────────────────────
 
 
+class ArrangementInstallmentInput(BaseModel):
+    """S235 — één termijn van een flexibel (handmatig) schema."""
+
+    due_date: date
+    amount: Decimal = Field(..., gt=0, decimal_places=2)
+
+
 class ArrangementCreate(BaseModel):
     total_amount: Decimal = Field(..., gt=0, decimal_places=2)
     installment_amount: Decimal | None = Field(None, gt=0, decimal_places=2)
@@ -141,6 +148,10 @@ class ArrangementCreate(BaseModel):
     frequency: str = Field(default="monthly", pattern="^(weekly|monthly|quarterly)$")
     start_date: date
     notes: str | None = None
+    # S235 — flexibel schema (bv. 2× €200, daarna €1.000): elke termijn eigen
+    # bedrag + datum. Meegegeven → letterlijk overnemen (na som-controle);
+    # None/leeg → de bestaande gelijke-termijnen-weg.
+    installments: list[ArrangementInstallmentInput] | None = None
 
 
 class ArrangementUpdate(BaseModel):

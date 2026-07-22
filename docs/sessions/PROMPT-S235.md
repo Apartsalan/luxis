@@ -16,11 +16,19 @@ signaleren).
    Er ligt een doorstuurbare vraag voor Lisanne klaar (zie hieronder / entry S234). Zodra
    Arsalan/Lisanne antwoordt: zaak-data rechtzetten (dry-run + GO + natelling). NIET zelf
    aannemen wat er moet gebeuren.
-2. **Auto-afsluiten bij volledige betaling.** Het systeem zet een dossier ál automatisch op
-   'betaald' + date_closed bij €0 openstaand (`workflow/hooks.py::on_payment_received`).
-   Arsalan koos in S234 "taak i.p.v. automatisch" — dat is dus een WIJZIGING van bestaand
-   gedrag. Eerst met Arsalan bevestigen: wil hij de auto-afsluiting vervangen door een taak
-   "Volledig betaald — afsluiten?", of laten zoals het is? Pas daarna bouwen.
+2. **Auto-afsluiten bij volledige betaling — BESLIST (Arsalan, 22 juli).** Auto-afsluiten
+   blijft zoals het is; er komt een MELDING erbij bij zo'n automatische afsluiting:
+   "Dossier volledig betaald en afgesloten — wil je de cliënt factureren?". Bouwen, akkoord
+   gegeven. Volledig uitgewerkt (welke bestanden, wachter) in `docs/sessions/S235-ONTWERP.md`
+   Deel 0 vraag 2. Kort: nieuw meldingstype `case_closed_invoice` in `notifications/service.py`,
+   aangeroepen in `workflow/hooks.py::on_payment_received` ná het afsluiten, frontend-type in
+   `use-notifications.ts` + doorklik naar facturen-tab, wachter-test.
+
+## Onderzoek al gedaan (sessie 22 juli, Fable) — NIET opnieuw doen
+De hele regeling/termijn-laag is al in de bron gemeten en de gaten + het ontwerp staan in
+`docs/sessions/S235-ONTWERP.md` (Deel 1 = wat al bestaat, Deel 2 = de 3 echte gaten:
+flexibel termijnschema bij aanmaken / mail-regeling → taak / pijplijn naar 'Bijhouden
+regeling'). Lees dat document en ga direct naar bouwen (na akkoord op de aanpak per gat).
 
 ## Hoofdtaak — betalingsregeling + flexibel termijnschema
 De classificatie herkent al een "betalingsregeling"-signaal uit inkomende mail. Bouw daarop:

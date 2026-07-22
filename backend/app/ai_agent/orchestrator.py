@@ -198,9 +198,43 @@ async def handle_email_classified_pipeline(
         )
 
 
+async def handle_email_classified_arrangement(
+    *,
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    classification_id: uuid.UUID,  # noqa: ARG001
+    case_id: uuid.UUID,
+    category: str,
+    confidence: float,  # noqa: ARG001
+    synced_email_id: uuid.UUID,  # noqa: ARG001
+) -> None:
+    """S235 (Gat B): regeling-verzoek herkend → direct een taak voor Lisanne.
+
+    De classificatie-wachtrij (goedkeuren + uitvoeren) wordt in de praktijk niet
+    afgewerkt, dus de taak ontstaat hier — op het moment van herkennen. Geen
+    AI-invulling van bedragen/looptijd: de advocaat bepaalt de voorwaarden.
+    """
+    if category != ClassificationCategory.BETALINGSREGELING_VERZOEK:
+        return
+    try:
+        from app.collections.service import ensure_arrangement_request_task
+
+        created = await ensure_arrangement_request_task(db, tenant_id, case_id)
+        if created:
+            logger.info(
+                "Orchestrator: taak 'Betalingsregeling vastleggen' aangemaakt "
+                "voor case %s", case_id,
+            )
+    except Exception:
+        logger.exception(
+            "Orchestrator: regeling-taak aanmaken faalde voor case %s", case_id
+        )
+
+
 def register_handlers(bus: EventBus | None = None) -> None:
     """Register all orchestrator handlers on the event bus."""
     target = bus or event_bus
     target.on(EMAIL_CLASSIFIED, handle_email_classified)
     target.on(EMAIL_CLASSIFIED, handle_email_classified_pipeline)
+    target.on(EMAIL_CLASSIFIED, handle_email_classified_arrangement)
     logger.info("Orchestrator: all handlers registered")

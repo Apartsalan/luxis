@@ -1,5 +1,6 @@
 """Collections module service — Claims, Payments, Arrangements."""
 
+import logging
 import uuid
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
@@ -34,6 +35,8 @@ from app.collections.schemas import (
 )
 from app.collections.wik import calculate_bik
 from app.shared.exceptions import BadRequestError, ConflictError, NotFoundError
+
+logger = logging.getLogger(__name__)
 
 
 async def _refresh_case_financials(
@@ -776,6 +779,175 @@ async def get_arrangement(
     return arrangement
 
 
+async def _move_case_to_regeling_step(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+) -> None:
+    """S235 — een nieuwe regeling zet de zaak op 'Bijhouden regeling' (hold-stap).
+
+    Bewust NIET via `advance_guard_reason`: die blokkeert elke zet naar een
+    hold-stap (S234, tegen lineair doorschuiven) — hier is de hold-stap juist
+    het afgesproken doel. Alleen de checks die hier gelden: gesloten zaak en
+    openstaand verweer. Geen stap gevonden of zaak staat er al → niets doen.
+    """
+    # Lazy import — collections is een dependency van incasso, niet andersom.
+    from app.incasso.service import list_pipeline_steps, move_case_to_step
+
+    result = await db.execute(
+        select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
+    )
+    case = result.scalar_one_or_none()
+    if case is None or case.status in TERMINAL_STATUSES or case.has_verweer:
+        return
+
+    steps = await list_pipeline_steps(db, tenant_id, active_only=True)
+    target = next((s for s in steps if s.name == "Bijhouden regeling"), None)
+    if target is None:
+        logger.warning(
+            "Regeling aangemaakt voor zaak %s maar pijplijnstap 'Bijhouden regeling' "
+            "bestaat niet (of is inactief) — zaak blijft op de huidige stap.",
+            case.case_number,
+        )
+        return
+    if case.incasso_step_id == target.id:
+        return
+
+    await move_case_to_step(
+        db, tenant_id, case, target,
+        trigger_type="arrangement",
+        notes="Betalingsregeling getroffen — zaak naar 'Bijhouden regeling'",
+    )
+
+
+async def _ensure_arrangement_defaulted_task(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    arrangement: PaymentArrangement,
+) -> None:
+    """S235 — regeling verbroken (wanprestatie) → eenmalige taak 'vervolg bepalen'.
+
+    Gedeeld punt voor BEIDE defaulted-routes (`default_arrangement` én
+    `update_arrangement` met status=defaulted) — kruispuntregel: geen
+    automatische sprong naar een vervolgstap, een mens beslist. Deduped: één
+    open taak per zaak (zelfde patroon als de b2c-taak uit S234).
+    """
+    from app.workflow.models import WorkflowTask
+
+    result = await db.execute(
+        select(Case).where(
+            Case.id == arrangement.case_id, Case.tenant_id == tenant_id
+        )
+    )
+    case = result.scalar_one_or_none()
+    if case is None:
+        return
+
+    existing = (
+        await db.execute(
+            select(WorkflowTask).where(
+                WorkflowTask.tenant_id == tenant_id,
+                WorkflowTask.case_id == case.id,
+                WorkflowTask.task_type == "manual_review",
+                WorkflowTask.status.in_(["pending", "due", "overdue"]),
+                WorkflowTask.is_active.is_(True),
+                WorkflowTask.action_config["source"].astext == "arrangement_defaulted",
+            )
+        )
+    ).scalar_one_or_none()
+    if existing:
+        return
+
+    db.add(
+        WorkflowTask(
+            tenant_id=tenant_id,
+            case_id=case.id,
+            assigned_to_id=case.assigned_to_id,
+            task_type="manual_review",
+            title=f"Regeling verbroken — vervolg bepalen {case.case_number}",
+            description=(
+                "De betalingsregeling is als wanprestatie gemarkeerd. Bepaal het "
+                "vervolg (bijvoorbeeld de incassoprocedure hervatten of dagvaarden)."
+            ),
+            due_date=date.today(),
+            status="due",
+            auto_execute=False,
+            action_config={"source": "arrangement_defaulted"},
+        )
+    )
+    await db.flush()
+
+
+async def ensure_arrangement_request_task(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+) -> bool:
+    """S235 (Gat B) — regeling-mail herkend → taak 'Betalingsregeling vastleggen'.
+
+    Direct bij de classificatie (niet in de beoordelingswachtrij, die in de
+    praktijk niemand afwerkt). Bewust GEEN automatisch ingevulde regeling uit de
+    mailtekst: de advocaat bepaalt de voorwaarden. Geen taak als de zaak dicht
+    is, er al een actieve regeling loopt, of er al een open taak staat.
+    Returnt True als er een taak is aangemaakt.
+    """
+    from app.workflow.models import WorkflowTask
+
+    result = await db.execute(
+        select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
+    )
+    case = result.scalar_one_or_none()
+    if case is None or case.status in TERMINAL_STATUSES:
+        return False
+
+    active_arr = (
+        await db.execute(
+            select(PaymentArrangement.id).where(
+                PaymentArrangement.tenant_id == tenant_id,
+                PaymentArrangement.case_id == case_id,
+                PaymentArrangement.status == "active",
+            ).limit(1)
+        )
+    ).scalar_one_or_none()
+    if active_arr:
+        return False
+
+    existing = (
+        await db.execute(
+            select(WorkflowTask.id).where(
+                WorkflowTask.tenant_id == tenant_id,
+                WorkflowTask.case_id == case_id,
+                WorkflowTask.status.in_(["pending", "due", "overdue"]),
+                WorkflowTask.is_active.is_(True),
+                WorkflowTask.action_config["source"].astext == "arrangement_request",
+            ).limit(1)
+        )
+    ).scalar_one_or_none()
+    if existing:
+        return False
+
+    db.add(
+        WorkflowTask(
+            tenant_id=tenant_id,
+            case_id=case_id,
+            assigned_to_id=case.assigned_to_id,
+            task_type="manual_review",
+            title=f"Betalingsregeling vastleggen — {case.case_number}",
+            description=(
+                "De debiteur vraagt per e-mail om een betalingsregeling. Beoordeel "
+                "het voorstel en leg de regeling vast op het dossier "
+                "(tabblad Betalingen → Betalingsregeling)."
+            ),
+            due_date=date.today(),
+            status="due",
+            auto_execute=False,
+            action_config={"source": "arrangement_request"},
+        )
+    )
+    await db.flush()
+    return True
+
+
 async def create_arrangement(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -800,6 +972,53 @@ async def create_arrangement(
     )
     if existing.scalar_one_or_none() is not None:
         raise ConflictError("Er is al een actieve betalingsregeling voor dit dossier")
+
+    # S235 — flexibel schema: termijnen letterlijk overnemen (elke termijn eigen
+    # bedrag + datum), na harde Decimal-controle dat de som exact het totaalbedrag is.
+    if data.installments:
+        installments_in = sorted(data.installments, key=lambda i: i.due_date)
+        total = sum((i.amount for i in installments_in), Decimal("0"))
+        if total != data.total_amount:
+            raise BadRequestError(
+                f"De som van de termijnen (€ {total}) is niet gelijk aan het "
+                f"totaalbedrag (€ {data.total_amount})"
+            )
+
+        arrangement = PaymentArrangement(
+            tenant_id=tenant_id,
+            case_id=case_id,
+            total_amount=data.total_amount,
+            # installment_amount is NOT NULL maar betekenisloos bij een flexibel
+            # schema — vul het bedrag van de eerste termijn (ontwerpkeuze S235);
+            # de UI toont bij een flexibel schema de termijnentabel, niet dit veld.
+            installment_amount=installments_in[0].amount,
+            frequency=data.frequency,
+            start_date=installments_in[0].due_date,
+            end_date=installments_in[-1].due_date,
+            status="active",
+            notes=data.notes,
+        )
+        db.add(arrangement)
+        await db.flush()
+
+        for i, inst in enumerate(installments_in, start=1):
+            db.add(
+                PaymentArrangementInstallment(
+                    tenant_id=tenant_id,
+                    arrangement_id=arrangement.id,
+                    installment_number=i,
+                    due_date=inst.due_date,
+                    amount=inst.amount,
+                    paid_amount=Decimal("0"),
+                    status="pending",
+                )
+            )
+
+        await db.flush()
+        # S235 — regeling getroffen → zaak naar 'Bijhouden regeling' (hold).
+        await _move_case_to_regeling_step(db, tenant_id, case_id)
+        await db.refresh(arrangement)
+        return arrangement
 
     # Calculate installment_amount or num_installments (one must be provided)
     if data.num_installments and not data.installment_amount:
@@ -858,6 +1077,8 @@ async def create_arrangement(
         db.add(installment)
 
     await db.flush()
+    # S235 — regeling getroffen → zaak naar 'Bijhouden regeling' (hold).
+    await _move_case_to_regeling_step(db, tenant_id, case_id)
     await db.refresh(arrangement)
     return arrangement
 
@@ -891,6 +1112,10 @@ async def update_arrangement(
                 inst.status = closed_status
 
     await db.flush()
+    # S235 — wanprestatie via de generieke update-route → zelfde vervolg-taak
+    # als de dedicated /default-knop (kruispunt: beide routes, één gedeeld punt).
+    if updates.get("status") == "defaulted":
+        await _ensure_arrangement_defaulted_task(db, tenant_id, arrangement)
     await db.refresh(arrangement)
     return arrangement
 
@@ -999,6 +1224,8 @@ async def default_arrangement(
             inst.status = "missed"
 
     await db.flush()
+    # S235 — regeling verbroken → taak "vervolg bepalen" (geen automatische sprong).
+    await _ensure_arrangement_defaulted_task(db, tenant_id, arrangement)
     await db.refresh(arrangement)
     return arrangement
 

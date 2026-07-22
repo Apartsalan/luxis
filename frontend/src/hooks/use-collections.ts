@@ -761,6 +761,8 @@ export function useCreateArrangement() {
         frequency: string;
         start_date: string;
         notes?: string;
+        /** S235 — flexibel schema: elke termijn eigen bedrag + datum */
+        installments?: { due_date: string; amount: string }[];
       };
     }) => {
       const res = await api(`/api/cases/${caseId}/arrangements`, {

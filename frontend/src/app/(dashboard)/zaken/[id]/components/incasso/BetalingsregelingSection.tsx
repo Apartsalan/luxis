@@ -95,6 +95,12 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
     notes: "",
   });
 
+  // S235 — flexibel schema: eigen bedrag + datum per termijn
+  const [manualSchedule, setManualSchedule] = useState(false);
+  const [manualRows, setManualRows] = useState<{ due_date: string; amount: string }[]>([
+    { due_date: "", amount: "" },
+  ]);
+
   // Payment form state
   const [payForm, setPayForm] = useState({
     amount: "",
@@ -106,23 +112,43 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
   const activeArrangement = arrangements?.find((a) => a.status === "active");
   const historicalArrangements = arrangements?.filter((a) => a.status !== "active") || [];
 
+  // Lopende telling flexibel schema — integer centen (zelfde reden als CQ-19)
+  const manualSumCents = manualRows.reduce((sum, r) => {
+    const v = parseFloat(r.amount);
+    return sum + (v > 0 ? Math.round(v * 100) : 0);
+  }, 0);
+  const totalCents = Math.round((parseFloat(form.total_amount) || 0) * 100);
+  const manualRowsComplete = manualRows.every((r) => r.due_date && parseFloat(r.amount) > 0);
+  const manualValid = manualRowsComplete && totalCents > 0 && manualSumCents === totalCents;
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const sortedRows = [...manualRows].sort((a, b) => a.due_date.localeCompare(b.due_date));
       await createArrangement.mutateAsync({
         caseId,
         data: {
           total_amount: form.total_amount,
-          ...(form.installment_amount && { installment_amount: form.installment_amount }),
-          ...(form.num_installments && { num_installments: parseInt(form.num_installments) }),
           frequency: form.frequency,
-          start_date: form.start_date,
+          ...(manualSchedule
+            ? {
+                // Startdatum = eerste termijndatum (backend zet dit ook zelf)
+                start_date: sortedRows[0].due_date,
+                installments: sortedRows,
+              }
+            : {
+                ...(form.installment_amount && { installment_amount: form.installment_amount }),
+                ...(form.num_installments && { num_installments: parseInt(form.num_installments) }),
+                start_date: form.start_date,
+              }),
           ...(form.notes && { notes: form.notes }),
         },
       });
       toast.success("Betalingsregeling aangemaakt");
       setShowCreate(false);
       setForm({ total_amount: "", installment_amount: "", num_installments: "", frequency: "monthly", start_date: "", notes: "" });
+      setManualSchedule(false);
+      setManualRows([{ due_date: "", amount: "" }]);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Er ging iets mis");
     }
@@ -239,6 +265,17 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
             </button>
           </div>
 
+          {/* S235 — schakelaar handmatig schema */}
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={manualSchedule}
+              onChange={(e) => setManualSchedule(e.target.checked)}
+              className="h-4 w-4 rounded border-input"
+            />
+            <span>Handmatig schema (eigen bedrag en datum per termijn, bijv. 2× € 200, daarna € 1.000)</span>
+          </label>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="regeling-totaalbedrag" className="mb-1 block text-sm font-medium">Totaalbedrag</label>
@@ -254,7 +291,7 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
                   const total = parseFloat(totalStr);
                   const num = parseInt(form.num_installments);
                   const updated: typeof form = { ...form, total_amount: totalStr };
-                  if (num > 0 && total > 0) {
+                  if (!manualSchedule && num > 0 && total > 0) {
                     updated.installment_amount = (total / num).toFixed(2);
                   }
                   setForm(updated);
@@ -263,6 +300,7 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
+            {!manualSchedule && (<>
             <div>
               <label htmlFor="regeling-aantal-termijnen" className="mb-1 block text-sm font-medium">Aantal termijnen</label>
               <input
@@ -316,13 +354,87 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
               <input
                 id="regeling-startdatum"
                 type="date"
-                required
+                required={!manualSchedule}
                 value={form.start_date}
                 onChange={(e) => setForm({ ...form, start_date: e.target.value })}
                 className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
+            </>)}
           </div>
+
+          {/* S235 — rijen-editor flexibel schema */}
+          {manualSchedule && (
+            <div className="space-y-2">
+              <span className="block text-sm font-medium">Termijnen</span>
+              {manualRows.map((row, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <span className="w-6 text-right text-sm text-muted-foreground">{idx + 1}.</span>
+                  <input
+                    type="date"
+                    required
+                    aria-label={`Vervaldatum termijn ${idx + 1}`}
+                    value={row.due_date}
+                    onChange={(e) => {
+                      const rows = [...manualRows];
+                      rows[idx] = { ...rows[idx], due_date: e.target.value };
+                      setManualRows(rows);
+                    }}
+                    className="rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    required
+                    aria-label={`Bedrag termijn ${idx + 1}`}
+                    value={row.amount}
+                    onChange={(e) => {
+                      const rows = [...manualRows];
+                      rows[idx] = { ...rows[idx], amount: e.target.value };
+                      setManualRows(rows);
+                    }}
+                    placeholder="0,00"
+                    className="w-32 rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setManualRows(manualRows.filter((_, i) => i !== idx))}
+                    disabled={manualRows.length === 1}
+                    aria-label={`Termijn ${idx + 1} verwijderen`}
+                    className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setManualRows([...manualRows, { due_date: "", amount: "" }])}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-input px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Termijn toevoegen
+              </button>
+
+              {/* Lopende telling */}
+              {totalCents > 0 && (
+                <div className={`rounded-lg border px-4 py-3 text-sm ${
+                  manualValid
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    : "border-amber-200 bg-amber-50 text-amber-800"
+                }`}>
+                  Som termijnen: <span className="font-medium">{formatCurrency(manualSumCents / 100)}</span>
+                  {" van "}
+                  <span className="font-medium">{formatCurrency(totalCents / 100)}</span>
+                  {!manualValid && manualRowsComplete && (
+                    <> — verschil {formatCurrency((totalCents - manualSumCents) / 100)}</>
+                  )}
+                  {!manualRowsComplete && <> — vul elke termijn volledig in</>}
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <label htmlFor="regeling-notities" className="mb-1 block text-sm font-medium">Notities</label>
@@ -337,7 +449,7 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
           </div>
 
           {/* Live Preview */}
-          {preview && (
+          {!manualSchedule && preview && (
             <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
               <p className="text-sm text-blue-800">
                 <span className="font-medium">{preview.count} termijnen</span>
@@ -359,7 +471,7 @@ export function BetalingsregelingSection({ caseId }: { caseId: string }) {
             </button>
             <button
               type="submit"
-              disabled={createArrangement.isPending}
+              disabled={createArrangement.isPending || (manualSchedule && !manualValid)}
               className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
               {createArrangement.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -537,6 +649,10 @@ function ArrangementCard({
   const paidCount = arrangement.paid_count;
   const progressPct = totalInstallments > 0 ? (paidCount / totalInstallments) * 100 : 0;
 
+  // S235 — verschillende termijnbedragen = flexibel schema; het frequentie-label
+  // zou dan misleiden ("Maandelijks" terwijl de datums vrij gekozen zijn).
+  const isFlexible = new Set(arrangement.installments.map((i) => String(i.amount))).size > 1;
+
   const statusColor: Record<string, string> = {
     active: "bg-emerald-100 text-emerald-700",
     completed: "bg-blue-100 text-blue-700",
@@ -563,7 +679,7 @@ function ArrangementCard({
               </span>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {FREQUENCY_LABELS[arrangement.frequency]} · {totalInstallments} termijnen ·
+              {isFlexible ? "Flexibel schema" : FREQUENCY_LABELS[arrangement.frequency]} · {totalInstallments} termijnen ·
               Start {formatDateShort(arrangement.start_date)}
               {arrangement.end_date && ` · Eind ${formatDateShort(arrangement.end_date)}`}
             </p>

@@ -35,6 +35,7 @@ export type NotificationType =
   | "trust_approval_pending"
   | "trust_stale"
   | "installment_overdue"
+  | "case_closed_invoice"
   | "system";
 
 export const NOTIFICATION_TYPE_CONFIG: Record<
@@ -57,6 +58,7 @@ export const NOTIFICATION_TYPE_CONFIG: Record<
   trust_approval_pending: { label: "Goedkeuring nodig", icon: "alert-circle", color: "amber" },
   trust_stale: { label: "Derdengelden stil", icon: "alert-triangle", color: "amber" },
   installment_overdue: { label: "Termijn gemist", icon: "alert-triangle", color: "red" },
+  case_closed_invoice: { label: "Dossier afgesloten", icon: "check-circle", color: "emerald" },
   system: { label: "Systeem", icon: "info", color: "gray" },
 };
 

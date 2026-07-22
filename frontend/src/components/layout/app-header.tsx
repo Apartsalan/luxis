@@ -124,6 +124,7 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
       case "installment_overdue":
         return "betalingen";
       case "invoice_overdue":
+      case "case_closed_invoice":
         return "facturen";
       default:
         return null;

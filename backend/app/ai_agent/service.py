@@ -505,7 +505,32 @@ async def execute_classification(
             execution_notes.append(f"Herinnering gepland over {days} dagen ({reminder_date})")
 
         elif action == "escalate":
-            if case:
+            # S235 (kruispunt-dedupe): een regeling-verzoek krijgt zijn taak al
+            # direct bij de classificatie (orchestrator → 'Betalingsregeling
+            # vastleggen'). Wordt de wachtrij later alsnog afgewerkt, dan zou
+            # deze escalate-tak een tweede taak op dezelfde mail maken — sla de
+            # escalatie-taak dan over zolang die gerichte taak nog open staat.
+            skip_escalate = False
+            if case and classification.category == "betalingsregeling_verzoek":
+                open_arrangement_task = (
+                    await db.execute(
+                        select(WorkflowTask.id).where(
+                            WorkflowTask.tenant_id == tenant_id,
+                            WorkflowTask.case_id == case.id,
+                            WorkflowTask.status.in_(["pending", "due", "overdue"]),
+                            WorkflowTask.is_active.is_(True),
+                            WorkflowTask.action_config["source"].astext
+                            == "arrangement_request",
+                        ).limit(1)
+                    )
+                ).scalar_one_or_none()
+                if open_arrangement_task:
+                    skip_escalate = True
+                    execution_notes.append(
+                        "Taak 'Betalingsregeling vastleggen' staat al open — "
+                        "geen extra escalatie-taak"
+                    )
+            if case and not skip_escalate:
                 task = WorkflowTask(
                     tenant_id=tenant_id,
                     case_id=case.id,
@@ -533,7 +558,8 @@ async def execute_classification(
                     },
                 )
                 db.add(task)
-            execution_notes.append("Geëscaleerd naar advocaat voor beoordeling")
+            if not skip_escalate:
+                execution_notes.append("Geëscaleerd naar advocaat voor beoordeling")
 
         elif action == "dismiss":
             if email:

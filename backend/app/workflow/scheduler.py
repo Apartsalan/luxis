@@ -828,12 +828,13 @@ async def daily_pipeline_auto_drafts() -> None:
                 template_step_ids = {s.id for s in steps if s.template_type}
 
                 matches = await evaluate_timeout_rules(session, tenant.id)
+                # S235 — sjabloon-skips éérst wegfilteren, dan pas het budget: een
+                # skip kost geen AI-oproep en mag dus geen budgetplek innemen
+                # (anders verdringen skips echte sjabloonloze gevallen).
+                ai_matches = [m for m in matches if m.to_step_id not in template_step_ids]
+                skipped_template = len(matches) - len(ai_matches)
                 generated = 0
-                skipped_template = 0
-                for m in matches[:budget]:
-                    if m.to_step_id in template_step_ids:
-                        skipped_template += 1
-                        continue
+                for m in ai_matches[:budget]:
                     try:
                         await generate_draft_for_step(
                             session,

@@ -235,7 +235,14 @@ async def scan_for_followups(
             if (
                 not case
                 or not step
-                or not step.template_type  # alleen verstuur-adviezen, geen escalaties
+                # Alleen échte verstuur-adviezen: het advies moet GENERATE_DOCUMENT
+                # zijn ÉN de stap moet een sjabloon hebben. Alleen op de stap
+                # filteren was fout (S236-review): oude escalatie-adviezen van
+                # vóór de S234-briefkoppeling staan op stappen die inmiddels wél
+                # een sjabloon hebben → die kregen een misleidende verstuur-taak
+                # terwijl 'Uitvoeren' een beoordeel-taak maakt.
+                or rec.recommended_action != RecommendedAction.GENERATE_DOCUMENT
+                or not step.template_type
                 or case.incasso_step_id != rec.incasso_step_id  # zaak al doorgeschoven
                 or str(rec.id) in tasked_rec_ids
             ):

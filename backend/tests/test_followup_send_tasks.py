@@ -308,6 +308,38 @@ async def test_step_change_skips_task(
 
 
 @pytest.mark.asyncio
+async def test_no_send_task_for_stale_escalate_advice_on_templated_step(
+    db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """S236-review — een oud escalatie-advies op een stap die inmiddels wél een
+    sjabloon heeft (S234 gaf de derde/laatste sommatie een brief) mag GEEN
+    'versturen'-taak krijgen: 'Uitvoeren' van dat advies verstuurt niets maar
+    maakt een beoordeel-taak. Live gevonden: 10 misleidende taken op prod."""
+    step = await _create_step(db, test_tenant.id)  # stap MET sjabloon
+    case = await _create_case(db, test_tenant.id, test_user.id, step)
+    db.add(
+        FollowupRecommendation(
+            tenant_id=test_tenant.id,
+            case_id=case.id,
+            incasso_step_id=step.id,
+            recommended_action=RecommendedAction.ESCALATE,  # oud advies-type
+            reasoning="advies van vóór de briefkoppeling",
+            days_in_step=16,
+            outstanding_amount=Decimal("5000.00"),
+            urgency="normal",
+            status=RecommendationStatus.PENDING,
+        )
+    )
+    await db.commit()
+
+    await scan_for_followups(db, test_tenant.id)
+    await db.commit()
+
+    tasks = await _send_tasks(db, test_tenant.id, case.id)
+    assert tasks == []
+
+
+@pytest.mark.asyncio
 async def test_scan_no_task_when_case_already_moved_on(
     db: AsyncSession, test_tenant: Tenant, test_user: User
 ):

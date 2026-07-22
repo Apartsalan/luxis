@@ -59,7 +59,10 @@ schoon; CI groen op alle 4 commits (conclusion=success via API nagetrokken).
 **Live natelling op prod: alle 7 routes** (classificatie, intake, factuur-tekst,
 compose/antwoord, dossier-concept, stap-concept, PDF) — elk 1 echte AI-call, resultaat
 schema-conform, 7 rijen in `ai_usage` met kosten. Prod-logs sinds deploy: 0 AI-fouten;
-containers healthy, login-API 200.
+containers healthy, login-API 200. **Extra op verzoek Arsalan: antwoord-testronde met
+46 verse AI-antwoorden** (18 scenario's + 28 goud-gevallen, corrector aan, niets
+verstuurd) — 0 storingen, 0 echte fouten; de 2 corrector-markeringen beide handmatig
+weerlegd als controleur-missers (rapport: `docs/sessions/S238-antwoord-testronde.md`).
 
 ### Bekende issues / bewust niet gedaan
 - **Intake-route loopt structureel via het tool_use-vangnet** ("Grammar compilation

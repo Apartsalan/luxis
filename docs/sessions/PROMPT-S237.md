@@ -30,7 +30,8 @@ Geen echte debiteuren mailen zonder GO per geval (testkanaal 2026-00006 = Arsala
 gmail). Elke prod-mutatie: dry-run/telling + GO + natelling. Geen `git add -A`.
 Kruispunt-check bij elk gedeeld effect (skill `breed-testen`). KvK: niet naar vragen.
 Deploy via SSH mét `--force-recreate`. Inlognaam Lisanne: kesting@kestinglegal.nl.
-Check eerst of CI-run 29910413122 (commits e18c2d2/1782310) groen is geworden.
+CI was groen op alle S236-commits (nagetrokken). Klein los punt: `sharp` (frontend)
+draagt 4 externe libvips-CVE's — updaten zodra er een gepatchte versie is.
 
 ## Verificatie
 - Backend: `docker compose exec backend python -m pytest tests/ -k "<relevante modules>" -v`

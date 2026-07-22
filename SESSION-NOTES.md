@@ -69,10 +69,11 @@ Commits `e91037d`, `e18c2d2`, `1782310`; backend+frontend via SSH `--force-recre
 ### Verificatie
 9+1 nieuwe werklijst-wachters groen; 201 kruispunt-tests (followup/advance/workflow/
 arrangement) groen; mail-kruispunt 952 groen (15 errors = botsing met parallelle
-eigen run, schoon herdraaid: 98/98); ruff + tsc schoon; CI groen op `e91037d`
-(commits `e18c2d2`/`1782310`: run 29910413122 liep nog bij afsluiten — natrekken met
-`gh run list`); containers healthy, login-API 200 na beide deploys; alle prod-
-mutaties met dry-run + natelling (10/7/7/7/7/14 exact).
+eigen run, schoon herdraaid: 98/98); ruff + tsc schoon; CI groen op alle 3 commits
+(29910413122 + 29911747328 conclusion=success via API nagetrokken; de Frontend
+Dependency Audit-job faalt daarbinnen niet-blokkerend op 4 sharp/libvips-CVE's —
+extern, zie Bekende issues); containers healthy, login-API 200 na beide deploys;
+alle prod-mutaties met dry-run + natelling (10/7/7/7/7/14 exact).
 
 ### Bekende issues / bewust niet gedaan
 - **Escalatie-adviezen (o.a. 5 échte 'Voorstel dagvaarding'-dossiers) staan NIET op
@@ -86,6 +87,9 @@ mutaties met dry-run + natelling (10/7/7/7/7/14 exact).
 - Batch-generatie zónder verzending laat de verstuur-taak bewust open (er ging niets
   de deur uit) maar schuift de zaak wél door (bestaand S234-randgeval).
 - IN100613 onaangeraakt (wacht op Lisanne); heeft ook nog een oud pending advies.
+- **npm-audit-waarschuwing (niet-blokkerend):** `sharp` erft 4 libvips-CVE's
+  (CVE-2026-33327/-33328/-35590/-35591, 3× high) — sharp updaten zodra er een
+  gepatchte versie is.
 
 ### Volgende sessie
 S237: reacties op de 7 sommaties verwerken (IN100606-verweer ligt bij Lisanne;

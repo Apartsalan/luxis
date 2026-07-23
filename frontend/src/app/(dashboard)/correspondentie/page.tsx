@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Mail,
   ArrowDownLeft,
@@ -114,6 +114,19 @@ export default function CorrespondentiePage() {
       setSelectedIds(new Set());
     }
   }, [searchParams]);
+
+  // S240 (klikproef-vondst) — handmatige tabwissel maakt de URL weer kaal.
+  // Blijft ?filter=unlinked staan, dan is een volgende melding-klik een
+  // navigatie naar exact dezelfde URL en ziet het abonnement hierboven niets.
+  const router = useRouter();
+  const switchTab = (tab: "alle" | "ongesorteerd" | "aanvragen") => {
+    setActiveTab(tab);
+    setSelectedEmailId(null);
+    setSelectedIds(new Set());
+    if (searchParams.get("filter")) {
+      router.replace("/correspondentie", { scroll: false });
+    }
+  };
 
   const openAiDraft = async (draftId: string, sourceEmail: SyncedEmailDetail) => {
     try {
@@ -411,7 +424,7 @@ export default function CorrespondentiePage() {
           </h1>
           <div className="flex flex-wrap items-center gap-1 mt-2">
             <button
-              onClick={() => { setActiveTab("alle"); setSelectedEmailId(null); setSelectedIds(new Set()); }}
+              onClick={() => switchTab("alle")}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 activeTab === "alle"
                   ? "bg-primary text-primary-foreground"
@@ -424,7 +437,7 @@ export default function CorrespondentiePage() {
               ) : null}
             </button>
             <button
-              onClick={() => { setActiveTab("ongesorteerd"); setSelectedEmailId(null); setSelectedIds(new Set()); }}
+              onClick={() => switchTab("ongesorteerd")}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 activeTab === "ongesorteerd"
                   ? "bg-primary text-primary-foreground"
@@ -439,7 +452,7 @@ export default function CorrespondentiePage() {
               )}
             </button>
             <button
-              onClick={() => { setActiveTab("aanvragen"); setSelectedEmailId(null); setSelectedIds(new Set()); }}
+              onClick={() => switchTab("aanvragen")}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 activeTab === "aanvragen"
                   ? "bg-primary text-primary-foreground"

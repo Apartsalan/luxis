@@ -231,10 +231,71 @@ async def handle_email_classified_arrangement(
         )
 
 
+async def handle_email_classified_promise(
+    *,
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    classification_id: uuid.UUID,
+    case_id: uuid.UUID,
+    category: str,
+    confidence: float,  # noqa: ARG001
+    synced_email_id: uuid.UUID,  # noqa: ARG001
+) -> None:
+    """S240 (GO Arsalan 23-7): betaalbelofte herkend → taak op de beloofde datum.
+
+    promise_date + promise_amount staan al op de classificatie (S239 live
+    bewezen: 31-7-2026, €100 op 0.95), maar níets bewaakte die datum ooit.
+    Zelfde patroon als de regeling-handler (S235): taak op het moment van
+    herkennen, niet in de dode beoordelingswachtrij. Zonder herkende datum
+    valt er niets op datum te bewaken → bewust geen taak (de mail zelf geeft
+    al een email_received-melding).
+    """
+    if category != ClassificationCategory.BELOFTE_TOT_BETALING:
+        return
+    try:
+        from sqlalchemy import select
+
+        from app.ai_agent.models import EmailClassification
+        from app.collections.service import ensure_payment_promise_task
+
+        classification = (
+            await db.execute(
+                select(EmailClassification).where(
+                    EmailClassification.id == classification_id,
+                    EmailClassification.tenant_id == tenant_id,
+                )
+            )
+        ).scalar_one_or_none()
+        if classification is None or classification.promise_date is None:
+            logger.info(
+                "Orchestrator: belofte zonder herkende datum op case %s — "
+                "geen bewaak-taak", case_id,
+            )
+            return
+
+        created = await ensure_payment_promise_task(
+            db,
+            tenant_id,
+            case_id,
+            promise_date=classification.promise_date,
+            promise_amount=classification.promise_amount,
+        )
+        if created:
+            logger.info(
+                "Orchestrator: taak 'Betaalbelofte controleren' aangemaakt "
+                "voor case %s (due %s)", case_id, classification.promise_date,
+            )
+    except Exception:
+        logger.exception(
+            "Orchestrator: belofte-taak aanmaken faalde voor case %s", case_id
+        )
+
+
 def register_handlers(bus: EventBus | None = None) -> None:
     """Register all orchestrator handlers on the event bus."""
     target = bus or event_bus
     target.on(EMAIL_CLASSIFIED, handle_email_classified)
     target.on(EMAIL_CLASSIFIED, handle_email_classified_pipeline)
     target.on(EMAIL_CLASSIFIED, handle_email_classified_arrangement)
+    target.on(EMAIL_CLASSIFIED, handle_email_classified_promise)
     logger.info("Orchestrator: all handlers registered")

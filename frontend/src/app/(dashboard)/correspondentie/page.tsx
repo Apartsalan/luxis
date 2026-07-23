@@ -61,8 +61,15 @@ import { Reply, Forward } from "lucide-react";
 // ── Main Page ────────────────────────────────────────────────────────────────
 
 export default function CorrespondentiePage() {
-  // Tab state
-  const [activeTab, setActiveTab] = useState<"alle" | "ongesorteerd" | "aanvragen">("alle");
+  // Tab state — S240: ?filter=unlinked (melding-doorklik + dashboard-link)
+  // opent direct de Ongesorteerd-tab. ponytail: query-param direct lezen bij
+  // mount — vermijdt useSearchParams + Suspense-eis (zelfde patroon als
+  // instellingen).
+  const [activeTab, setActiveTab] = useState<"alle" | "ongesorteerd" | "aanvragen">(() => {
+    if (typeof window === "undefined") return "alle";
+    const filter = new URLSearchParams(window.location.search).get("filter");
+    return filter === "unlinked" ? "ongesorteerd" : "alle";
+  });
 
   // Data hooks
   const { data: unlinkedData, isLoading } = useUnlinkedEmails(100);

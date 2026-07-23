@@ -36,6 +36,7 @@ export type NotificationType =
   | "trust_stale"
   | "installment_overdue"
   | "case_closed_invoice"
+  | "email_unsorted"
   | "system";
 
 export const NOTIFICATION_TYPE_CONFIG: Record<
@@ -59,6 +60,7 @@ export const NOTIFICATION_TYPE_CONFIG: Record<
   trust_stale: { label: "Derdengelden stil", icon: "alert-triangle", color: "amber" },
   installment_overdue: { label: "Termijn gemist", icon: "alert-triangle", color: "red" },
   case_closed_invoice: { label: "Dossier afgesloten", icon: "check-circle", color: "emerald" },
+  email_unsorted: { label: "Ongesorteerde mail", icon: "mail", color: "amber" },
   system: { label: "Systeem", icon: "info", color: "gray" },
 };
 

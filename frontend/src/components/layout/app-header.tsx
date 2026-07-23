@@ -255,14 +255,17 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
                     );
 
                     // Link bij case_id (met tab-context, CONN-5); een
-                    // invoice_overdue zonder dossier → facturenlijst; anders een
-                    // echte button — alle drie toetsenbord-focusbaar.
+                    // invoice_overdue zonder dossier → facturenlijst; een
+                    // email_unsorted → Mail-pagina met ongesorteerd-filter
+                    // (S240); anders een echte button — alle toetsenbord-focusbaar.
                     const tab = notificationTab(n.type);
                     const href = n.case_id
                       ? `/zaken/${n.case_id}${tab ? `?tab=${tab}` : ""}`
                       : n.type === "invoice_overdue"
                         ? "/facturen"
-                        : null;
+                        : n.type === "email_unsorted"
+                          ? "/correspondentie?filter=unlinked"
+                          : null;
                     if (href) {
                       return (
                         <Link

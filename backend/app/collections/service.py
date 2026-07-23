@@ -2,7 +2,7 @@
 
 import logging
 import uuid
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING
 
@@ -954,6 +954,102 @@ async def ensure_arrangement_request_task(
     )
     await db.flush()
     return True
+
+
+async def ensure_payment_promise_task(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    *,
+    promise_date: date,
+    promise_amount: Decimal | None = None,
+) -> bool:
+    """S240 (GO Arsalan 23-7) — betaalbelofte herkend → taak op de beloofde datum.
+
+    De classificatie haalt promise_date + promise_amount al perfect uit de mail
+    (S239 live bewezen), maar níets keek ooit naar die datum — een verlopen
+    belofte gaf geen enkel signaal. Zelfde recept als
+    ensure_arrangement_request_task (S235): direct bij herkennen, dedupe op open
+    taak, geen taak bij gesloten/betaalde zaak. Returnt True bij een nieuwe taak.
+    """
+    from app.workflow.models import WorkflowTask
+
+    result = await db.execute(
+        select(Case).where(Case.id == case_id, Case.tenant_id == tenant_id)
+    )
+    case = result.scalar_one_or_none()
+    if case is None or case.status in TERMINAL_STATUSES:
+        return False
+
+    existing = (
+        await db.execute(
+            select(WorkflowTask.id).where(
+                WorkflowTask.tenant_id == tenant_id,
+                WorkflowTask.case_id == case_id,
+                WorkflowTask.status.in_(["pending", "due", "overdue"]),
+                WorkflowTask.is_active.is_(True),
+                WorkflowTask.action_config["source"].astext == "payment_promise",
+            ).limit(1)
+        )
+    ).scalar_one_or_none()
+    if existing:
+        return False
+
+    amount_label = f" van € {promise_amount}" if promise_amount is not None else ""
+    db.add(
+        WorkflowTask(
+            tenant_id=tenant_id,
+            case_id=case_id,
+            assigned_to_id=case.assigned_to_id,
+            task_type="manual_review",
+            title=f"Betaalbelofte controleren — {case.case_number}",
+            description=(
+                f"De debiteur beloofde per e-mail een betaling{amount_label} "
+                f"uiterlijk {promise_date.strftime('%d-%m-%Y')}. Controleer op die "
+                "datum of de betaling binnen is; zo niet, bepaal het vervolg."
+            ),
+            due_date=promise_date,
+            # De dagelijkse taken-job zet pending → due/overdue op datum.
+            status="pending" if promise_date > date.today() else "due",
+            auto_execute=False,
+            action_config={"source": "payment_promise"},
+        )
+    )
+    await db.flush()
+    return True
+
+
+async def close_payment_promise_tasks(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+) -> int:
+    """S240 — zaak volledig betaald → open betaalbelofte-taken zijn klaar.
+
+    Aangehaakt op on_payment_received (het gedeelde punt van álle betaalroutes;
+    gekozen boven een check bij taak-weergave omdat de taak dan ook écht dicht
+    staat in tellers en lijsten). Elke volledige betaling sluit de taak — ook
+    een betaling ná de beloofde datum maakt bewaken zinloos. Returnt het aantal
+    gesloten taken.
+    """
+    from app.workflow.models import WorkflowTask
+
+    result = await db.execute(
+        select(WorkflowTask).where(
+            WorkflowTask.tenant_id == tenant_id,
+            WorkflowTask.case_id == case_id,
+            WorkflowTask.status.in_(["pending", "due", "overdue"]),
+            WorkflowTask.is_active.is_(True),
+            WorkflowTask.action_config["source"].astext == "payment_promise",
+        )
+    )
+    tasks = list(result.scalars().all())
+    for task in tasks:
+        task.status = "completed"
+        task.completed_at = datetime.now(UTC)
+    if tasks:
+        await db.flush()
+    return len(tasks)
 
 
 async def create_arrangement(

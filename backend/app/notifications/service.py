@@ -18,6 +18,7 @@ NOTIF_TRUST_STALE = "trust_stale"  # FIN-2: derdengelden staan te lang stil
 NOTIF_INSTALLMENT_OVERDUE = "installment_overdue"  # regeling-alarm: termijn gemist
 NOTIF_BIK_ABOVE_STAFFEL = "bik_above_staffel"  # S230/V1: B2C-kosten boven WIK-staffel
 NOTIF_CASE_CLOSED_INVOICE = "case_closed_invoice"  # S235: auto-afgesloten → cliënt factureren?
+NOTIF_EMAIL_UNSORTED = "email_unsorted"  # S240: nieuwe mail in de ongesorteerde bak
 
 # A5/A11 (S198): meldings-typen die uit de meldingenlijst + ongelezen-teller worden
 # gefilterd. De classificatielijn staat op pauze en 'classification_done' verzoop de
@@ -269,6 +270,38 @@ async def create_email_received_notification(
             message=message,
             case_id=case_id,
             case_number=case_number,
+        ),
+        dedup_minutes=60,
+    )
+
+
+async def create_email_unsorted_notification(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    from_label: str,
+    subject: str,
+) -> int:
+    """S240 (GO Arsalan 23-7): een inkomende mail die nérgens aan koppelt viel
+    stil in de ongesorteerde bak — 2 échte zakelijke mails bleven er 9 dagen /
+    5 weken hangen (S239-meting). Meld elke nieuwe ongesorteerde inbound-mail
+    aan alle actieve gebruikers; doorklik gaat naar de Mail-pagina (frontend
+    kent dit type, geen case_id).
+
+    Deduped per (user, title) within 60 minutes — de titel draagt het onderwerp,
+    dus twee verschillende ongesorteerde mails melden allebei; een dubbele
+    sync-run van dezelfde mail meldt één keer.
+    """
+    subject_clean = (subject or "(geen onderwerp)").strip()[:120]
+    title = f"Ongesorteerde e-mail: {subject_clean}"
+    message = f"Van: {from_label} — koppel de mail aan een dossier of negeer hem."
+    return await _notify_all_tenant_users(
+        db,
+        tenant_id,
+        NotificationCreate(
+            type=NOTIF_EMAIL_UNSORTED,
+            title=title,
+            message=message,
         ),
         dedup_minutes=60,
     )

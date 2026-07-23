@@ -763,6 +763,34 @@ async def sync_emails_for_account(
                     "Notification voor email_received mislukt — sync gaat door"
                 )
 
+        # S240 — nieuwe ongesorteerde inbound-mail: meld hem, anders valt hij
+        # stil in de bak (S239: 2 échte mails lagen er 9 dagen / 5 weken).
+        # Kruispunt-poorten: eigen afzenders zijn hierboven al 'outbound'
+        # (S236-poort), bounces zijn auto-dismissed, en het BaseNet-
+        # importaccount (provider 'import') synct nooit — de guard hier is de
+        # wachter voor als dat ooit verandert.
+        elif (
+            case_id is None
+            and direction == "inbound"
+            and not is_bounce
+            and account.provider != "import"
+        ):
+            try:
+                from app.notifications.service import (
+                    create_email_unsorted_notification,
+                )
+
+                await create_email_unsorted_notification(
+                    db,
+                    account.tenant_id,
+                    from_label=msg.from_name or msg.from_email or "(onbekend)",
+                    subject=msg.subject or "",
+                )
+            except Exception:
+                logger.exception(
+                    "Notification voor email_unsorted mislukt — sync gaat door"
+                )
+
     # Update last sync timestamp; wis een eerdere sync-fout (S203 #1: NULL = geslaagd).
     account.last_sync_at = datetime.now(UTC)
     account.last_sync_error = None

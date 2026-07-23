@@ -111,6 +111,13 @@ async def on_payment_received(
             db, tenant_id, case.id, reason="Zaak gesloten (volledig betaald)"
         )
 
+        # S240 — de betaalbelofte is nagekomen (of achterhaald): open
+        # betaalbelofte-taken sluiten mee. Dit is het gedeelde punt van álle
+        # betaalroutes (create_payment → deze hook).
+        from app.collections.service import close_payment_promise_tasks
+
+        await close_payment_promise_tasks(db, tenant_id, case.id)
+
         # S235 (keuze Arsalan 22-7): maak het automatische afsluiten zichtbaar én
         # herinner aan de eigen declaratie naar de cliënt.
         from app.notifications.service import create_case_closed_invoice_notification

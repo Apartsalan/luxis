@@ -43,8 +43,23 @@ def upgrade() -> None:
         sa.Column("last_error", sa.Text(), nullable=True),
         sa.Column("claimed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("sent_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        # server_default is verplicht: TimestampMixin vult deze kolommen NIET in
+        # Python maar laat de database dat doen (server_default=func.now()). Zonder
+        # deze default faalt elke insert op een not-null-schending — en de tests
+        # zien dat niet, want de testdatabase wordt uit de modellen gebouwd
+        # (create_all neemt de default mee) en productie uit deze migratie.
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.ForeignKeyConstraint(["tenant_id"], ["tenants.id"]),
         sa.ForeignKeyConstraint(["created_by_id"], ["users.id"]),
         sa.ForeignKeyConstraint(["case_id"], ["cases.id"]),

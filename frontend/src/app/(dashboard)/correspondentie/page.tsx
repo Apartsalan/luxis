@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -60,13 +60,13 @@ import { formatRelativeTime } from "@/lib/utils";
 import { buildReplyPrefillWithShell, buildForwardPrefill, type ReplyPrefill } from "@/lib/email-reply";
 import { Reply, Forward } from "lucide-react";
 
-// â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Main Page ────────────────────────────────────────────────────────────────
 
 export default function CorrespondentiePage() {
-  // Tab state â€” S240: ?filter=unlinked (melding-doorklik + dashboard-link)
+  // Tab state — S240: ?filter=unlinked (melding-doorklik + dashboard-link)
   // opent direct de Ongesorteerd-tab. Via useSearchParams (patroon zaken-
   // pagina), niet window.location bij mount: een klik op de meldingen-bel
-  // terwijl je al Ã³p de Mail-pagina staat is een navigatie zonder remount â€”
+  // terwijl je al óp de Mail-pagina staat is een navigatie zonder remount —
   // alleen dit abonnement ziet die wissel (Fable-review S240).
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<"alle" | "ongesorteerd" | "aanvragen">(() =>
@@ -90,11 +90,11 @@ export default function CorrespondentiePage() {
   const [caseSearch, setCaseSearch] = useState("");
   const [showComposeDialog, setShowComposeDialog] = useState(false);
   const [replyPrefill, setReplyPrefill] = useState<ReplyPrefill | null>(null);
-  // S223 â€” "AI-antwoord maken" op een inkomende mail van de wederpartij
+  // S223 — "AI-antwoord maken" op een inkomende mail van de wederpartij
   const [aiReplyEmail, setAiReplyEmail] = useState<SyncedEmailDetail | null>(null);
-  // S233 â€” het AI-concept opent nu IN-PLACE als zijpaneel op de Mail-pagina i.p.v.
+  // S233 — het AI-concept opent nu IN-PLACE als zijpaneel op de Mail-pagina i.p.v.
   // een navigatie naar de dossierpagina (waardoor je de mail kwijtraakte). De
-  // mail waarop je antwoordt blijft links leesbaar Ã©n staat in het paneel.
+  // mail waarop je antwoordt blijft links leesbaar én staat in het paneel.
   const [aiDraft, setAiDraft] = useState<{
     id: string;
     subject: string;
@@ -106,8 +106,8 @@ export default function CorrespondentiePage() {
   } | null>(null);
   const [aiDraftSending, setAiDraftSending] = useState(false);
 
-  // S240 â€” melding-doorklik terwijl de Mail-pagina al open staat: navigatie
-  // zonder remount â†’ alleen dit abonnement ziet de wissel naar ?filter=unlinked.
+  // S240 — melding-doorklik terwijl de Mail-pagina al open staat: navigatie
+  // zonder remount → alleen dit abonnement ziet de wissel naar ?filter=unlinked.
   useEffect(() => {
     if (searchParams.get("filter") === "unlinked") {
       setActiveTab("ongesorteerd");
@@ -116,7 +116,7 @@ export default function CorrespondentiePage() {
     }
   }, [searchParams]);
 
-  // S240 (klikproef-vondst) â€” handmatige tabwissel maakt de URL weer kaal.
+  // S240 (klikproef-vondst) — handmatige tabwissel maakt de URL weer kaal.
   // Blijft ?filter=unlinked staan, dan is een volgende melding-klik een
   // navigatie naar exact dezelfde URL en ziet het abonnement hierboven niets.
   const router = useRouter();
@@ -151,7 +151,7 @@ export default function CorrespondentiePage() {
   // Verzend het AI-antwoord vanaf de Mail-pagina. Zelfde route als de
   // dossierpagina: compose/send (al opgemaakt) + advance-after-send om het
   // concept als verzonden te markeren en de reviewtaak te sluiten. Een antwoord
-  // schuift de pijplijn NOOIT door (P1) â€” advance-after-send weet dat (reply-intent).
+  // schuift de pijplijn NOOIT door (P1) — advance-after-send weet dat (reply-intent).
   const sendAiDraft = async (data: EmailComposeData) => {
     if (!aiDraft) return;
     setAiDraftSending(true);
@@ -237,16 +237,16 @@ export default function CorrespondentiePage() {
   };
   const debouncedSearch = useDebounce(caseSearch, 300);
 
-  // "Alle e-mails": zoek server-side door de HÃ‰LE mailbox (niet alleen de
+  // "Alle e-mails": zoek server-side door de HÉLE mailbox (niet alleen de
   // geladen 200). Alleen actief op dit tabblad; de Ongesorteerd-tab filtert
-  // client-side. Limiet 200 â†’ toont de nieuwste 200 treffers; `total` toont
+  // client-side. Limiet 200 → toont de nieuwste 200 treffers; `total` toont
   // hoeveel er in totaal matchen.
   const debouncedEmailFilter = useDebounce(emailFilter, 300);
   const serverSearch =
     activeTab === "alle" && debouncedEmailFilter.trim()
       ? debouncedEmailFilter.trim()
       : undefined;
-  // S244 â€” Postvak IN / Verzonden binnen "Alle e-mails" (direction-filter
+  // S244 — Postvak IN / Verzonden binnen "Alle e-mails" (direction-filter
   // op de server, dus zoeken + paginering werken er gewoon doorheen).
   const [directionFilter, setDirectionFilter] = useState<"all" | "inbound" | "outbound">("all");
   const {
@@ -326,7 +326,7 @@ export default function CorrespondentiePage() {
     }
   }, [activeTab, allEmails, allEmailsFlat, selectedEmailId]);
 
-  // â”€â”€ Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Handlers ───────────────────────────────────────────────────────────────
 
   const handleSync = () => {
     syncEmails.mutate(
@@ -394,7 +394,7 @@ export default function CorrespondentiePage() {
       { emailId },
       {
         onSuccess: () => {
-          toast.success("Aanvraag gemaakt â€” controleer bij Nieuwe aanvragen");
+          toast.success("Aanvraag gemaakt — controleer bij Nieuwe aanvragen");
           setSelectedEmailId(null);
           setActiveTab("aanvragen");
         },
@@ -420,7 +420,7 @@ export default function CorrespondentiePage() {
     }
   };
 
-  // â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
@@ -515,7 +515,7 @@ export default function CorrespondentiePage() {
         </div>
       </div>
 
-      {/* Compose dialog â€” nieuw, beantwoorden of doorsturen */}
+      {/* Compose dialog — nieuw, beantwoorden of doorsturen */}
       {showComposeDialog && (
         <EmailComposeDialog
           open={showComposeDialog}
@@ -548,7 +548,7 @@ export default function CorrespondentiePage() {
         />
       )}
 
-      {/* AI-antwoord maken â€” concept op een inkomende mail van de wederpartij.
+      {/* AI-antwoord maken — concept op een inkomende mail van de wederpartij.
           S233: opent het concept IN-PLACE als zijpaneel i.p.v. te navigeren. */}
       {aiReplyEmail && (
         <AiReplyDialog
@@ -558,7 +558,7 @@ export default function CorrespondentiePage() {
         />
       )}
 
-      {/* AI-concept reviewen & versturen â€” zijpaneel, mail blijft leesbaar */}
+      {/* AI-concept reviewen & versturen — zijpaneel, mail blijft leesbaar */}
       {aiDraft && (
         <EmailComposeDialog
           open={!!aiDraft}
@@ -580,14 +580,14 @@ export default function CorrespondentiePage() {
         />
       )}
 
-      {/* Nieuwe aanvragen tab â€” bestaande intake-detectie zichtbaar */}
+      {/* Nieuwe aanvragen tab — bestaande intake-detectie zichtbaar */}
       {activeTab === "aanvragen" && <IntakeRequestsView />}
 
-      {/* Alle e-mails tab â€” lijst + gedeeld leesvenster (zelfde als Ongesorteerd) */}
+      {/* Alle e-mails tab — lijst + gedeeld leesvenster (zelfde als Ongesorteerd) */}
       {activeTab === "alle" && (
         <div className="flex gap-4">
           <div className={selectedEmailId ? "hidden lg:block lg:w-2/5" : "w-full"}>
-            {/* S244 â€” Postvak IN / Verzonden */}
+            {/* S244 — Postvak IN / Verzonden */}
             <div className="mb-3 flex gap-1 rounded-lg bg-muted/50 p-1 w-fit">
               {([["all", "Alles"], ["inbound", "Postvak IN"], ["outbound", "Verzonden"]] as const).map(
                 ([key, label]) => (
@@ -693,7 +693,7 @@ export default function CorrespondentiePage() {
         <EmptyState />
       ) : (
         <div className="flex gap-4">
-          {/* Email list â€” onder lg verborgen zodra een mail open is
+          {/* Email list — onder lg verborgen zodra een mail open is
               (detail wordt dan full-width i.p.v. een geplette split-view) */}
           <div
             className={selectedEmailId ? "hidden lg:block lg:w-2/5" : "w-full"}
@@ -746,7 +746,7 @@ export default function CorrespondentiePage() {
             </div>
           </div>
 
-          {/* Detail + action panel â€” gedeeld met "Alle e-mails" */}
+          {/* Detail + action panel — gedeeld met "Alle e-mails" */}
           {selectedEmailId && emailDetail && (
             <div className="w-full lg:w-3/5 space-y-4">
               {/* Mobiel: terug naar de lijst */}
@@ -785,10 +785,10 @@ export default function CorrespondentiePage() {
   );
 }
 
-// â”€â”€ Nieuwe aanvragen (intake) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Nieuwe aanvragen (intake) ───────────────────────────────────────────────
 
 function formatEuro(amount: string | null): string {
-  if (!amount) return "â€”";
+  if (!amount) return "—";
   const n = Number(amount);
   if (Number.isNaN(n)) return amount;
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n);
@@ -870,14 +870,14 @@ function IntakeRequestsView() {
                   )}
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Van {intake.client_name || intake.email_from} Â· {intake.email_subject}
+                  Van {intake.client_name || intake.email_from} · {intake.email_subject}
                 </p>
               </div>
               <a
                 href={`/intake/${intake.id}`}
                 className="shrink-0 text-xs font-medium text-primary hover:underline"
               >
-                Details bewerken â†’
+                Details bewerken →
               </a>
             </div>
 
@@ -919,12 +919,12 @@ function IntakeField({ label, value }: { label: string; value: string | null }) 
   return (
     <div className="min-w-0">
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="truncate text-sm text-foreground">{value || "â€”"}</p>
+      <p className="truncate text-sm text-foreground">{value || "—"}</p>
     </div>
   );
 }
 
-// â”€â”€ Gedeeld leesvenster (Ongesorteerd + Alle e-mails) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Gedeeld leesvenster (Ongesorteerd + Alle e-mails) ───────────────────────
 
 interface CaseSearchResult {
   id: string;
@@ -1083,7 +1083,7 @@ function EmailDetailPanel({
           )}
         </div>
 
-        {/* S244 â€” eerdere mailtjes uit dezelfde draad onder de mail, zodat je
+        {/* S244 — eerdere mailtjes uit dezelfde draad onder de mail, zodat je
             het hele gesprek kunt teruglezen zonder de lijst af te struinen.
             Alleen voor dossier-gekoppelde mail (de draad wordt binnen het
             dossier opgezocht); ongekoppelde mail toont hier niets. */}
@@ -1102,7 +1102,7 @@ function EmailDetailPanel({
             {email.case_number ? "Gekoppeld dossier" : "Koppel aan dossier"}
           </h4>
 
-          {/* Al gekoppeld â†’ toon het dossier met snelkoppeling */}
+          {/* Al gekoppeld → toon het dossier met snelkoppeling */}
           {email.case_number && (
             <a
               href={`/zaken/${email.case_id}`}
@@ -1110,7 +1110,7 @@ function EmailDetailPanel({
             >
               <Briefcase className="h-3.5 w-3.5" />
               {email.case_number}
-              <span className="ml-auto text-xs">Open dossier â†’</span>
+              <span className="ml-auto text-xs">Open dossier →</span>
             </a>
           )}
 
@@ -1145,7 +1145,7 @@ function EmailDetailPanel({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
-                placeholder="Zoek op dossiernummer, naam of cliÃ«nt..."
+                placeholder="Zoek op dossiernummer, naam of cliënt..."
                 className="pl-9 h-9 text-sm"
                 value={caseSearch}
                 onChange={(e) => onCaseSearchChange(e.target.value)}
@@ -1166,10 +1166,10 @@ function EmailDetailPanel({
                     >
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">
-                          {c.case_number} â€” {c.description || "Geen beschrijving"}
+                          {c.case_number} — {c.description || "Geen beschrijving"}
                         </p>
                         <p className="text-xs text-muted-foreground truncate">
-                          {c.client?.name || "Geen cliÃ«nt"}
+                          {c.client?.name || "Geen cliënt"}
                         </p>
                       </div>
                       <Check className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -1206,7 +1206,7 @@ function EmailDetailPanel({
                 disabled={isDismissing}
               >
                 <EyeOff className="h-4 w-4 mr-1" />
-                Negeren â€” niet relevant
+                Negeren — niet relevant
               </Button>
             </div>
           )}
@@ -1216,7 +1216,7 @@ function EmailDetailPanel({
   );
 }
 
-// â”€â”€ All Emails View â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── All Emails View ─────────────────────────────────────────────────────────
 
 function AllEmailsView({
   emails,
@@ -1239,7 +1239,7 @@ function AllEmailsView({
   isLoadingMore: boolean;
   onLoadMore: () => void;
 }) {
-  // Server heeft al gefilterd/gezocht â€” hier alleen groeperen op datum.
+  // Server heeft al gefilterd/gezocht — hier alleen groeperen op datum.
   const grouped = useMemo(() => {
     if (emails.length === 0) return [];
     const groups: { label: string; emails: typeof emails }[] = [];
@@ -1280,12 +1280,12 @@ function AllEmailsView({
 
   return (
     <div className="space-y-2">
-      {/* Teller â€” `total` is het totaal aantal treffers; de lijst groeit met
+      {/* Teller — `total` is het totaal aantal treffers; de lijst groeit met
           "meer laden". */}
       <p className="px-1 text-xs text-muted-foreground">
         {emailFilter
-          ? `${total} resultaten voor "${emailFilter}"${total > emails.length ? ` â€” ${emails.length} getoond` : ""}`
-          : `${total} e-mails${total > emails.length ? ` â€” ${emails.length} getoond` : ""}`}
+          ? `${total} resultaten voor "${emailFilter}"${total > emails.length ? ` — ${emails.length} getoond` : ""}`
+          : `${total} e-mails${total > emails.length ? ` — ${emails.length} getoond` : ""}`}
       </p>
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       {grouped.map((group) => (
@@ -1374,7 +1374,7 @@ function AllEmailsView({
   );
 }
 
-// â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Sub-components ───────────────────────────────────────────────────────────
 
 function EmailListItem({
   email,
@@ -1478,7 +1478,7 @@ function EmailListItem({
             {email.snippet}
           </p>
         )}
-        {/* S221 punt 18 â€” dossiernummer direct klikbaar in de lijstrij (voorheen
+        {/* S221 punt 18 — dossiernummer direct klikbaar in de lijstrij (voorheen
             alleen in het detailpaneel). stopPropagation zodat de klik navigeert
             i.p.v. de mail te openen. */}
         {email.case_id && email.case_number && (
@@ -1514,11 +1514,11 @@ function SuggestionItem({
           )}
           <p className="text-sm font-medium truncate">
             {suggestion.case_number}
-            {suggestion.description && ` â€” ${suggestion.description}`}
+            {suggestion.description && ` — ${suggestion.description}`}
           </p>
         </div>
         <p className="text-xs text-muted-foreground truncate">
-          {suggestion.client_name && `${suggestion.client_name} Â· `}
+          {suggestion.client_name && `${suggestion.client_name} · `}
           {suggestion.match_reason}
         </p>
       </div>
@@ -1592,10 +1592,10 @@ function BulkLinkButton({
                     className="w-full text-left px-3 py-2 hover:bg-muted/50 transition-colors"
                   >
                     <p className="text-sm font-medium truncate">
-                      {c.case_number} â€” {c.description || "Geen beschrijving"}
+                      {c.case_number} — {c.description || "Geen beschrijving"}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {c.client?.name || "Geen cliÃ«nt"}
+                      {c.client?.name || "Geen cliënt"}
                     </p>
                   </button>
                 ))

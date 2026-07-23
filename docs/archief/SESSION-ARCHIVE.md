@@ -10821,3 +10821,69 @@ S234: incassostappen kritisch herzien — situatie-stappen i.p.v. platte lijst; 
 koppelen aan derde/laatste sommatie (dan schuiven die ook door); batch- en follow-up-route
 op dezelfde "volgende stap"-logica als compose/send + AI-route trekken. Zie
 `docs/sessions/PROMPT-S234.md`.
+## Sessie 233b (21 juli 2026, Fable-review → Opus-bouw → Fable-review — S233-review + vier mailfixes, LIVE)
+
+### Samenvatting
+Arsalan vroeg een volledige review van S233, inclusief het klikwerk dat die nacht was
+overgeslagen ("dat kon je wel"). Klopte: alles bleek gewoon klikbaar.
+
+**Review S233 (Fable, live op prod):** zijpaneel + non-modaal + bronmail onderin opnieuw
+bevestigd; AI-generatie mét instructie "doe de facturen erbij" live gedaan (1 AI-call) →
+`attach_invoices=true` op het concept, en de batch-draft van diezelfde ochtend bleef
+`false` (kruispunt-guard in het echt bewezen). Bedragen kloppen: € 140,49 (16/7) →
+€ 140,55 (21/7) = exact 5 dagen wettelijke rente op € 100.
+
+**Vier fixes uit de review, alle gecommit + gedeployd + CI groen:**
+1. `e37b815` — uitgaande mails kregen nooit een draad-kenmerk (alle 6 op het testdossier
+   leeg) → het antwoord-paneel toonde eigen verstuurde mails nooit. Nu draagt elke
+   verzending zijn draad-wortel (antwoord = References-wortel, verse mail = eigen id,
+   zelfde regel als de inkomende-sync). Live: 0→2 uitgaande mails in de draad, paneel
+   toont ze. Plus: waarschuwing in het compose-paneel als de behandelaar facturen vroeg
+   maar het dossier geen factuur-PDF heeft (de AI-tekst beloofde een bijlage die er
+   niet was). Wachters: `test_outbound_thread_id`.
+2. `4166f30` — Fable-review-restpunten: "Je vroeg" → u-vorm; draad-paneel cap 50→200
+   (drukste dossier ~83, oudere draadmails vielen stil weg). Plus correctie op de
+   commit-tekst van e37b815: de "bonus" (auto-koppeling inkomend via draad) geldt alleen
+   binnen één mail-account — in de echte opzet (IMAP in via 8a1f…, Outlook uit via
+   226e…) verandert daar niets; het draad-paneel filtert niet op account en is het
+   echte effect.
+3. `1abae63` — LIVE-BUG (gevonden bij de verificatie): élk antwoord via de
+   Outlook-route faalde met 400 — Graph's `/reply` kreeg het RFC Message-ID van een
+   IMAP-gesyncte mail, maar eist het postvak-interne id. Rode test eerst, dan fix:
+   RFC-id valt terug op gewone sendMail. Live: exact dezelfde call die 400 gaf → 200.
+4. `a291692` — Fable-review op de fix zelf, gemeten in prod: de `<`-check was te smal
+   (3099 BaseNet-import-mails dragen `basenet:…`-ids zonder `<` → vielen alsnog in de
+   kapotte /reply-tak), én de /reply-tak kent geen bijlagen (zouden stil wegvallen).
+   Nu positieve tekenset-keuring (`_looks_like_graph_id`) + met bijlagen altijd
+   sendMail. Wachters: `test_outlook_reply_routing` (5).
+
+### Gewijzigde bestanden
+Backend: `email/send_service.py` (provider_thread_id op outbound SyncedEmail),
+`email/compose_router.py` (draad-wortel doorgeven), `email/providers/outlook.py`
+(reply-routing). Tests: `test_outbound_thread_id.py` (nieuw, 2),
+`test_outlook_reply_routing.py` (nieuw, 5). Frontend: `email-compose-dialog.tsx`
+(invoiceWarning + u-vorm), `mail-thread-panel.tsx` (cap 200).
+
+### Verificatie
+151 tests groen (send/advance/step/compose-subset) + 5+2 nieuwe wachters; ruff + tsc
+schoon; 4 commits gedeployd via SSH `--force-recreate`, containers healthy; CI groen op
+e37b815/4166f30/1abae63 (a291692 liep nog bij afsluiten — natrekken met `gh run list`).
+Live-bewijzen op prod: draad 0→2, factuurwaarschuwing zichtbaar, reply-call 400→200.
+
+### Bekende issues / bewust niet gedaan
+- **Factuur-vinkje positief pad niet visueel getest** — testdossier 2026-00006 heeft
+  geen factuur-PDF (echte dossiers als IN100487 wél, maar die zijn van echte
+  debiteuren). Keten is backend-getest; wil je het zien, hang eenmalig een test-PDF
+  aan een claim van 2026-00006.
+- **Externe threading op onderwerp:** de sendMail-terugval zet geen In-Reply-To-header
+  (Graph staat dat niet toe) — in de mailbox van de debiteur threadt het antwoord op
+  "Re: onderwerp". Upgradepad: createReply-draft. Niet urgent.
+- **Testsporen:** 2 testantwoorden naar Arsalans gmail op 2026-00006; 1 ongebruikt
+  AI-concept (met factuur-vlag) op diezelfde mail. Randobservatie: het testantwoord
+  dook óók als inkomend op in de M365-box (vermoedelijk doorstuurregel gmail) — 
+  onschuldig, niet uitgezocht.
+
+### Volgende sessie
+S234: incassostappen kritisch herzien — situatie-stappen i.p.v. platte lijst; brief
+koppelen aan derde/laatste sommatie; batch/follow-up op de gedeelde doorschuif-logica.
+Zie `docs/sessions/PROMPT-S234.md`.

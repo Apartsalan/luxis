@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 23 juli 2026 (S242 — veegsessie voorstel-lijst LIVE: dubbelklik-betaling-slot, belofte×regeling-ontdubbeling, eigenaarloze-taken-melding naar iedereen). Rapport: entry S242 in `SESSION-NOTES.md`. **Volgende = S243: Arsalan bepaalt de hoofdtaak (sterkste kandidaat: opruimronde met Lisanne).**
+**Laatst bijgewerkt:** 23 juli 2026 (S243 — opruimronde, 607-check + fase-vindbaarheid LIVE, 11 dagvaarden-dossiers heropend, 4-sessieplan demo-punten). Rapport: entry S243 in `SESSION-NOTES.md`. **Volgende = S244: mail-werkbank (`docs/sessions/PROMPT-S244.md`).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,28 +53,29 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 23 juli 2026, S242)
+## 🎯 Huidige prioriteit (bijgewerkt 23 juli 2026, S243)
 
-> ✅ **S242 AFGEROND (LIVE).** Veegsessie voorstel-lijst, 3 fixes elk met rode test
-> eerst + wachters: (1) dubbelklik/2 tabs kan een betaling nooit meer dubbel boeken
-> (zaak-slot + 10s-dedup-venster op het gedeelde servicepunt; bron-record-routes
-> uitgezonderd); (2) belofte-taak en betalingsregeling bewaken niet langer dubbel
-> (beide volgordes); (3) te-late taak zonder eigenaar meldt bij álle actieve
-> gebruikers i.p.v. de toevallig 'eerste'. 11 nieuwe wachters, 231+82 tests groen,
-> backend gedeployd, login 200. Rapport: entry S242 in SESSION-NOTES.
+> ✅ **S243 AFGEROND.** (1) Opruimronde: 37 test-taken, 14 test-adviezen, 38
+> testmails, 15 test-intakes afgevoerd (dry-run + natelling exact); 4 echte mails
+> + 1 echte intake liggen bij Lisanne/Arsalan. (2) Bewezen: alle 607
+> BaseNet-export-dossiers staan 1-op-1 in Luxis; vindbaarheids-gat gedicht
+> (zoeken + filter op BaseNet-fase, `062ac4b`, visueel bewezen). (3) De 11
+> "Akkoord dagvaarden"-dossiers heropend (stap gelijknamig, eigenaar Lisanne,
+> rente loopt, 0 mails). (4) Demo-puntenlijst (13 punten) gemeten en verdeeld
+> over 4 sessies. Rapport: entry S243 in SESSION-NOTES.
 >
-> 🎯 **VOLGENDE (S243): Arsalan bepaalt de hoofdtaak bij start.** Sterkste kandidaat
-> volgens de S241-werklastmeting: **opruimronde mét Lisanne** (39 test-taken, 14
-> test-adviezen, 81 oude ongesorteerde mails, 16 oude aanvragen) — geen nieuwe bouw
-> nodig. Verder blijven staan: **IN100015-verjaringsmelding is onterecht (gestuit;
-> Luxis kent geen stuiting — voorstel in entry S242) en mag weg; IN100127 beoordelen**,
-> demo-ronde met nakijk-lijst + Fable-tegenlezing S242, 2 open mails (IN100128,
-> IN100586), Lisanne-antwoorden
-> (IN100592/IN100606/IN100492), rest voorstel-lijst (categorie 'onduidelijk',
-> overbetaling-knop, cascade, weekend-logica), BaseNet-delisting, kostenblokje,
-> fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische
-> restjes S235, sharp-CVE's. KvK: niet naar vragen. Derde AI-testronde: pas weer
-> bij wijzigingen aan prompts/schema's/antwoord-logica.
+> 🎯 **VOLGENDE (S244-S247): demo-puntenreeks** — masterplan
+> `docs/plans/PLAN-DEMO-PUNTEN-S243.md`: S244 mail-werkbank (correspondentie-tab
+> redesign, draad overal, Verzonden-map, lege sjabloon), S245 taken+meldingen,
+> S246 uitgesteld versturen (alle 7 verzenddeuren), S247 AI-kennislaag. Harde
+> eis: visueel testen met Playwright + screenshots. Parallel beslispunt:
+> fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`, 406
+> dossiers, GO per groep). Verder blijven staan: IN100015-melding wegklikken
+> (onterecht, gestuit), IN100127 beoordelen, 2 open mails (IN100128/IN100586),
+> Lisanne-antwoorden (IN100592/IN100606/IN100492), verweer-parkeerstap-voorstel,
+> rest voorstel-lijst, BaseNet-delisting, kostenblokje, opmaak-restpunt S227,
+> S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's. KvK: niet naar
+> vragen.
 
 ## Projectdocumenten
 

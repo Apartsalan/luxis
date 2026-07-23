@@ -2,10 +2,75 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 23 juli 2026 (S242 afgerond — veegsessie voorstel-lijst LIVE + demo-staart: stuiting-bevinding, verweer-parkeerstap-voorstel, afzender-weergave-fix LIVE).
-**Laatste feature/fix:** Afzender-weergave bij 'Verzenden als' gefixt (dossier toont nu incasso@); daarvoor: dubbelklik-betaling-slot, belofte×regeling-ontdubbeling, eigenaarloze-taken-melding. Detail: entry S242 (incl. 2 nagekomen secties).
-**Openstaand:** IN100015-verjaringsmelding is ONTERECHT (gestuit + dossier dicht — mag weg; Luxis kent geen stuiting, voorstel in entry S242); IN100127 beoordelen; 2 open mails (IN100128, IN100586) + verweer IN100592/IN100606 + IN100492 bij Lisanne; demo-ronde met nakijk-lijst (20 punten) + opruimronde mét Lisanne; Fable-tegenlezing S242; rest voorstel-lijst. Losse punten: BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
-**Volgende sessie:** S243 — Arsalan bepaalt de hoofdtaak bij start; zie `docs/sessions/PROMPT-S243.md`.
+**Laatst bijgewerkt:** 23 juli 2026 (S243 — opruimronde + 607-check + fase-vindbaarheid LIVE + 11 dagvaarden-dossiers heropend + 4-sessieplan demo-punten).
+**Laatste feature/fix:** Dossiers vindbaar op BaseNet-werkfase (zoekbalk + fase-filter, `062ac4b`, live + visueel bewezen); 11 "Akkoord dagvaarden"-dossiers heropend op de gelijknamige stap.
+**Openstaand:** demo-puntenreeks S244-S247 (mail-werkbank → taken+meldingen → uitgesteld versturen → AI-kennislaag, masterplan `docs/plans/PLAN-DEMO-PUNTEN-S243.md`); fase-heropening per groep (beslislijst `docs/plans/BASENET-STATUS-HERSTEL.md`, GO Lisanne/Arsalan); 4 review-mails in de ongesorteerde bak (Incassocenter, Factuur F2026-00001, 2× Purple Exchange) + intake Ram Charan Sukhdai (€ 10.824,97) bij Lisanne/Arsalan; IN100015-melding wegklikken (onterecht, gestuit); IN100127 beoordelen; 2 open mails (IN100128, IN100586) + verweer IN100592/IN100606 + IN100492 bij Lisanne; verweer-parkeerstap-voorstel; 193 ongelezen meldingen (optioneel opruimen). Losse punten: BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
+**Volgende sessie:** S244 — mail-werkbank (Opus); zie `docs/sessions/PROMPT-S244.md`.
+
+## Sessie 243 (23 juli 2026, Opus (start Fable) — opruimronde + demo-puntenlijst: meting, plan, fase-vindbaarheid, 11 heropend)
+
+### Samenvatting
+Start volgens PROMPT-S243 (CI S242 nagetrokken: afzender-fix groen; signaleringen
+IN100015/IN100127 + 2 open mails doorgegeven). Arsalan koos de opruimronde en gaf
+daarna een demo-puntenlijst van 13 wensen/vragen.
+
+**1. Opruimronde (GO per categorie, elk dry-run + natelling exact):** 37
+test-taken gesloten (testdossiers 2026-00007 t/m -00019; de 18 echte bleven), 14
+test-adviezen afgewezen (8 echte bleven), 38 testmails/reclame weggedrukt, 15
+test-intakes afgewezen. Blijft voor Lisanne/Arsalan: 4 mogelijk-echte mails in de
+ongesorteerde bak (Incassocenter 7-7, eigen Factuur F2026-00001, 2× Purple
+Exchange) + 1 echte intake (Ram Charan Sukhdai, € 10.824,97).
+
+**2. Demo-puntenlijst → gemeten + 4-sessieplan.** Alle 13 punten in de bron
+gemeten (code + prod + BaseNet-export). Masterplan
+`docs/plans/PLAN-DEMO-PUNTEN-S243.md`; prompts S244 (mail-werkbank: tab-redesign,
+draad overal, Verzonden-map, lege sjabloon), S245 (taken: dossierinfo/filters/
+dubbel-wegklik + mail-meldingen weg na antwoord — besluit Arsalan), S246
+(uitgesteld versturen op alle 7 verzenddeuren), S247 (AI-kennislaag:
+placeholder-bug IN100606 + juridische kennisregels IN100458). Harde eis Arsalan:
+alles visueel testen met Playwright + screenshots.
+
+**3. Kernvraag Arsalan: "staan de export-dossiers überhaupt in Luxis?" — JA,
+bewezen:** alle 607 inccodes uit `Xml_02-07-2026_2400.zip` 1-op-1 vergeleken met
+prod: 0 ontbreken, 0 extra. Probleem was vindbaarheid: `basenet_origin_phase`
+(S207d) was niet doorzoekbaar. **Gefixt (`062ac4b`, LIVE):** zoekbalk zoekt door
+de fase + nieuw fase-filter op de dossierlijst (opties via nieuw endpoint, vóór
+de /{case_id}-route). 3 wachters; visueel bewezen op prod (filter én zoekterm
+geven exact de 11, screenshot bewaard).
+
+**4. De 11 "Akkoord dagvaarden"-dossiers heropend (prod-mutatie, dry-run + GO +
+natelling 11/11):** IN100046/077/246/252/281/294/364/419/487/509/537 → status
+in_behandeling, eigenaar Lisanne, stap "Akkoord dagvaarden", rente-bevriezing
+gewist (draaiboek-eis #9). Vooraf gecheckt: 0 doorschuifregels vanaf de stap,
+geen sjabloon (kan niets versturen), email_logs 54 vóór==ná, 0 archiefzaken
+geraakt, verjaringssommetje vroegste feb 2028 (geen ruis-meldingen). Verwacht
+effect: per dossier een follow-up-advies "handmatige beoordeling" + taak
+"Vervolg bepalen" (bedoeld). Overige 406 dichte werkvoorraad-dossiers per fase
+in beslislijst `docs/plans/BASENET-STATUS-HERSTEL.md` — heropening blijft per
+groep na GO.
+
+### Gewijzigde bestanden
+`backend/app/cases/{service,router}.py` (fase-zoek + filter + opties-endpoint),
+`frontend/src/hooks/use-cases.ts`, `frontend/src/app/(dashboard)/zaken/page.tsx`,
+`backend/tests/test_basenet_phase_filter.py` (nieuw, 3). Docs: masterplan,
+beslislijst, PROMPT-S244 t/m S247. Prod-mutaties: opruimronde (37/14/38/15) + 11
+heropend. Commit `062ac4b` + docs-commit.
+
+### Verificatie
+3 nieuwe wachters + test_cases 33 groen; ruff + tsc schoon; backend+frontend
+gedeployd via SSH `--force-recreate`, containers healthy, login 200. Visueel:
+Playwright op prod — fase-filter 11/11, zoekterm 11/11 (screenshot
+`s243-fase-filter-11-dossiers.png`). Alle prod-mutaties dry-run + natelling
+exact. Model-les: het filter-bouwwerk startte per ongeluk op Fable — door
+Arsalan gecorrigeerd, afgemaakt op Opus.
+
+### Bekende issues / bewust niet gedaan
+- 193 ongelezen meldingen: bewust laten staan (geen akkoord gevraagd/gegeven).
+- Meldingen over de nu gesloten test-taken blijven bestaan (onschadelijk).
+- CI van `062ac4b` + docs-commit liep nog bij afsluiten — natrekken bij S244.
+
+### Volgende sessie
+S244 (Opus): mail-werkbank — zie `docs/sessions/PROMPT-S244.md`.
 
 ## Sessie 242 (23 juli 2026, Opus-bouw — veegsessie voorstel-lijst: 3 kleine verbeteringen, LIVE)
 
@@ -702,70 +767,3 @@ doorschuif-regels Derde→Laatste→Faillissement aanwezig. CI-afsluitcheck: zie
 ### Volgende sessie
 S235: betalingsregeling herkennen uit mail (classificatie bestaat al) + flexibel termijnschema.
 Eerst de 2 vragen hierboven met Arsalan/Lisanne afhandelen. Zie `docs/sessions/PROMPT-S235.md`.
-
-## Sessie 233b (21 juli 2026, Fable-review → Opus-bouw → Fable-review — S233-review + vier mailfixes, LIVE)
-
-### Samenvatting
-Arsalan vroeg een volledige review van S233, inclusief het klikwerk dat die nacht was
-overgeslagen ("dat kon je wel"). Klopte: alles bleek gewoon klikbaar.
-
-**Review S233 (Fable, live op prod):** zijpaneel + non-modaal + bronmail onderin opnieuw
-bevestigd; AI-generatie mét instructie "doe de facturen erbij" live gedaan (1 AI-call) →
-`attach_invoices=true` op het concept, en de batch-draft van diezelfde ochtend bleef
-`false` (kruispunt-guard in het echt bewezen). Bedragen kloppen: € 140,49 (16/7) →
-€ 140,55 (21/7) = exact 5 dagen wettelijke rente op € 100.
-
-**Vier fixes uit de review, alle gecommit + gedeployd + CI groen:**
-1. `e37b815` — uitgaande mails kregen nooit een draad-kenmerk (alle 6 op het testdossier
-   leeg) → het antwoord-paneel toonde eigen verstuurde mails nooit. Nu draagt elke
-   verzending zijn draad-wortel (antwoord = References-wortel, verse mail = eigen id,
-   zelfde regel als de inkomende-sync). Live: 0→2 uitgaande mails in de draad, paneel
-   toont ze. Plus: waarschuwing in het compose-paneel als de behandelaar facturen vroeg
-   maar het dossier geen factuur-PDF heeft (de AI-tekst beloofde een bijlage die er
-   niet was). Wachters: `test_outbound_thread_id`.
-2. `4166f30` — Fable-review-restpunten: "Je vroeg" → u-vorm; draad-paneel cap 50→200
-   (drukste dossier ~83, oudere draadmails vielen stil weg). Plus correctie op de
-   commit-tekst van e37b815: de "bonus" (auto-koppeling inkomend via draad) geldt alleen
-   binnen één mail-account — in de echte opzet (IMAP in via 8a1f…, Outlook uit via
-   226e…) verandert daar niets; het draad-paneel filtert niet op account en is het
-   echte effect.
-3. `1abae63` — LIVE-BUG (gevonden bij de verificatie): élk antwoord via de
-   Outlook-route faalde met 400 — Graph's `/reply` kreeg het RFC Message-ID van een
-   IMAP-gesyncte mail, maar eist het postvak-interne id. Rode test eerst, dan fix:
-   RFC-id valt terug op gewone sendMail. Live: exact dezelfde call die 400 gaf → 200.
-4. `a291692` — Fable-review op de fix zelf, gemeten in prod: de `<`-check was te smal
-   (3099 BaseNet-import-mails dragen `basenet:…`-ids zonder `<` → vielen alsnog in de
-   kapotte /reply-tak), én de /reply-tak kent geen bijlagen (zouden stil wegvallen).
-   Nu positieve tekenset-keuring (`_looks_like_graph_id`) + met bijlagen altijd
-   sendMail. Wachters: `test_outlook_reply_routing` (5).
-
-### Gewijzigde bestanden
-Backend: `email/send_service.py` (provider_thread_id op outbound SyncedEmail),
-`email/compose_router.py` (draad-wortel doorgeven), `email/providers/outlook.py`
-(reply-routing). Tests: `test_outbound_thread_id.py` (nieuw, 2),
-`test_outlook_reply_routing.py` (nieuw, 5). Frontend: `email-compose-dialog.tsx`
-(invoiceWarning + u-vorm), `mail-thread-panel.tsx` (cap 200).
-
-### Verificatie
-151 tests groen (send/advance/step/compose-subset) + 5+2 nieuwe wachters; ruff + tsc
-schoon; 4 commits gedeployd via SSH `--force-recreate`, containers healthy; CI groen op
-e37b815/4166f30/1abae63 (a291692 liep nog bij afsluiten — natrekken met `gh run list`).
-Live-bewijzen op prod: draad 0→2, factuurwaarschuwing zichtbaar, reply-call 400→200.
-
-### Bekende issues / bewust niet gedaan
-- **Factuur-vinkje positief pad niet visueel getest** — testdossier 2026-00006 heeft
-  geen factuur-PDF (echte dossiers als IN100487 wél, maar die zijn van echte
-  debiteuren). Keten is backend-getest; wil je het zien, hang eenmalig een test-PDF
-  aan een claim van 2026-00006.
-- **Externe threading op onderwerp:** de sendMail-terugval zet geen In-Reply-To-header
-  (Graph staat dat niet toe) — in de mailbox van de debiteur threadt het antwoord op
-  "Re: onderwerp". Upgradepad: createReply-draft. Niet urgent.
-- **Testsporen:** 2 testantwoorden naar Arsalans gmail op 2026-00006; 1 ongebruikt
-  AI-concept (met factuur-vlag) op diezelfde mail. Randobservatie: het testantwoord
-  dook óók als inkomend op in de M365-box (vermoedelijk doorstuurregel gmail) — 
-  onschuldig, niet uitgezocht.
-
-### Volgende sessie
-S234: incassostappen kritisch herzien — situatie-stappen i.p.v. platte lijst; brief
-koppelen aan derde/laatste sommatie; batch/follow-up op de gedeelde doorschuif-logica.
-Zie `docs/sessions/PROMPT-S234.md`.

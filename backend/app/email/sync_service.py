@@ -554,7 +554,13 @@ async def sync_emails_for_account(
     for msg in messages:
         # Check if already synced (dedup by provider_message_id)
         existing = await db.execute(
-            select(SyncedEmail.id, SyncedEmail.case_id, SyncedEmail.is_read).where(
+            select(
+                SyncedEmail.id,
+                SyncedEmail.case_id,
+                SyncedEmail.is_read,
+                SyncedEmail.is_dismissed,
+                SyncedEmail.is_bounce,
+            ).where(
                 SyncedEmail.email_account_id == account.id,
                 SyncedEmail.provider_message_id == msg.provider_message_id,
             )
@@ -571,8 +577,14 @@ async def sync_emails_for_account(
                     .where(SyncedEmail.id == existing_row[0])
                     .values(is_read=msg.is_read)
                 )
-            # If already synced but unlinked → try to link it
-            if existing_row[1] is None:
+            # If already synced but unlinked → try to link it.
+            # S241 — een door de gebruiker genegeerde mail ("Negeren") NOOIT
+            # stil her-koppelen: die beslissing wint van elke sync (zelfde
+            # regel als de re-match, S188c). Bounces zijn óók dismissed maar
+            # dat is een systeemvlag — die mogen wél alsnog op dossiernummer
+            # koppelen (bv. zaak aangemaakt ná de bounce).
+            user_dismissed = existing_row[3] and not existing_row[4]
+            if existing_row[1] is None and not user_dismissed:
                 # Respecteer eerst het eigen dossiernummer van de mail; val alleen
                 # terug op het gesynchte dossier (force_case_id) als de mail GEEN
                 # dossiernummer draagt. Bounces/systeemmails NOOIT force-linken —

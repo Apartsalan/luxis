@@ -11062,3 +11062,92 @@ classificatie-call, ~¢) — dat is juist het doel van die tabel.
 S236: verwerk het antwoord van Lisanne over IN100613 (dry-run + GO + natelling) en het
 werklijst-beslispunt; daarna losse punten of nieuw hoofdonderwerp naar keuze Arsalan.
 Zie `docs/sessions/PROMPT-S236.md`.
+
+## Sessie 236 (22 juli 2026, Opus-bouw → Fable-review → Opus-fixes — werklijst-taken + 7 sommaties verstuurd + spook-inkomend-fix, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S236. Besluiten Arsalan vooraf: IN100613 laten liggen (Lisanne nog
+niet geantwoord); **Taken-pagina = dé werklijst**; de 7 sommaties mochten na eigen
+grondige controle de deur uit ("als jij het hebt nagekeken mag je het doen").
+
+**1. Werklijst-taak voor verstuur-adviezen (LIVE + live bewezen).** Elk openstaand
+verstuur-advies van de follow-up-adviseur krijgt een gespiegelde taak
+"{stap} versturen — {zaaknummer}" op de Taken-pagina (scanner-backfill dekt ook oude
+adviezen; ontdubbeld per advies via rec_id in action_config). De taak sluit op exact
+de advies-momenten: brief écht verstuurd → completed op de gedeelde doorschuif-motor
+`advance_after_step_send` (dus álle verzendroutes); advies afgewezen/superseded →
+skipped (`close_followup_send_tasks` in `supersede_open_recommendations` +
+`reject_recommendation`). Taken-pagina kreeg knop "Controleren & versturen" → /followup
+(niet visueel doorgeklikt; tsc schoon). Live bewezen: na de 30-min-scan stonden exact
+de 4 juiste taken op prod.
+
+**2. De 7 eerste sommaties (IN100592/98/99, 602/03/04/06) — VERSTUURD.** Controle
+per dossier vóór verzending: 0 mails/documenten/staphistorie ooit (vers gemeten);
+hoofdsom = som losse vorderingen (7/7 exact, incl. creditnota's −1.200,01 en −621,53
+netjes in de brieftabel); **BIK onafhankelijk nagerekend volgens de wettelijke
+staffel: 7/7 op de cent**; rente-steekproef IN100604 met de hand (2%/mnd samengesteld):
+257,40 vs 257,38 in de brief (deelmaand-conventie); alle 7 b2b → geen
+14-dagenbrief-plicht; afzender incasso@ via Graph. Alle 7 sent (0 bounces), elk
+dossier → Tweede sommatie, adviezen executed. **IN100603 draagt een negatieve
+renteregel (−107,90; creditnota ouder dan facturen — S181-F-gedrag, voordeel
+debiteur).** **IN100606 (Maatwerk Zorgbemiddeling) betwistte binnen 25 min**: AI
+classificeerde betwisting (0.95), dossier auto → 'Verweer beantwoorden', AI-concept
+klaar — de hele verweer-keten live bewezen op een échte debiteur. **IN100607 bewust
+NIET verstuurd**: bleek op 'Verweer beantwoorden' te staan (stale eerste-sommatie-
+advies van vóór de stap-wissel).
+
+**3. Fable-review-vondst: spook-inkomend (gefixt, LIVE).** Elke mail namens
+kantooradres incasso@ ('Verzenden als' op seidony's account) kwam via de Verzonden
+Items-sync als **inbound** terug: eigen sommaties als ontvangen post, mét notificatie
+en AI-beoordelingscall (~$0,03 voor 7), patroon sinds 17-7 (verklaart de S233b-
+"doorstuurregel gmail"-randobservatie). Rode test eerst; fix: eigen-afzender-set
+(accountadres + Tenant.email) in richting-oordeel, ontdubbel-poort en
+contact-matching (`sync_service.py`, 3 wachters).
+
+**4. Tweede reviewvondst op eigen werk (gefixt, LIVE).** Het taak-filter keek alleen
+naar "stap heeft sjabloon" → 10 oude escalatie-adviezen (van vóór de S234-
+briefkoppeling, testdossiers) kregen een misleidende "versturen"-taak. Nu ook
+filteren op advies-type GENERATE_DOCUMENT (+wachter).
+
+**5. Prod-opruiming (één transactie, tellingen exact):** 10 misleidende taken weg;
+7 spookmails weg mét bijlage- en classificatierijen, hun echte Graph-ids overgezet
+op de uitgaande records (= wat de gefixte poort gedaan zou hebben); 14 onterechte
+"nieuwe e-mail"-meldingen weg. Echte reacties + meldingen onaangeraakt (nageteld).
+
+### Gewijzigde bestanden
+Backend: `ai_agent/followup_service.py` (taak-aanmaak + reject-koppeling),
+`incasso/service.py` (`close_followup_send_tasks` + motor + supersede),
+`email/sync_service.py` (eigen-afzender-set). Frontend: `taken/page.tsx` (knop).
+Tests: `test_followup_send_tasks.py` (nieuw, 10), `test_email_sync.py` (+3).
+Commits `e91037d`, `e18c2d2`, `1782310`; backend+frontend via SSH `--force-recreate`
+(geen migratie).
+
+### Verificatie
+9+1 nieuwe werklijst-wachters groen; 201 kruispunt-tests (followup/advance/workflow/
+arrangement) groen; mail-kruispunt 952 groen (15 errors = botsing met parallelle
+eigen run, schoon herdraaid: 98/98); ruff + tsc schoon; CI groen op alle 3 commits
+(29910413122 + 29911747328 conclusion=success via API nagetrokken; de Frontend
+Dependency Audit-job faalt daarbinnen niet-blokkerend op 4 sharp/libvips-CVE's —
+extern, zie Bekende issues); containers healthy, login-API 200 na beide deploys;
+alle prod-mutaties met dry-run + natelling (10/7/7/7/7/14 exact).
+
+### Bekende issues / bewust niet gedaan
+- **Escalatie-adviezen (o.a. 5 échte 'Voorstel dagvaarding'-dossiers) staan NIET op
+  de Taken-pagina** — buiten de gekozen scope (verstuur-adviezen). Voorstel voor
+  Arsalan: ook die als taak spiegelen.
+- **IN100607**: stale pending eerste-sommatie-advies terwijl de zaak op 'Verweer
+  beantwoorden' staat — advies zou superseded moeten worden (data-fix, niet gedaan).
+- Werklijst-taak is éénrichting: handmatig afvinken laat het advies op de
+  Follow-up-pagina staan (bewuste keuze); taak-aanmaak schrijft geen
+  dossier-activiteit (cosmetisch).
+- Batch-generatie zónder verzending laat de verstuur-taak bewust open (er ging niets
+  de deur uit) maar schuift de zaak wél door (bestaand S234-randgeval).
+- IN100613 onaangeraakt (wacht op Lisanne); heeft ook nog een oud pending advies.
+- **npm-audit-waarschuwing (niet-blokkerend):** `sharp` erft 4 libvips-CVE's
+  (CVE-2026-33327/-33328/-35590/-35591, 3× high) — sharp updaten zodra er een
+  gepatchte versie is.
+
+### Volgende sessie
+S237: reacties op de 7 sommaties verwerken (IN100606-verweer ligt bij Lisanne;
+meer reacties verwacht) + de open beslispunten hierboven. Zie
+`docs/sessions/PROMPT-S237.md`.

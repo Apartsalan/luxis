@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 23 juli 2026 (S245 — taken+meldingen LIVE: dossierinfo op taken, filters, één-klik-wegklik, mail-meldingen gelezen na antwoord; visueel bewezen desktop + mobiel, Fable-review zonder reparaties). Rapport: entry S245 in `SESSION-NOTES.md`. **Volgende = S246: uitgesteld versturen (`docs/sessions/PROMPT-S246.md`).**
+**Laatst bijgewerkt:** 23 juli 2026 (S246 — "Verstuur later" LIVE op alle zelf-opgestelde mails; live bewezen: mail vertrok automatisch en kwam aan). Rapport: entry S246 in `SESSION-NOTES.md`. **Volgende = eerst Fable-eindreview S246, daarna S247 AI-kennislaag (`docs/sessions/PROMPT-S247.md`).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,33 +53,41 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 23 juli 2026, S245)
+## 🎯 Huidige prioriteit (bijgewerkt 23 juli 2026, S246)
 
-> ✅ **S245 AFGEROND — taken + meldingen LIVE (demo-punten blok 2).** (1)
-> Dossierinfo op taken: zaaknummer + cliënt- + debiteurnaam via een compact
-> case-subobject (fixt zowel de Taken-pagina als het dashboard-widget). (2)
-> Filters op de Taken-pagina: vrij zoeken (dossier/naam/taak), taaktype en
-> eigenaar, client-side + filter-bewuste lege-staat. (3) Dubbel-wegklik-bug
-> weg: optimistische verwijdering + per-rij bezig-status (één klik → taak
-> direct weg; live bewezen). (4) Mail-meldingen van een dossier gelezen na een
-> verstuurd antwoord (gerichte `mark_case_type_read` op het reply-verzendpunt;
-> tenant-breed). Alles gedeployd + live-klikronde desktop/mobiel; Fable-
-> eindreview zonder reparaties. Onderdeel 4 niet live-gemaild (constraint) maar
-> met 2 route-wachters bewezen. Rapport: entry S245 in SESSION-NOTES.
-> **Openstaand besluit: scope onderdeel 4 (tenant-breed vs per-gebruiker).**
+> ✅ **S246 AFGEROND — uitgesteld versturen LIVE (demo-punten blok 3).** Naast
+> "Versturen" staat nu **"Verstuur later"** met presets (Morgen 09:00 / Morgen
+> 15:00 / eigen tijdstip), op álle mails die je zelf opstelt: antwoord,
+> AI-concept, gewone mail, sjabloon en mail vanuit een dossier — die lopen
+> allemaal via dezelfde compose-deur. Nieuwe tabel `scheduled_emails` (RLS in
+> dezelfde migratie), minuut-bezorger die op het geplande moment **exact dezelfde
+> verzendfunctie** draait (zelfde afzender incasso@, opmaak, bijlagen,
+> vastlegging, doorschuiven). Geplande mails zichtbaar op dossier + Mail-pagina
+> en annuleerbaar. Nooit dubbel: de rij wordt geclaimd én vastgelegd vóór de
+> verzending; geen automatische herhaling bij fouten (status mislukt + melding).
+> **Live bewezen:** ingeplande mail vertrok automatisch om 23:25:12 en kwam aan.
+> Twee echte bugs onderweg gevangen (claim-terugdraai = dubbelverzendrisico;
+> ontbrekende DB-default liet inplannen op prod crashen — nu met wachter die de
+> hele foutsoort dekt). Rapport: entry S246 in SESSION-NOTES.
+> **Bewust uitgesteld (besluit Arsalan):** "Verstuur later" op de lopende-band-
+> knoppen (incassostap/opvolging over meerdere dossiers). Daar zit doc-generatie
+> + doorschuiven in de aanroeper, dus dat vraagt eerst een keuze: schuift de zaak
+> door bij het inplannen of pas bij verzending?
 >
-> 🎯 **VOLGENDE (S246-S247): rest demo-puntenreeks** — masterplan
-> `docs/plans/PLAN-DEMO-PUNTEN-S243.md`: S246 uitgesteld versturen (nieuwe tabel
-> `scheduled_emails` + RLS in dezelfde migratie, "Verstuur later" op alle 7
-> verzenddeuren, scheduler met lock-patroon), S247 AI-kennislaag. Harde eis:
-> visueel testen met Playwright + screenshots. Parallel beslispunt:
-> fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`, 406
-> dossiers, GO per groep). Verder blijven staan: IN100127 beoordelen, 2 open
-> mails (IN100128/IN100586), Lisanne-antwoorden (IN100592/IN100606/IN100492) +
-> regeling-taken IN100281/IN100537, verweer-parkeerstap-voorstel, rest
-> voorstel-lijst, BaseNet-delisting, kostenblokje, opmaak-restpunt S227,
-> S221b-rest, DMARC, cosmetisch (afgeronde taak toont "X dagen te laat", 4
-> restjes S235), sharp-CVE's. KvK: niet naar vragen.
+> 🎯 **VOLGENDE: (1) Fable-eindreview van S246** — verplicht, dit raakt alle
+> verzendroutes; nog niet gedraaid. (2) **S247 AI-kennislaag** — masterplan
+> `docs/plans/PLAN-DEMO-PUNTEN-S243.md`: placeholder-bug in de prompt fixen +
+> wachter, juridische kennisregels via de bestaande goedkeur-flow (élke regel
+> langs Lisanne; 132 learned_answers wachten al), en na prompt-wijzigingen een
+> derde AI-testronde. Harde eis: visueel testen met Playwright + screenshots.
+> Parallel beslispunt: fase-heropening per groep
+> (`docs/plans/BASENET-STATUS-HERSTEL.md`, 406 dossiers, GO per groep). Verder
+> blijven staan: IN100127 beoordelen, 2 open mails (IN100128/IN100586),
+> Lisanne-antwoorden (IN100592/IN100606/IN100492) + regeling-taken
+> IN100281/IN100537, verweer-parkeerstap-voorstel, rest voorstel-lijst,
+> BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC,
+> cosmetisch (afgeronde taak toont "X dagen te laat", 4 restjes S235),
+> sharp-CVE's. KvK: niet naar vragen.
 
 ## Projectdocumenten
 

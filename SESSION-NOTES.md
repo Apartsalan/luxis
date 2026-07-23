@@ -2,10 +2,94 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 23 juli 2026 (S245 — taken+meldingen LIVE: dossierinfo op taken, filters, één-klik-wegklik, mail-meldingen gelezen na antwoord).
-**Laatste feature/fix:** 4 demo-punten blok 2 (5 commits `3cc8c37`→`bfd57b7`) + Fable-eindreview zonder reparaties; onderdeel 4 (meldingen na antwoord) niet live-gemaild (constraint) maar met 2 doorloop-tests bewezen.
-**Openstaand:** demo-puntenreeks S246-S247 (uitgesteld versturen → AI-kennislaag, masterplan `docs/plans/PLAN-DEMO-PUNTEN-S243.md`); **IN100592 3e betwisting + 2 regeling-taken IN100281/IN100537 wachten op Lisanne**; keuze onderdeel 4-scope (tenant-breed vs per-gebruiker); fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`); 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai; 117 ongelezen meldingen. Losse punten: afgeronde taak toont nog "X dagen te laat"; BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
-**Volgende sessie:** S246 — uitgesteld versturen (Opus); zie `docs/sessions/PROMPT-S246.md`.
+**Laatst bijgewerkt:** 23 juli 2026 (S246 — "Verstuur later" LIVE op alle zelf-opgestelde mails; live-bewijs: mail vertrok automatisch om 23:25).
+**Laatste feature/fix:** wachtrij `scheduled_emails` + minuut-bezorger + knop met presets (4 commits `9197f66`→`4269592`); 2 echte bugs onderweg gevangen (claim-terugdraai = dubbelverzendrisico; ontbrekende DB-default liet inplannen op prod crashen).
+**Openstaand:** S247 AI-kennislaag (masterplan `docs/plans/PLAN-DEMO-PUNTEN-S243.md`); **"Verstuur later" op de lopende-band-knoppen (batch/follow-up) bewust uitgesteld — besluit Arsalan S246**; Fable-eindreview S246 nog niet gedraaid; **IN100592 3e betwisting + 2 regeling-taken IN100281/IN100537 wachten op Lisanne**; fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`); 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai. Losse punten: afgeronde taak toont nog "X dagen te laat"; BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
+**Volgende sessie:** S247 — AI-kennislaag (Opus), maar eerst Fable-eindreview van S246; zie `docs/sessions/PROMPT-S247.md`.
+
+## Sessie 246 (23 juli 2026, Fable-plan → Opus-bouw — uitgesteld versturen, LIVE + live-bewijs)
+
+### Samenvatting
+Startpunt PROMPT-S246. **Modelfout aan het begin:** Opus deed zelf het onderzoek én
+het plan; Arsalan greep in ("plan = Fable"). Plan daarna opnieuw gemaakt op Fable,
+gebouwd op Opus. Les vastgelegd in memory `feedback_model_choice` — "Bouwen → Opus"
+in een sessieprompt slaat op de BOUWfase, niet op de plan- en reviewfase.
+
+**Twee scope-besluiten van Arsalan vooraf.** (1) "Verstuur later" nu alleen op de
+mails die je zelf opstelt (antwoord, AI-concept, gewone mail, sjabloon, vanuit
+dossier) — die lopen állemaal via één deur (`/api/email/compose/send`). De twee
+lopende-band-knoppen (incassostap/opvolging over meerdere dossiers) zijn bewust
+uitgesteld: daar zit doc-generatie + doorschuiven in de CALLER, niet in de gedeelde
+verzendfunctie, dus "later versturen" is daar een aparte, grotere klus met een eigen
+keuze (schuift de zaak bij het inplannen door of pas bij verzending?). (2) Meldingen-
+scope uit S245 blijft tenant-breed → nul codewijziging.
+
+**Gebouwd.** `perform_compose_send` afgesplitst van het endpoint (inhoud ongewijzigd)
+zodat de wachtrij-bezorger exact dezelfde machine draait — afzender (incasso@),
+huisstijl, bijlagen, renteoverzicht, drieluik-logging, meldingen opruimen en
+doorschuiven zijn identiek aan een directe verzending. Nieuwe tabel `scheduled_emails`
+(TenantBase, `apply_rls` in dezelfde migratie). Minuut-job in APScheduler. Knop
+"Verstuur later" met presets (Morgen 09:00 / 15:00 / eigen tijdstip) op de compose-
+dialoog — dus meteen op álle vijf de routes van Arsalans lijstje. Geplande mails
+zichtbaar op dossier + Mail-pagina, annuleerbaar.
+
+**Bewust NIET verhuisd naar een nieuw servicebestand:** een drift-wachter en ~6
+testbestanden prikken op `app.email.compose_router.*`; verplaatsen zou die stil
+breken. Splitsing binnen hetzelfde bestand levert hetzelfde resultaat met de kleinste
+kans op schade. De drift-wachter zag de verplaatste provider-uitgang correct en is
+bijgewerkt (`send_via_provider` → `perform_compose_send`).
+
+**Twee echte bugs gevangen.**
+1. *Dubbelverzendrisico.* De claim (pending→sending) draaide bij een fout mee terug,
+   dus een crash tussen claimen en versturen zette de rij weer op "wachtend" → de
+   volgende ronde zou een mogelijk al verstuurde mail nógmaals sturen. Fix: claim
+   METEEN vastleggen vóór de provider-aanroep. Blijft hij hangen, dan meldt
+   `_fail_stuck_claims` na 10 min dat het ONZEKER is — nooit stil opnieuw sturen.
+   Gevonden door de eigen wachter (attempts bleef 0).
+2. *Migratie-drift (live op prod).* `created_at/updated_at` not-null zonder
+   `server_default`; TimestampMixin vult die niet in Python. Inplannen crashte met 500.
+   De tests zagen het niet: testDB komt uit de MODELLEN (create_all), prod uit de
+   MIGRATIE. Fix s246 + s246b (idempotent) + nieuwe wachter
+   `test_migration_timestamp_defaults.py` die álle migraties leest — rood bewezen op
+   de echte fout, daarna groen.
+
+### Gewijzigde bestanden
+Backend: `email/scheduled_models.py`, `email/scheduled_service.py`,
+`email/scheduled_router.py` (nieuw), `email/compose_router.py` (splitsing +
+`scheduled_at`/`advance_draft_id`), `incasso/service.py`
+(`complete_ai_draft_after_send` naar service-laag), `incasso/router.py` (dun),
+`workflow/scheduler.py` (minuut-job), `main.py`, `alembic/env.py`, migraties
+`s246_scheduled_emails.py` + `s246b_sched_ts.py`.
+Frontend: `email-compose-dialog.tsx` (knop + presets + eigen tijdstip),
+`scheduled-emails-panel.tsx` + `use-scheduled-emails.ts` (nieuw),
+`correspondentie/page.tsx`, `zaken/[id]/page.tsx`.
+Tests: `test_scheduled_emails.py` (12 wachters), `test_migration_timestamp_defaults.py`,
+`test_send_route_drift_guard.py` (bijgewerkt), `conftest.py`.
+Commits `9197f66`→`4269592`.
+
+### Verificatie
+131 tests groen over send/compose/mail/incasso/workflow (basislijn zonder deze
+sessie óók gemeten om vervuiling uit te sluiten); ruff + tsc schoon; migratie mét
+RLS geverifieerd op prod (FORCE + policy); login 200; bezorger-hartslag zonder fout.
+Visueel op prod (desktop + mobiel 390×844, screenshots bekeken): knop + presets,
+inplannen zonder te versturen, lijst op het dossier, annuleren.
+**Live-bewijs (GO Arsalan):** mail ingepland op 23:25, automatisch vertrokken om
+23:25:12 (1 poging), aangekomen in zijn gmail — bevestigd door Arsalan. Spoor klopt:
+`synced_emails` outbound met afzender **incasso@kestinglegal.nl** (kantoorkanaal, net
+als bij een klik) + `case_activities` "E-mail verzonden naar …".
+**Testlessen:** twee pytest-runs tegelijk op dezelfde testDB gaven 68 spookfouten —
+één run tegelijk (huisregel bevestigd).
+
+### Bekende issues / bewust niet gedaan
+- **Lopende band (batch/follow-up) heeft géén "Verstuur later"** — besluit Arsalan;
+  vereist eerst een keuze over het moment van doorschuiven.
+- **Fable-eindreview van S246 is nog niet gedraaid** (verplicht: dit raakt alle
+  verzendroutes) — eerste taak van de volgende sessie.
+- AI-concept-nazorg bij een geplande mail is via wachters bewezen, niet live gedraaid
+  (er stond geen echt AI-concept klaar op het testdossier).
+
+### Volgende sessie
+Eerst Fable-eindreview S246, daarna S247 AI-kennislaag. Zie `docs/sessions/PROMPT-S247.md`.
 
 ## Sessie 245 (23 juli 2026, Opus-bouw → Fable-eindreview — taken+meldingen: 4 demo-punten blok 2, LIVE)
 
@@ -729,92 +813,3 @@ healthy, login 200. Werklijst-natelling prod 14/14 met tweede scan (idempotent),
 ### Volgende sessie
 S238: native structured outputs-refactor (alle AI-aanroepen, eigen sessie, Opus +
 volle kruispunt-discipline). Zie `docs/sessions/PROMPT-S238.md`.
-
-## Sessie 236 (22 juli 2026, Opus-bouw → Fable-review → Opus-fixes — werklijst-taken + 7 sommaties verstuurd + spook-inkomend-fix, LIVE)
-
-### Samenvatting
-Startpunt PROMPT-S236. Besluiten Arsalan vooraf: IN100613 laten liggen (Lisanne nog
-niet geantwoord); **Taken-pagina = dé werklijst**; de 7 sommaties mochten na eigen
-grondige controle de deur uit ("als jij het hebt nagekeken mag je het doen").
-
-**1. Werklijst-taak voor verstuur-adviezen (LIVE + live bewezen).** Elk openstaand
-verstuur-advies van de follow-up-adviseur krijgt een gespiegelde taak
-"{stap} versturen — {zaaknummer}" op de Taken-pagina (scanner-backfill dekt ook oude
-adviezen; ontdubbeld per advies via rec_id in action_config). De taak sluit op exact
-de advies-momenten: brief écht verstuurd → completed op de gedeelde doorschuif-motor
-`advance_after_step_send` (dus álle verzendroutes); advies afgewezen/superseded →
-skipped (`close_followup_send_tasks` in `supersede_open_recommendations` +
-`reject_recommendation`). Taken-pagina kreeg knop "Controleren & versturen" → /followup
-(niet visueel doorgeklikt; tsc schoon). Live bewezen: na de 30-min-scan stonden exact
-de 4 juiste taken op prod.
-
-**2. De 7 eerste sommaties (IN100592/98/99, 602/03/04/06) — VERSTUURD.** Controle
-per dossier vóór verzending: 0 mails/documenten/staphistorie ooit (vers gemeten);
-hoofdsom = som losse vorderingen (7/7 exact, incl. creditnota's −1.200,01 en −621,53
-netjes in de brieftabel); **BIK onafhankelijk nagerekend volgens de wettelijke
-staffel: 7/7 op de cent**; rente-steekproef IN100604 met de hand (2%/mnd samengesteld):
-257,40 vs 257,38 in de brief (deelmaand-conventie); alle 7 b2b → geen
-14-dagenbrief-plicht; afzender incasso@ via Graph. Alle 7 sent (0 bounces), elk
-dossier → Tweede sommatie, adviezen executed. **IN100603 draagt een negatieve
-renteregel (−107,90; creditnota ouder dan facturen — S181-F-gedrag, voordeel
-debiteur).** **IN100606 (Maatwerk Zorgbemiddeling) betwistte binnen 25 min**: AI
-classificeerde betwisting (0.95), dossier auto → 'Verweer beantwoorden', AI-concept
-klaar — de hele verweer-keten live bewezen op een échte debiteur. **IN100607 bewust
-NIET verstuurd**: bleek op 'Verweer beantwoorden' te staan (stale eerste-sommatie-
-advies van vóór de stap-wissel).
-
-**3. Fable-review-vondst: spook-inkomend (gefixt, LIVE).** Elke mail namens
-kantooradres incasso@ ('Verzenden als' op seidony's account) kwam via de Verzonden
-Items-sync als **inbound** terug: eigen sommaties als ontvangen post, mét notificatie
-en AI-beoordelingscall (~$0,03 voor 7), patroon sinds 17-7 (verklaart de S233b-
-"doorstuurregel gmail"-randobservatie). Rode test eerst; fix: eigen-afzender-set
-(accountadres + Tenant.email) in richting-oordeel, ontdubbel-poort en
-contact-matching (`sync_service.py`, 3 wachters).
-
-**4. Tweede reviewvondst op eigen werk (gefixt, LIVE).** Het taak-filter keek alleen
-naar "stap heeft sjabloon" → 10 oude escalatie-adviezen (van vóór de S234-
-briefkoppeling, testdossiers) kregen een misleidende "versturen"-taak. Nu ook
-filteren op advies-type GENERATE_DOCUMENT (+wachter).
-
-**5. Prod-opruiming (één transactie, tellingen exact):** 10 misleidende taken weg;
-7 spookmails weg mét bijlage- en classificatierijen, hun echte Graph-ids overgezet
-op de uitgaande records (= wat de gefixte poort gedaan zou hebben); 14 onterechte
-"nieuwe e-mail"-meldingen weg. Echte reacties + meldingen onaangeraakt (nageteld).
-
-### Gewijzigde bestanden
-Backend: `ai_agent/followup_service.py` (taak-aanmaak + reject-koppeling),
-`incasso/service.py` (`close_followup_send_tasks` + motor + supersede),
-`email/sync_service.py` (eigen-afzender-set). Frontend: `taken/page.tsx` (knop).
-Tests: `test_followup_send_tasks.py` (nieuw, 10), `test_email_sync.py` (+3).
-Commits `e91037d`, `e18c2d2`, `1782310`; backend+frontend via SSH `--force-recreate`
-(geen migratie).
-
-### Verificatie
-9+1 nieuwe werklijst-wachters groen; 201 kruispunt-tests (followup/advance/workflow/
-arrangement) groen; mail-kruispunt 952 groen (15 errors = botsing met parallelle
-eigen run, schoon herdraaid: 98/98); ruff + tsc schoon; CI groen op alle 3 commits
-(29910413122 + 29911747328 conclusion=success via API nagetrokken; de Frontend
-Dependency Audit-job faalt daarbinnen niet-blokkerend op 4 sharp/libvips-CVE's —
-extern, zie Bekende issues); containers healthy, login-API 200 na beide deploys;
-alle prod-mutaties met dry-run + natelling (10/7/7/7/7/14 exact).
-
-### Bekende issues / bewust niet gedaan
-- **Escalatie-adviezen (o.a. 5 échte 'Voorstel dagvaarding'-dossiers) staan NIET op
-  de Taken-pagina** — buiten de gekozen scope (verstuur-adviezen). Voorstel voor
-  Arsalan: ook die als taak spiegelen.
-- **IN100607**: stale pending eerste-sommatie-advies terwijl de zaak op 'Verweer
-  beantwoorden' staat — advies zou superseded moeten worden (data-fix, niet gedaan).
-- Werklijst-taak is éénrichting: handmatig afvinken laat het advies op de
-  Follow-up-pagina staan (bewuste keuze); taak-aanmaak schrijft geen
-  dossier-activiteit (cosmetisch).
-- Batch-generatie zónder verzending laat de verstuur-taak bewust open (er ging niets
-  de deur uit) maar schuift de zaak wél door (bestaand S234-randgeval).
-- IN100613 onaangeraakt (wacht op Lisanne); heeft ook nog een oud pending advies.
-- **npm-audit-waarschuwing (niet-blokkerend):** `sharp` erft 4 libvips-CVE's
-  (CVE-2026-33327/-33328/-35590/-35591, 3× high) — sharp updaten zodra er een
-  gepatchte versie is.
-
-### Volgende sessie
-S237: reacties op de 7 sommaties verwerken (IN100606-verweer ligt bij Lisanne;
-meer reacties verwacht) + de open beslispunten hierboven. Zie
-`docs/sessions/PROMPT-S237.md`.

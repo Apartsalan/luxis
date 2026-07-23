@@ -48,6 +48,7 @@ async def list_cases(
     case_type: str | None = Query(default=None),
     case_status: str | None = Query(default=None, alias="status"),
     incasso_step_id: uuid.UUID | None = Query(default=None),
+    basenet_phase: str | None = Query(default=None, max_length=60),
     search: str | None = Query(default=None),
     client_id: uuid.UUID | None = Query(default=None),
     assigned_to_id: uuid.UUID | None = Query(default=None),
@@ -70,6 +71,7 @@ async def list_cases(
         case_type=case_type,
         status=case_status,
         incasso_step_id=incasso_step_id,
+        basenet_phase=basenet_phase,
         search=search,
         client_id=client_id,
         assigned_to_id=assigned_to_id,
@@ -89,6 +91,16 @@ async def list_cases(
         per_page=per_page,
         pages=math.ceil(total / per_page) if total > 0 else 0,
     )
+
+
+@router.get("/basenet-phases")
+async def list_basenet_phases(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """S243: distinct BaseNet-werkfases voor het fase-filter op de dossierlijst."""
+    phases = await service.list_basenet_phases(db, current_user.tenant_id)
+    return {"phases": phases}
 
 
 @router.get("/conflict-check")

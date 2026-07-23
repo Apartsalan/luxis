@@ -256,6 +256,7 @@ async def list_cases(
     case_type: str | None = None,
     status: str | None = None,
     incasso_step_id: uuid.UUID | None = None,
+    basenet_phase: str | None = None,
     search: str | None = None,
     client_id: uuid.UUID | None = None,
     assigned_to_id: uuid.UUID | None = None,
@@ -285,6 +286,11 @@ async def list_cases(
     # niet de status). Arsalans punt: alle zaken op één stap kunnen tonen.
     if incasso_step_id:
         query = query.where(Case.incasso_step_id == incasso_step_id)
+
+    # S243: filter op BaseNet-werkfase — geïmporteerde dossiers zonder
+    # Luxis-stap (bv. "Akkoord dagvaarden") waren via het stap-filter onvindbaar.
+    if basenet_phase:
+        query = query.where(Case.basenet_origin_phase == basenet_phase)
 
     if client_id:
         # Filter cases where this contact is client, opposing party, OR a case party
@@ -320,6 +326,9 @@ async def list_cases(
                 Case.case_number.ilike(search_term),
                 Case.description.ilike(search_term),
                 Case.reference.ilike(search_term),
+                # S243: vindbaar op de BaseNet-werkfase ("Akkoord dagvaarden"…) —
+                # geïmporteerde dossiers zonder Luxis-stap waren anders onvindbaar.
+                Case.basenet_origin_phase.ilike(search_term),
                 Case.client.has(Contact.name.ilike(search_term)),
                 Case.opposing_party.has(Contact.name.ilike(search_term)),
                 # S239: vindbaar op het factuurnummer van een vordering — dat
@@ -366,6 +375,23 @@ async def list_cases(
     cases = list(result.scalars().all())
 
     return cases, total
+
+
+async def list_basenet_phases(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+) -> list[str]:
+    """S243: distinct BaseNet-werkfases (gesorteerd) voor het fase-filter."""
+    result = await db.execute(
+        select(Case.basenet_origin_phase)
+        .where(
+            Case.tenant_id == tenant_id,
+            Case.basenet_origin_phase.is_not(None),
+        )
+        .distinct()
+        .order_by(Case.basenet_origin_phase)
+    )
+    return [row[0] for row in result.all()]
 
 
 async def get_case(

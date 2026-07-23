@@ -22,7 +22,7 @@ import {
   ChevronDown,
   ArrowUpDown,
 } from "lucide-react";
-import { useCases, type CaseSortField, type CaseSortDir } from "@/hooks/use-cases";
+import { useCases, useBasenetPhases, type CaseSortField, type CaseSortDir } from "@/hooks/use-cases";
 import { useConfirm } from "@/components/confirm-dialog";
 import { useModules } from "@/hooks/use-modules";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -101,7 +101,7 @@ function CaseSortHeader({
 // ze in localStorage zodat ze de menu-navigatie overleven. Een doorklik vanaf het
 // dashboard/rapportages (filters in de URL) WINT: dan negeren we het geheugen.
 const SAVED_FILTERS_KEY = "zaken-filters-v1";
-const URL_FILTER_KEYS = ["search", "case_type", "status", "incasso_step_id", "date_from", "date_to"];
+const URL_FILTER_KEYS = ["search", "case_type", "status", "incasso_step_id", "basenet_phase", "date_from", "date_to"];
 
 function loadSavedFilters(): Record<string, string> {
   if (typeof window === "undefined") return {};
@@ -139,6 +139,7 @@ export default function ZakenPage() {
   const [caseType, setCaseType] = useState(() => initFilter("case_type", "caseType"));
   const [status, setStatus] = useState(() => initFilter("status", "status"));
   const [incassoStep, setIncassoStep] = useState(() => initFilter("incasso_step_id", "incassoStep"));
+  const [basenetPhase, setBasenetPhase] = useState(() => initFilter("basenet_phase", "basenetPhase"));
   const [assignedTo, setAssignedTo] = useState(() => (urlHasFilters ? "" : savedFilters.assignedTo ?? ""));
   const [dateFrom, setDateFrom] = useState(() => initFilter("date_from", "dateFrom"));
   const [dateTo, setDateTo] = useState(() => initFilter("date_to", "dateTo"));
@@ -150,9 +151,9 @@ export default function ZakenPage() {
     if (typeof window === "undefined") return;
     localStorage.setItem(
       SAVED_FILTERS_KEY,
-      JSON.stringify({ search, caseType, status, incassoStep, assignedTo, dateFrom, dateTo }),
+      JSON.stringify({ search, caseType, status, incassoStep, basenetPhase, assignedTo, dateFrom, dateTo }),
     );
-  }, [search, caseType, status, incassoStep, assignedTo, dateFrom, dateTo]);
+  }, [search, caseType, status, incassoStep, basenetPhase, assignedTo, dateFrom, dateTo]);
 
   const debouncedSearch = useDebounce(search, 300);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -164,6 +165,9 @@ export default function ZakenPage() {
   // Stap-filter (B3, S198): filter dossiers op pijplijn-STAP (sommatie/dagvaarding/…).
   const { data: pipelineSteps } = useIncassoPipelineSteps(true);
   const activeSteps = (pipelineSteps ?? []).filter((s: PipelineStep) => s.is_active);
+  // S243: BaseNet-fase-filter — geïmporteerde dossiers zonder Luxis-stap
+  // ("Akkoord dagvaarden" enz.) waren via het stap-filter onvindbaar.
+  const { data: basenetPhases } = useBasenetPhases();
   const { confirm, ConfirmDialog: ConfirmDialogEl } = useConfirm();
 
   const toggleSort = (field: CaseSortField) => {
@@ -193,6 +197,7 @@ export default function ZakenPage() {
     case_type: caseType || undefined,
     status: status || undefined,
     incasso_step_id: incassoStep || undefined,
+    basenet_phase: basenetPhase || undefined,
     search: debouncedSearch || undefined,
     assigned_to_id: assignedTo || undefined,
     date_from: dateFrom || undefined,
@@ -201,7 +206,7 @@ export default function ZakenPage() {
     sort_dir: sortDir,
   });
 
-  const activeFilters = [caseType, status, incassoStep, assignedTo, dateFrom, dateTo].filter(Boolean).length;
+  const activeFilters = [caseType, status, incassoStep, basenetPhase, assignedTo, dateFrom, dateTo].filter(Boolean).length;
   const allIds = data?.items?.map((z) => z.id) ?? [];
   const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
   const someSelected = selectedIds.size > 0;
@@ -400,6 +405,24 @@ export default function ZakenPage() {
               ))}
             </select>
           )}
+          {(basenetPhases?.length ?? 0) > 0 && (
+            <select
+              value={basenetPhase}
+              onChange={(e) => {
+                setBasenetPhase(e.target.value);
+                setPage(1);
+              }}
+              aria-label="Filter op BaseNet-fase"
+              className="rounded-lg border border-input bg-card px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+            >
+              <option value="">Alle BaseNet-fases</option>
+              {basenetPhases?.map((phase) => (
+                <option key={phase} value={phase}>
+                  {phase}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             onClick={() => setShowMoreFilters(!showMoreFilters)}
             className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2.5 text-xs font-medium transition-colors ${
@@ -422,6 +445,7 @@ export default function ZakenPage() {
                 setCaseType("");
                 setStatus("");
                 setIncassoStep("");
+                setBasenetPhase("");
                 setSearch("");
                 setAssignedTo("");
                 setDateFrom("");

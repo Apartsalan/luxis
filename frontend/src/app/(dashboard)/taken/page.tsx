@@ -806,9 +806,9 @@ export default function TakenPage() {
                     onComplete={handleComplete}
                     onSkip={handleSkip}
                     onRestore={handleRestore}
-                    isCompleting={completeTask.isPending}
-                    isSkipping={skipTask.isPending}
-                    isRestoring={restoreTask.isPending}
+                    isCompleting={completeTask.isPending && completeTask.variables === task.id}
+                    isSkipping={skipTask.isPending && skipTask.variables === task.id}
+                    isRestoring={restoreTask.isPending && restoreTask.variables === task.id}
                   />
                 ))}
                 {group.tasks.length > TASKS_PER_GROUP && !expandedGroups[group.label] && (

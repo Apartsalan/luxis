@@ -104,6 +104,30 @@ export function useMyTasks() {
   });
 }
 
+/** Optimistisch de status van één taak bijwerken in álle workflow-tasks-caches.
+ *  Zo verdwijnt/verschuift de rij meteen bij de klik (geen wacht op refetch) —
+ *  daardoor kan een taak niet per ongeluk dubbel weggeklikt worden. Geeft de
+ *  vorige cache-inhoud terug voor rollback bij een fout. */
+async function optimisticTaskStatus(
+  queryClient: ReturnType<typeof useQueryClient>,
+  taskId: string,
+  status: string,
+) {
+  await queryClient.cancelQueries({ queryKey: ["workflow-tasks"] });
+  const previous = queryClient.getQueriesData<WorkflowTask[]>({ queryKey: ["workflow-tasks"] });
+  queryClient.setQueriesData<WorkflowTask[]>({ queryKey: ["workflow-tasks"] }, (old) =>
+    old?.map((t) => (t.id === taskId ? { ...t, status } : t)),
+  );
+  return previous;
+}
+
+function rollbackTasks(
+  queryClient: ReturnType<typeof useQueryClient>,
+  previous: [readonly unknown[], WorkflowTask[] | undefined][] | undefined,
+) {
+  previous?.forEach(([key, data]) => queryClient.setQueryData(key, data));
+}
+
 export function useCompleteTask() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -118,7 +142,9 @@ export function useCompleteTask() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onMutate: (taskId) => optimisticTaskStatus(queryClient, taskId, "completed"),
+    onError: (_e, _id, previous) => rollbackTasks(queryClient, previous),
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["workflow-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
@@ -139,7 +165,9 @@ export function useSkipTask() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onMutate: (taskId) => optimisticTaskStatus(queryClient, taskId, "skipped"),
+    onError: (_e, _id, previous) => rollbackTasks(queryClient, previous),
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["workflow-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
@@ -162,7 +190,9 @@ export function useRestoreTask() {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onMutate: (taskId) => optimisticTaskStatus(queryClient, taskId, "pending"),
+    onError: (_e, _id, previous) => rollbackTasks(queryClient, previous),
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["workflow-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },

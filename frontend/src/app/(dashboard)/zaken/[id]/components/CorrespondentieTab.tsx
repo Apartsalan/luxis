@@ -680,8 +680,10 @@ function CorrespondentieTab({
                         : ""
                     }`}
                   >
-                    {narrow ? (
-                      <>
+                    {/* Twee regels: bij open gesprek (smalle kolom) én op
+                        telefoonbreedte — daar drukt één regel het onderwerp
+                        ook weg. Eén regel alleen op md+ zonder open gesprek. */}
+                      <div className={narrow ? "" : "md:hidden"}>
                         <div className="flex items-center gap-2">
                           {t.direction === "inbound" ? (
                             <ArrowDownLeft className="h-3.5 w-3.5 shrink-0 text-blue-600" />
@@ -713,9 +715,9 @@ function CorrespondentieTab({
                           </span>
                           {badges}
                         </div>
-                      </>
-                    ) : (
-                      <div className="flex items-center gap-2">
+                      </div>
+                    {!narrow && (
+                      <div className="hidden md:flex items-center gap-2">
                         {t.direction === "inbound" ? (
                           <ArrowDownLeft className="h-3.5 w-3.5 shrink-0 text-blue-600" />
                         ) : (

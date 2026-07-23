@@ -2,12 +2,12 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 23 juli 2026, nacht (S239 loopt — scenario-nachtronde afgerond: 32 scenario's, 5 fixes LIVE; ochtendgesprek over voorstel-lijst volgt).
+**Laatst bijgewerkt:** 23 juli 2026 (S239 afgerond — scenario-nachtronde: 32 scenario's, 13 vondsten, 5 fixes LIVE; GO voor S240: bouwen + testronde 2).
 **Laatste feature/fix:** Scenario-nachtronde "een week uit het leven van Lisanne": 5 gefixte vondsten live (overbetaal-poort, samengesteld-kenmerk-herkenning, spooktaken bij weggegooid concept, regeling-afgerond-taak, zoeken op factuurnummer). Detail: entry S239 (tussenstand) + `docs/sessions/S239-SCENARIOS.md`.
 **Openstaand (→ vervolg S239):** voorstel-lijst 7 punten uit de nachtronde (sterkste: melding ongesorteerde bak — het S237-gat, nu gekwantificeerd); **2 echte mails wachten op antwoord (IN100128 update-verzoek 13-7, IN100586 uithanden-mail 17-6 — vannacht teruggevonden)**; verweer-concepten IN100592 + IN100606 en IN100492-vraag bij Lisanne; opruimronde mét Lisanne (nu incl. 7 resterende spooktaken + 40+ oude testdossier-taken). Losse punten: BaseNet-delisting, derde AI-testronde, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, testdata, 4 cosmetische restjes S235, sharp-CVE's.
-**Volgende sessie:** S239 loopt door (ochtend 23-7).
+**Volgende sessie:** S240 (Opus) — zie `docs/sessions/PROMPT-S240.md`.
 
-## Sessie 239 — tussenstand (22/23 juli 2026, nacht — Fable autonoom: scenario-nachtronde + fixloop, LIVE)
+## Sessie 239 (22/23 juli 2026, nacht — Fable autonoom: scenario-nachtronde + fixloop, LIVE)
 
 ### Samenvatting
 Arsalans opdracht (avond 22-7): bedenk 20-30+ scenario's waar Lisanne in haar
@@ -58,9 +58,11 @@ live natellingen per fix (zie logboek). CI: liep nog bij schrijven — natrekken
 Testsporen: wegwerpdossier volledig gewist; blijvend: ai_usage-rijen (bedoeld),
 1 spooktaak dicht (2026-00012), 2 echte mails gekoppeld (gewenst effect).
 
-### Vervolg (ochtend 23-7)
-Voorstel-lijst doornemen met Arsalan; 2 gevonden mails beantwoorden (Lisanne/Arsalan);
-opruimronde-punten; daarna verder naar Arsalans keuze.
+### Vervolg (besloten ochtend 23-7)
+Arsalan: GO voor voorstel 1+2 (bak-melding + belofte-bewaking) en testronde 2 met
+brillen "slordige gebruiker" + "klik-ronde als Lisanne" — in een VERSE sessie op Opus
+(S240, prompt klaargezet). CI beide S239-commits groen (success via gh nagetrokken).
+De 2 gevonden mails wachten nog op antwoord — eerste vraag van S240.
 
 ## Sessie 238 (22 juli 2026, Opus-bouw → Fable-eindreview — expliciete schema-koppeling + native structured outputs, LIVE)
 

@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 22 juli 2026 (S238 — expliciete schema-koppeling + native structured outputs in de AI-laag LIVE; trefwoord-detectie weg, runtime-vangnet naar forced tool_use, alle 7 routes op prod nageteld). Rapport: entry S238 in `SESSION-NOTES.md`. **Volgende = S239: Lisanne-antwoorden + opruimronde, of nieuw hoofdonderwerp.**
+**Laatst bijgewerkt:** 23 juli 2026 (S239 — scenario-nachtronde: 32 scenario's, 13 vondsten, 5 fixes LIVE; logboek `docs/sessions/S239-SCENARIOS.md`). Rapport: entry S239 in `SESSION-NOTES.md`. **Volgende = S240 (Opus): bak-melding + belofte-bewaking bouwen, daarna testronde 2 (slordige gebruiker + klik-ronde).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,26 +53,27 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 22 juli 2026, S237)
+## 🎯 Huidige prioriteit (bijgewerkt 23 juli 2026, S239)
 
-> ✅ **S238 AFGEROND — EXPLICIETE SCHEMA-KOPPELING + NATIVE STRUCTURED OUTPUTS (LIVE).**
-> De trefwoord-schema-detectie in `ai_agent/kimi_client.py` is weg: elke AI-aanroeper
-> (classificatie, intake, factuur, concepten ×3, PDF, testronde-script) geeft zijn
-> JSON-schema en purpose nu expliciet mee. Tekst-routes op native structured outputs;
-> drie live gevonden grammar-grenzen afgedekt met een statische poort + runtime-vangnet
-> naar forced tool_use (nooit meer harde AI-uitval door een schemagrens). Schema's
-> kloppend gemaakt met hun prompts (classificatie miste sentiment/defense_type,
-> factuur miste 13 velden). 20 nieuwe wachters; alle 7 routes live op prod nageteld;
-> CI groen op alle 4 commits. Detail: entry S238.
+> ✅ **S239 AFGEROND — SCENARIO-NACHTRONDE "EEN WEEK UIT HET LEVEN VAN LISANNE" (LIVE).**
+> 32 scenario's (werkdag, rare debiteur, cliënt-kant, tijd/termijnen, rand/systeem) met
+> verwacht-resultaat vooraf; 13 vondsten, waarvan 5 gefixt + gedeployd + live nageteld
+> (overbetaal-poort/negatief openstaand, samengesteld-kenmerk-herkenning — 2 échte mails
+> direct gekoppeld, spooktaken bij concept-weggooien, regeling-afgerond-taak, zoeken op
+> factuurnummer). 10 nieuwe wachters, 351 tests groen, CI groen. Volledig logboek +
+> voorstel-lijst (7): `docs/sessions/S239-SCENARIOS.md`; entry S239 in SESSION-NOTES.
 >
-> 🎯 **VOLGENDE (S239): Lisanne-antwoorden + opruimronde** — verweer-concepten
-> IN100592/IN100606 + IN100492-vraag verwerken zodra Lisanne reageert; opruimronde
-> mét dry-run + GO (IN100607/613/521, 6 oude nakijk-taken, dubbel concept IN100592,
-> logboekregeltje execute-escalate). Of nieuw hoofdonderwerp naar keuze Arsalan
-> (kandidaat: gat onbekend-afzender-melding uit S237). Losse punten: BaseNet-delisting,
-> derde AI-testronde + Lisanne-steekproef, kostenblokje, fysieke-telefoon-check,
-> opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen, 4 cosmetische restjes
-> S235, sharp-CVE's. KvK: niet naar vragen.
+> 🎯 **VOLGENDE (S240, op Opus): twee functies bouwen + testronde 2.** (1) Melding/teller
+> voor de ongesorteerde mailbak (het S237-gat — vannacht gekwantificeerd: 2 echte mails
+> bleven er 9 dagen/5 weken hangen); (2) betaalbelofte-bewaking (taak op promise_date —
+> datum+bedrag worden al herkend). Daarna testronde 2 met brillen "slordige gebruiker" +
+> "klik-ronde als Lisanne" (keuze Arsalan 23-7). **Eerst in de ochtend: 2 gevonden mails
+> beantwoorden (IN100128 update-verzoek, IN100586 uithanden-mail).** Daarnaast blijven
+> staan: Lisanne-antwoorden (IN100592/IN100606/IN100492), opruimronde mét GO (nu incl.
+> 7 resterende spooktaken + 40+ oude testdossier-taken), voorstel-lijst punten 3-7,
+> BaseNet-delisting, derde AI-testronde + Lisanne-steekproef, kostenblokje,
+> fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen,
+> 4 cosmetische restjes S235, sharp-CVE's. KvK: niet naar vragen.
 
 ## Projectdocumenten
 

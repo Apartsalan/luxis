@@ -208,7 +208,7 @@ function TaskRow({
             {getRelativeDateLabel(task.due_date)}
           </span>
 
-          {/* Case link */}
+          {/* Case link — dossiernummer + debiteur (wederpartij) */}
           {task.case && (
             <Link
               href={`/zaken/${task.case_id}`}
@@ -216,6 +216,9 @@ function TaskRow({
             >
               <Briefcase className="h-3 w-3" />
               {task.case.case_number}
+              {task.case.debtor_name && (
+                <span className="text-muted-foreground/80">· {task.case.debtor_name}</span>
+              )}
             </Link>
           )}
 

@@ -62,9 +62,36 @@ class WorkflowTaskUpdate(BaseModel):
     recurrence_end_date: date | None = None  # G9
 
 
+class TaskCaseInfo(BaseModel):
+    """Compacte dossier-info bij een taak, zodat de takenlijst zaaknummer +
+    namen kan tonen zonder los dossier-verzoek. Gevoed vanuit het (al eager
+    geladen) Case-ORM-object: client = cliënt/schuldeiser, opposing_party =
+    debiteur/wederpartij."""
+
+    id: uuid.UUID
+    case_number: str
+    client_name: str | None = None
+    debtor_name: str | None = None
+
+    model_config = {"from_attributes": True}
+
+    @model_validator(mode="before")
+    @classmethod
+    def _from_case(cls, data):
+        if isinstance(data, dict) or data is None:
+            return data
+        return {
+            "id": data.id,
+            "case_number": data.case_number,
+            "client_name": data.client.name if data.client else None,
+            "debtor_name": data.opposing_party.name if data.opposing_party else None,
+        }
+
+
 class WorkflowTaskResponse(BaseModel):
     id: uuid.UUID
     case_id: uuid.UUID
+    case: TaskCaseInfo | None = None
     assigned_to_id: uuid.UUID | None
     task_type: str
     title: str

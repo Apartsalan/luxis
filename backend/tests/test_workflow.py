@@ -105,6 +105,48 @@ async def test_list_tasks_filter_by_case(
 
 
 @pytest.mark.asyncio
+async def test_task_response_includes_case_info(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+):
+    """De takenlijst moet dossiernummer + cliënt- + debiteurnaam meesturen,
+    zodat de UI 'welke zaak/wie' toont zonder los dossier-verzoek."""
+    debtor = Contact(
+        id=uuid.uuid4(),
+        tenant_id=test_tenant.id,
+        contact_type="company",
+        name="Wanbetaler B.V.",
+        email="debiteur@wanbetaler.nl",
+    )
+    db.add(debtor)
+    await db.flush()
+    case = await _create_case(db, test_tenant.id, "2026-00042")
+    case.opposing_party = debtor
+    await db.flush()
+
+    await client.post(
+        "/api/workflow/tasks",
+        json={
+            "case_id": str(case.id),
+            "task_type": "check_payment",
+            "title": "Bel debiteur",
+            "due_date": (date.today() + timedelta(days=5)).isoformat(),
+        },
+        headers=auth_headers,
+    )
+
+    resp = await client.get(f"/api/workflow/tasks?case_id={case.id}", headers=auth_headers)
+    assert resp.status_code == 200
+    case_info = resp.json()[0]["case"]
+    assert case_info["case_number"] == "2026-00042"
+    assert case_info["client_name"] == "Test Client B.V."
+    assert case_info["debtor_name"] == "Wanbetaler B.V."
+
+
+@pytest.mark.asyncio
 async def test_update_task_to_completed(
     client: AsyncClient,
     auth_headers: dict,

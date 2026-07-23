@@ -22,7 +22,7 @@ export interface WorkflowTask {
   created_at: string;
   updated_at: string;
   // Nested relations (optional, depending on endpoint)
-  case?: { id: string; case_number: string; status: string };
+  case?: { id: string; case_number: string; client_name: string | null; debtor_name: string | null };
   assigned_to?: { id: string; full_name: string } | null;
 }
 

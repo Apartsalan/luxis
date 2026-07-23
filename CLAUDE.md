@@ -102,6 +102,10 @@ Na goedkeuring.
   wordt later gebouwd op pydantic-ai; elke service-functie moet dan direct als
   tool-handler kunnen dienen. Toekomst-adopties + triggers: `docs/TOEKOMST-REPOS.md` —
   **raakt een sessie zo'n trigger, meld het bij Arsalan vóór het bouwen.**
+- **Rolverdeling (Arsalan 23-7, S240):** deze sessies BOUWEN; Lisanne doet het
+  inhoudelijke werk in het systeem (mails beantwoorden, dossierbeslissingen).
+  Inhoudelijke vondsten signaleren in het verslag — niet aanbieden om concepten
+  te schrijven of ze zelf af te handelen, tenzij Arsalan er expliciet om vraagt.
 - Zelfstandig werken, geen toestemming (behalve destructieve acties)
 - Nieuwe features: altijd 4-stappen werkwijze
 - Juridische twijfel: flaggen, niet stoppen

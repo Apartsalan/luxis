@@ -33,6 +33,12 @@ van deze sessie is. Extra taak-context: geen (S242 was een afgeronde veegsessie)
   `docs/plans/VOORSTEL-verweer-parkeerstap-terugkeer.md` — na verstuurd
   verweer-antwoord + stilte automatisch terug de sommatie-keten in. Lees de
   3 controlepunten in het voorstel vóór de bouw.
+- **"AI-bericht maken" los van een inkomende mail (vraag Arsalan, demo-staart
+  S242, IN100483):** de knop "AI-antwoord maken" hangt alleen aan binnengekomen
+  mails; een herinnering/vervolg op een EIGEN verstuurde mail ("vraag Jona
+  nogmaals om de stukken") kan er niet mee. Gat = AI-compose op dossier-/
+  persoonsniveau met vrije instructie. Eerst met Arsalan bespreken (hij wil dit
+  gefixt, niet met spoed). Omweg werkt al: knop op de oude inkomende mail.
 - Rest voorstel-lijst (S239): categorie 'onduidelijk', overbetaling-knop,
   cascade bij dossier-verwijderen, weekend-logica, kostenblokje.
 - Fable-tegenlezing van S242 (wens Arsalan tijdens de demo).

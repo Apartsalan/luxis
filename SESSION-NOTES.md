@@ -2,7 +2,7 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 23 juli 2026 (S241 afgerond — testronde 3 + Negeren-fix + meldingen-bundeling LIVE; de S240-entry volgt nog uit de parallelle terminal, logboek staat al in `docs/sessions/S240-SCENARIOS.md`).
+**Laatst bijgewerkt:** 23 juli 2026 (S242-start: S240-entry alsnog geschreven uit logboek + git log; S241 was al afgerond — testronde 3 + Negeren-fix + meldingen-bundeling LIVE).
 **Laatste feature/fix:** Meldingen-bundeling in de bel (3+ ongelezen van zelfde type = één rij; klik = overzichtspagina + stapel gelezen) + fix "Negeren wint van elke sync". Detail: entry S241 + `docs/sessions/S241-SCENARIOS.md`.
 **Openstaand:** voorstel-lijst (S242-kandidaten: dubbelklik-betaling-slot, belofte×regeling dubbel werk, eigenaarloze-taken-melding; rest S239-lijst onaangeraakt); 2 echte mails (IN100128, IN100586) + verweer IN100592/IN100606 + IN100492 bij Lisanne; opruimronde mét Lisanne; **2 verjaringsmeldingen (IN100015 VERJAARD, IN100127) nu zichtbaar door de bundeling — aandacht Lisanne/Arsalan**. Losse punten: BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, testdata, 4 cosmetische restjes S235, sharp-CVE's; derde AI-testronde bewust afgevoerd (S241).
 **Volgende sessie:** S242 (Opus) — zie `docs/sessions/PROMPT-S242.md`.
@@ -73,6 +73,57 @@ bundeling-commit liep nog bij afsluiten — **natrekken bij S242-start**.
 
 ### Volgende sessie
 S242 (Opus): kleine veegsessie voorstel-lijst — zie `docs/sessions/PROMPT-S242.md`.
+
+## Sessie 240 (23 juli 2026, Opus-bouw → Fable-review → Fable-testronde 2 — bak-melding + belofte-bewaking + klik-ronde, LIVE)
+
+### Samenvatting
+Entry geschreven bij S242-start (compact uit `docs/sessions/S240-SCENARIOS.md` +
+git log) — de parallelle terminal sloot af zonder deze entry.
+
+**Bouw (GO Arsalan na S239, `4c8f787`, Opus):** de twee sterkste S239-voorstellen:
+- **Melding ongesorteerde bak** — nieuwe binnenkomende mail die niet automatisch
+  te koppelen is → melding bij alle actieve gebruikers (dicht het S237-gat
+  "debiteur-reactie vanaf onbekend adres valt stil"); geldt alleen NIEUWE
+  binnenkomers, de 81 oude ongesorteerde mails spammen niet.
+- **Betaalbelofte-bewaking** — belofte-mail (datum+bedrag al herkend door de
+  classificatie) → bewakingstaak op de beloofde datum
+  (`ensure_payment_promise_task`); sluit automatisch bij volledige betaling.
+
+**Fable-review → 2 fixes (`d141f35`):** belofte-taak sluit ook bij handmátig
+zaak-afsluiten (route-kruispunt); melding-doorklik werkt ook als de Mail-pagina
+al open staat. Rolverdeling vastgelegd (`b42a140`, Working Agreement CLAUDE.md):
+sessies bouwen, Lisanne doet het inhoudelijke werk.
+
+**Testronde 2 (Fable na modelwissel, logboek `S240-SCENARIOS.md`):** bril
+"slordige gebruiker" (8 scenario's, prod-API op wegwerpdossier 2026-00021) +
+bril "klik-ronde als Lisanne" (6 scenario's, Playwright tegen prod, desktop +
+mobiel 390×844). 13/14 goed — validaties overal netjes (422/400 met NL-meldingen,
+bedragen op de cent), cijfers dashboard/dossier consistent én handmatig nagerekend.
+- **Vondst 1 (🅰, gefixt `6192ac3`):** melding-doorklik naar exact dezelfde URL
+  deed niets na eerdere doorklik + handmatige tabwissel — tabwissel maakt de URL
+  nu weer kaal; live herbeklikt en bewezen.
+- **Vondst 2 (🅲, → S242):** dubbelklik/2 tabs boekt een deelbetaling dubbel
+  (beide 201; alleen UI-demping, geen slot in de service-laag).
+
+Bijvangst (echt, niet aangeraakt): IN100592 (Zwartbol) mailde opnieuw mét
+dossiernummer → automatisch gekoppeld + als verweer beoordeeld (0.75).
+
+### Gewijzigde bestanden
+Backend: `ai_agent/orchestrator.py`, `collections/service.py`,
+`email/sync_service.py`, `notifications/service.py`, `workflow/hooks.py`,
+`cases/service.py`. Frontend: `correspondentie/page.tsx`, `app-header.tsx`,
+`use-notifications.ts`. Tests: `test_email_unsorted_notification.py`,
+`test_payment_promise_task.py`. Commits `4c8f787`, `d141f35`, `6192ac3`,
+`b42a140`, `d9e35f0`.
+
+### Verificatie
+Wegwerpdossier 2026-00021 volledig gewist (natelling 0); klikproef-melding
+gewist (natelling 0); geen mail verstuurd; 0 consolefouten in de klik-ronde;
+screenshots mobiel bewaard. CI van alle S240-commits groen (nagetrokken in
+S241/S242).
+
+### Volgende sessie
+S241 draaide parallel (zie entry hierboven); S242 = veegsessie voorstel-lijst.
 
 ## Sessie 239 (22/23 juli 2026, nacht — Fable autonoom: scenario-nachtronde + fixloop, LIVE)
 
@@ -684,67 +735,3 @@ S234: incassostappen kritisch herzien — situatie-stappen i.p.v. platte lijst; 
 koppelen aan derde/laatste sommatie (dan schuiven die ook door); batch- en follow-up-route
 op dezelfde "volgende stap"-logica als compose/send + AI-route trekken. Zie
 `docs/sessions/PROMPT-S234.md`.
-
-## Sessie 232 (20 juli 2026, Opus-bouw — sjabloon-doorschuiven + 3 demo-fixes, LIVE)
-
-### Samenvatting
-Kruispunt-sessie op de verzendroutes. Alles hieronder is live, getest en op prod nageteld.
-Vóór de bouw met Fable de kruispunten in kaart gebracht (welke routes/pagina's raakt elke
-wijziging), daarna met Opus gebouwd.
-
-**Hoofdtaak — sjabloon-verzending schuift door (LIVE + wachter).** In de demo stuurde
-Arsalan een eerste sommatie via het mailvenster met sjabloon; de mail ging weg maar het
-dossier bleef op "Eerste sommatie". Alleen de AI-conceptroute (`advance-after-send`) schoof
-door. Gemeten: er zijn vier routes die een stap-brief versturen (AI-concept, batch, follow-up,
-compose/send) met twéé verschillende "volgende stap"-logica's. Voor nu compose/send op
-dezelfde regel als de AI-route gezet, de andere twee met rust (die herzien we in S234).
-- Gedeelde helper `advance_after_step_send()` (incasso/service.py) — de kern die
-  `advance-after-send` al gebruikte: verzending vastleggen op de huidige stap + default
-  timeout-rule + `move_case_to_step`. De router hergebruikt hem nu (dubbele code weg).
-- Brief-families `STEP_TEMPLATE_FAMILIES`: alle sommatie-varianten tellen als "de brief van
-  hun stap" → eerste én tweede sommatie schuiven door. **Match op de EXPLICIETE template_type**
-  (niet de afgeleide): AI-drafts dragen geen sjabloon → schuiven alleen via advance-after-send
-  → nooit dubbel. Extra guard `skip_pipeline_advance` dekt het randgeval (AI-concept waar de
-  gebruiker alsnog een sjabloon koos). **Grens:** derde/laatste sommatie hebben in prod géén
-  brief-koppeling → schuiven nog niet door (S234).
-- Wachter `test_advance_after_send_routes.py`: hele poort-matrix (stap-brief→door;
-  antwoord/vrij/herverzending/skip→niets) + gedrag van de helper. 13 tests.
-
-**Witregel na "Geachte" teruggedraaid (LIVE).** De S227-extra lege regel ná de aanhef was
-te veel — de opmaak was daarvóór al goed. Centraal in `_inline_paragraph_spacing`, dus overal
-tegelijk (stapbrieven, AI-concepten, AI-antwoorden). De S226-alinea-marge (de echte Gmail-fix)
-en de vaste witregel tussen Betreft en aanhef blijven. Wachters in `test_incasso_templates.py`
-omgedraaid: slaan nu alarm als de extra regel terugkomt.
-
-**Bijlagen: geen aantal-limiet meer (LIVE).** Wens Arsalan. De echte beperking is de totale
-mailgrootte (de provider stopt alle bijlagen base64 in één request), niet het aantal. Aantal-cap
-(10) weg op alle plekken; nieuwe totale-groottegrens `_assert_total_attachment_size` (25 MB),
-route-onafhankelijk vóór verzending. Per-bijlage 3 MB blijft. Test omgezet naar totaal-grootte.
-
-**Dossierfilters onthouden (LIVE).** De sortering stond al in de URL, de filters niet → na een
-dossier openen + terug via het menu waren ze weg. Nu bewaard in localStorage (`zaken-filters-v1`);
-een doorklik vanaf dashboard/rapportage (filters in de URL) wint en negeert het geheugen.
-
-**Twee prod-datamutaties (na expliciete GO, nageteld).**
-- Gebruikersnaam Lisanne `lisanne@kestinglegal.nl` → `kesting@kestinglegal.nl` (`UPDATE 1`).
-  De mailkanalen hangen aan het account (user_id), niet aan dit veld → verzenden/ontvangen
-  intact; wachtwoord-hash onaangeraakt. **Lisanne logt vanaf nu in met kesting@kestinglegal.nl.**
-- IN100605 → "Tweede sommatie". Bewezen dat de eerste sommatie 20-7 2× de deur uit ging
-  (`email_logs` status sent, sjabloon `sommatie_drukte`) terwijl het dossier bleef staan.
-  Doorgezet via de nieuwe gedeelde helper (default advance-rule, staphistorie-spoor).
-
-### Gewijzigde bestanden
-Backend: `incasso/service.py` (families + `advance_after_step_send` + poort), `incasso/router.py`
-(hergebruikt helper), `email/compose_router.py` (doorschuiven + totaal-groottegrens +
-`skip_pipeline_advance`), `email/incasso_templates.py` (witregel terug). Tests:
-`test_advance_after_send_routes.py` (nieuw), `test_compose_attachment_limits.py`,
-`test_incasso_templates.py`. Frontend: `zaken/[id]/page.tsx` (doorschuif-toast + refresh +
-skip-guard), `zaken/page.tsx` (filter-geheugen).
-
-### Bewust niet gedaan / grenzen
-- **Outlook-route (.eml) NIET wegdoen** — Arsalan: later. Doorschuiven zit alleen op de
-  directe verzendknop (bij .eml weet Luxis niet of de mail echt weg is).
-- **Derde/laatste sommatie schuiven nog niet door** — geen brief aan die stappen gekoppeld
-  (data/ontwerpkeuze voor S234; de mechaniek dekt het dan zonder codewijziging).
-- **Batch- en follow-up-route** houden hun eigen "volgende in de lijst"-logica — recht te
-  trekken in de S234-stappensessie.

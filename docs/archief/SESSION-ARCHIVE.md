@@ -10678,3 +10678,67 @@ deploy-regels-skill (docker cp-valkuil).
 S232: sjabloon-verzendroute laten doorschuiven naar de volgende stap (zelfde regel
 als `advance_after_send`, met wachter over álle verzendroutes), daarna IN100605
 handmatig rechtzetten. Zie `docs/sessions/PROMPT-S232.md`.
+
+## Sessie 232 (20 juli 2026, Opus-bouw — sjabloon-doorschuiven + 3 demo-fixes, LIVE)
+
+### Samenvatting
+Kruispunt-sessie op de verzendroutes. Alles hieronder is live, getest en op prod nageteld.
+Vóór de bouw met Fable de kruispunten in kaart gebracht (welke routes/pagina's raakt elke
+wijziging), daarna met Opus gebouwd.
+
+**Hoofdtaak — sjabloon-verzending schuift door (LIVE + wachter).** In de demo stuurde
+Arsalan een eerste sommatie via het mailvenster met sjabloon; de mail ging weg maar het
+dossier bleef op "Eerste sommatie". Alleen de AI-conceptroute (`advance-after-send`) schoof
+door. Gemeten: er zijn vier routes die een stap-brief versturen (AI-concept, batch, follow-up,
+compose/send) met twéé verschillende "volgende stap"-logica's. Voor nu compose/send op
+dezelfde regel als de AI-route gezet, de andere twee met rust (die herzien we in S234).
+- Gedeelde helper `advance_after_step_send()` (incasso/service.py) — de kern die
+  `advance-after-send` al gebruikte: verzending vastleggen op de huidige stap + default
+  timeout-rule + `move_case_to_step`. De router hergebruikt hem nu (dubbele code weg).
+- Brief-families `STEP_TEMPLATE_FAMILIES`: alle sommatie-varianten tellen als "de brief van
+  hun stap" → eerste én tweede sommatie schuiven door. **Match op de EXPLICIETE template_type**
+  (niet de afgeleide): AI-drafts dragen geen sjabloon → schuiven alleen via advance-after-send
+  → nooit dubbel. Extra guard `skip_pipeline_advance` dekt het randgeval (AI-concept waar de
+  gebruiker alsnog een sjabloon koos). **Grens:** derde/laatste sommatie hebben in prod géén
+  brief-koppeling → schuiven nog niet door (S234).
+- Wachter `test_advance_after_send_routes.py`: hele poort-matrix (stap-brief→door;
+  antwoord/vrij/herverzending/skip→niets) + gedrag van de helper. 13 tests.
+
+**Witregel na "Geachte" teruggedraaid (LIVE).** De S227-extra lege regel ná de aanhef was
+te veel — de opmaak was daarvóór al goed. Centraal in `_inline_paragraph_spacing`, dus overal
+tegelijk (stapbrieven, AI-concepten, AI-antwoorden). De S226-alinea-marge (de echte Gmail-fix)
+en de vaste witregel tussen Betreft en aanhef blijven. Wachters in `test_incasso_templates.py`
+omgedraaid: slaan nu alarm als de extra regel terugkomt.
+
+**Bijlagen: geen aantal-limiet meer (LIVE).** Wens Arsalan. De echte beperking is de totale
+mailgrootte (de provider stopt alle bijlagen base64 in één request), niet het aantal. Aantal-cap
+(10) weg op alle plekken; nieuwe totale-groottegrens `_assert_total_attachment_size` (25 MB),
+route-onafhankelijk vóór verzending. Per-bijlage 3 MB blijft. Test omgezet naar totaal-grootte.
+
+**Dossierfilters onthouden (LIVE).** De sortering stond al in de URL, de filters niet → na een
+dossier openen + terug via het menu waren ze weg. Nu bewaard in localStorage (`zaken-filters-v1`);
+een doorklik vanaf dashboard/rapportage (filters in de URL) wint en negeert het geheugen.
+
+**Twee prod-datamutaties (na expliciete GO, nageteld).**
+- Gebruikersnaam Lisanne `lisanne@kestinglegal.nl` → `kesting@kestinglegal.nl` (`UPDATE 1`).
+  De mailkanalen hangen aan het account (user_id), niet aan dit veld → verzenden/ontvangen
+  intact; wachtwoord-hash onaangeraakt. **Lisanne logt vanaf nu in met kesting@kestinglegal.nl.**
+- IN100605 → "Tweede sommatie". Bewezen dat de eerste sommatie 20-7 2× de deur uit ging
+  (`email_logs` status sent, sjabloon `sommatie_drukte`) terwijl het dossier bleef staan.
+  Doorgezet via de nieuwe gedeelde helper (default advance-rule, staphistorie-spoor).
+
+### Gewijzigde bestanden
+Backend: `incasso/service.py` (families + `advance_after_step_send` + poort), `incasso/router.py`
+(hergebruikt helper), `email/compose_router.py` (doorschuiven + totaal-groottegrens +
+`skip_pipeline_advance`), `email/incasso_templates.py` (witregel terug). Tests:
+`test_advance_after_send_routes.py` (nieuw), `test_compose_attachment_limits.py`,
+`test_incasso_templates.py`. Frontend: `zaken/[id]/page.tsx` (doorschuif-toast + refresh +
+skip-guard), `zaken/page.tsx` (filter-geheugen).
+
+### Bewust niet gedaan / grenzen
+- **Outlook-route (.eml) NIET wegdoen** — Arsalan: later. Doorschuiven zit alleen op de
+  directe verzendknop (bij .eml weet Luxis niet of de mail echt weg is).
+- **Derde/laatste sommatie schuiven nog niet door** — geen brief aan die stappen gekoppeld
+  (data/ontwerpkeuze voor S234; de mechaniek dekt het dan zonder codewijziging).
+- **Batch- en follow-up-route** houden hun eigen "volgende in de lijst"-logica — recht te
+  trekken in de S234-stappensessie.

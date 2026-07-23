@@ -16,6 +16,9 @@ export interface Notification {
   /** FEAT-AI-05: ISO timestamp until which this item is hidden from "Wachtend". null = not snoozed. */
   snoozed_until?: string | null;
   created_at: string;
+  /** S241-bundeling: op een bundel-rij (grouped=true) het aantal ongelezen
+   *  meldingen van dit type dat deze rij vertegenwoordigt. null/afwezig = losse melding. */
+  bundle_count?: number | null;
 }
 
 export type NotificationType =
@@ -65,11 +68,11 @@ export const NOTIFICATION_TYPE_CONFIG: Record<
 };
 
 // ─── Queries ──────────────────────────────────────────────────────
-export function useNotifications(limit = 20) {
+export function useNotifications(limit = 20, grouped = false) {
   return useQuery<Notification[]>({
-    queryKey: ["notifications", limit],
+    queryKey: ["notifications", limit, grouped],
     queryFn: async () => {
-      const res = await api(`/api/notifications?limit=${limit}`);
+      const res = await api(`/api/notifications?limit=${limit}${grouped ? "&grouped=true" : ""}`);
       if (!res.ok) return [];
       return res.json();
     },
@@ -121,7 +124,74 @@ export function useMarkAllAsRead() {
   });
 }
 
+/** S241 bundel-klik: markeer alle ongelezen meldingen van één type gelezen. */
+export function useMarkTypeAsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (type: NotificationType) => {
+      const res = await api("/api/notifications/read-by-type", {
+        method: "PUT",
+        body: JSON.stringify({ type }),
+      });
+      if (!res.ok) throw new Error("Kon bundel niet als gelezen markeren");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────
+/** S241: titel van een bundel-rij in de bel ("25 taken te laat"). */
+export function bundleTitle(type: NotificationType, count: number): string {
+  switch (type) {
+    case "email_received":
+      return `${count} nieuwe e-mails op dossiers`;
+    case "email_unsorted":
+      return `${count} nieuwe ongesorteerde e-mails`;
+    case "deadline_overdue":
+      return `${count} taken of deadlines te laat`;
+    case "deadline_approaching":
+      return `${count} deadlines naderen`;
+    case "ai_draft_ready":
+      return `${count} AI-concepten klaar voor controle`;
+    case "installment_overdue":
+      return `${count} regeling-termijnen gemist`;
+    case "invoice_overdue":
+      return `${count} eigen facturen te laat`;
+    case "verjaring_warning":
+      return `${count} verjaringswaarschuwingen`;
+    case "case_closed_invoice":
+      return `${count} dossiers afgesloten — factureren?`;
+    default: {
+      const label = NOTIFICATION_TYPE_CONFIG[type]?.label ?? "meldingen";
+      return `${count} × ${label}`;
+    }
+  }
+}
+
+/** S241: waar een bundel-klik heen navigeert (overzichtspagina per type). */
+export function bundleHref(type: NotificationType): string | null {
+  switch (type) {
+    case "email_received":
+      return "/correspondentie";
+    case "email_unsorted":
+      return "/correspondentie?filter=unlinked";
+    case "deadline_overdue":
+    case "deadline_approaching":
+    case "ai_draft_ready":
+    case "verjaring_warning":
+      return "/taken";
+    case "invoice_overdue":
+    case "case_closed_invoice":
+      return "/facturen";
+    case "installment_overdue":
+      return "/"; // dashboard toont de termijn-vooruitblik
+    default:
+      return null;
+  }
+}
+
 export function formatNotificationTime(dateStr: string): string {
   const date = new Date(dateStr);
   const now = new Date();

@@ -10,7 +10,10 @@ import {
   useUnreadCount,
   useMarkAsRead,
   useMarkAllAsRead,
+  useMarkTypeAsRead,
   formatNotificationTime,
+  bundleTitle,
+  bundleHref,
   NOTIFICATION_TYPE_CONFIG,
   type Notification,
   type NotificationType,
@@ -65,10 +68,13 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { data: notifications = [] } = useNotifications(15);
+  // S241: gebundelde bel-lijst — stapels van 3+ ongelezen van hetzelfde type
+  // komen als één rij terug (bundle_count gezet).
+  const { data: notifications = [] } = useNotifications(15, true);
   const { data: unreadCount = 0 } = useUnreadCount();
   const markAsRead = useMarkAsRead();
   const markAllAsRead = useMarkAllAsRead();
+  const markTypeAsRead = useMarkTypeAsRead();
 
   // Close dropdown on outside click or Escape
   useEffect(() => {
@@ -221,6 +227,60 @@ export function AppHeader({ onMobileMenuToggle }: AppHeaderProps) {
                   </div>
                 ) : (
                   notifications.map((n) => {
+                    // S241 — bundel-rij: één regel voor een stapel gelijksoortige
+                    // meldingen; klik markeert de hele stapel gelezen en gaat
+                    // naar de overzichtspagina van dat type.
+                    if (n.bundle_count) {
+                      const href = bundleHref(n.type);
+                      const bundleContent = (
+                        <div className="flex gap-3 px-4 py-3 hover:bg-muted/50 cursor-pointer transition-colors bg-primary/5">
+                          {getNotificationIcon(n.type)}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm leading-tight font-semibold text-foreground">
+                              {bundleTitle(n.type, n.bundle_count)}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                              Laatste: {n.title}
+                            </p>
+                            <span className="text-[11px] text-muted-foreground mt-1 block">
+                              {formatNotificationTime(n.created_at)}
+                            </span>
+                          </div>
+                          <div className="flex items-start pt-1">
+                            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-white shrink-0">
+                              {n.bundle_count > 99 ? "99+" : n.bundle_count}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                      const onBundleClick = () => {
+                        markTypeAsRead.mutate(n.type);
+                        setShowNotifications(false);
+                      };
+                      if (href) {
+                        return (
+                          <Link
+                            key={`bundle-${n.type}`}
+                            href={href}
+                            onClick={onBundleClick}
+                            className="block focus-visible:outline-none focus-visible:bg-muted/50"
+                          >
+                            {bundleContent}
+                          </Link>
+                        );
+                      }
+                      return (
+                        <button
+                          key={`bundle-${n.type}`}
+                          type="button"
+                          onClick={onBundleClick}
+                          className="block w-full text-left focus-visible:outline-none focus-visible:bg-muted/50"
+                        >
+                          {bundleContent}
+                        </button>
+                      );
+                    }
+
                     const content = (
                       <div
                         className={`flex gap-3 px-4 py-3 hover:bg-muted/50 cursor-pointer transition-colors ${

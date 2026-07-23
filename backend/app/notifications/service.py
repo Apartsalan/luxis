@@ -1,11 +1,11 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import and_, func, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.notifications.models import Notification
-from app.notifications.schemas import NotificationCreate
+from app.notifications.schemas import NotificationCreate, NotificationResponse
 
 # Notification type constants — keep in sync with frontend CaseActionFeed
 NOTIF_EMAIL_RECEIVED = "email_received"
@@ -106,6 +106,109 @@ async def list_notifications(
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+# S241-bundeling: vanaf zoveel ongelezen meldingen van hetzelfde type wordt het
+# één bundel-rij in de bel. Onder de drempel blijft alles los.
+BUNDLE_THRESHOLD = 3
+
+
+async def list_bell_notifications(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    limit: int = 15,
+) -> list[NotificationResponse]:
+    """S241 — gebundelde bel-lijst (meting: 112 ongelezen bij seidony, 93 bij
+    kesting; grootste stapels waren 63× 'taak te laat' en 25× 'nieuwe mail').
+
+    Typen met >= BUNDLE_THRESHOLD ongelezen meldingen worden één bundel-rij:
+    de nieuwste melding is de drager, bundle_count draagt het totaal. Al-gelezen
+    rijen en typen onder de drempel blijven losse rijen. De platte lijst
+    (list_notifications) blijft ongewijzigd — de dossier-actiefeed leest die.
+    """
+    base = [
+        Notification.tenant_id == tenant_id,
+        Notification.user_id == user_id,
+        Notification.type.notin_(HIDDEN_BELL_TYPES),
+    ]
+
+    counts_result = await db.execute(
+        select(Notification.type, func.count())
+        .where(*base, Notification.is_read == False)  # noqa: E712
+        .group_by(Notification.type)
+    )
+    bundle_counts = {t: c for t, c in counts_result.all() if c >= BUNDLE_THRESHOLD}
+
+    individual_where = list(base)
+    if bundle_counts:
+        # Ongelezen rijen van gebundelde typen verdwijnen uit de losse lijst —
+        # de bundel vertegenwoordigt ze. Gelezen rijen blijven gewoon staan.
+        individual_where.append(
+            or_(
+                Notification.is_read == True,  # noqa: E712
+                Notification.type.notin_(list(bundle_counts)),
+            )
+        )
+    individuals = (
+        await db.execute(
+            select(Notification)
+            .where(*individual_where)
+            .order_by(Notification.created_at.desc())
+            .limit(limit)
+        )
+    ).scalars().all()
+    singles = [NotificationResponse.model_validate(n) for n in individuals]
+
+    bundles: list[NotificationResponse] = []
+    if bundle_counts:
+        carriers = (
+            await db.execute(
+                select(Notification)
+                .distinct(Notification.type)
+                .where(
+                    *base,
+                    Notification.is_read == False,  # noqa: E712
+                    Notification.type.in_(list(bundle_counts)),
+                )
+                .order_by(Notification.type, Notification.created_at.desc())
+            )
+        ).scalars().all()
+        for carrier in carriers:
+            item = NotificationResponse.model_validate(carrier)
+            item.bundle_count = bundle_counts[carrier.type]
+            bundles.append(item)
+
+    # Bundels altijd bovenaan (nieuwste eerst) — een stapel ongelezen werk mag
+    # nooit door de limit-kap uit de lijst vallen achter losse nieuwere rijen.
+    bundles.sort(key=lambda i: i.created_at, reverse=True)
+    singles.sort(key=lambda i: i.created_at, reverse=True)
+    return (bundles + singles)[:limit]
+
+
+async def mark_type_read(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    notification_type: str,
+) -> int:
+    """S241 — bundel-klik: alle ongelezen meldingen van één type gelezen.
+
+    Alleen voor de eigen gebruiker binnen de eigen tenant. Returnt het aantal.
+    """
+    stmt = (
+        update(Notification)
+        .where(
+            Notification.tenant_id == tenant_id,
+            Notification.user_id == user_id,
+            Notification.type == notification_type,
+            Notification.is_read == False,  # noqa: E712
+        )
+        .values(is_read=True)
+    )
+    result = await db.execute(stmt)
+    await db.flush()
+    return result.rowcount
 
 
 async def get_unread_count(

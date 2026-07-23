@@ -18,16 +18,32 @@ class SnoozeRequest(BaseModel):
 
     hours: int
 
+
+class ReadByTypeRequest(BaseModel):
+    """S241-bundeling: type waarvan alle ongelezen meldingen gelezen worden."""
+
+    type: str
+
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
 
 @router.get("", response_model=list[NotificationResponse])
 async def list_notifications(
     limit: int = 15,
+    grouped: bool = False,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """List notifications for the current user, newest first."""
+    """List notifications for the current user, newest first.
+
+    grouped=true (S241, de bel): typen met 3+ ongelezen meldingen worden één
+    bundel-rij met bundle_count. Zonder grouped blijft de lijst plat — de
+    dossier-actiefeed rekent daarop.
+    """
+    if grouped:
+        return await service.list_bell_notifications(
+            db, current_user.tenant_id, current_user.id, limit
+        )
     return await service.list_notifications(
         db, current_user.tenant_id, current_user.id, limit
     )
@@ -75,6 +91,20 @@ async def snooze_notification(
         raise HTTPException(status_code=400, detail=str(e))
     await db.commit()
     return {"ok": found}
+
+
+@router.put("/read-by-type")
+async def mark_type_read(
+    data: ReadByTypeRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """S241 bundel-klik: markeer alle ongelezen meldingen van één type gelezen."""
+    count = await service.mark_type_read(
+        db, current_user.tenant_id, current_user.id, data.type
+    )
+    await db.commit()
+    return {"ok": True, "count": count}
 
 
 @router.put("/read-all")

@@ -17,6 +17,10 @@ class NotificationResponse(BaseModel):
     is_read: bool
     snoozed_until: datetime | None = None
     created_at: datetime
+    # S241-bundeling: gezet op een bundel-rij in de bel (grouped=true) — het
+    # aantal ongelezen meldingen van dit type dat deze rij vertegenwoordigt.
+    # None = gewone losse melding.
+    bundle_count: int | None = None
 
     model_config = {"from_attributes": True}
 

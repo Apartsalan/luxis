@@ -402,12 +402,21 @@ async def test_ai_concept_nazorg_pas_na_echte_verzending(
     """Het kruispunt: bij het INPLANNEN mag het concept niet worden afgevinkt en
     het dossier niet doorschuiven — anders loopt het dossier vooruit op een mail
     die nog in de wachtrij staat. Pas ná verzending draait de nazorg."""
+    from app.ai_agent.models import AIDraft, DraftStatus
+
     case = await _case(db, test_tenant.id)
     await _account(db, test_tenant.id, test_user.id)
+    # Echt concept in reviewstatus — de blinde-wachtrij-guard (S246-review)
+    # blokkeert terecht op een niet-bestaand of al-verstuurd concept.
+    draft = AIDraft(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, case_id=case.id,
+        subject="Concept", body="x", status=DraftStatus.GENERATED,
+    )
+    db.add(draft)
     await db.commit()
 
     token = create_access_token(str(test_user.id), str(test_tenant.id))
-    draft_id = uuid.uuid4()
+    draft_id = draft.id
     when = datetime.now(UTC) + timedelta(hours=2)
 
     provider = _mock_provider()
@@ -441,6 +450,98 @@ async def test_ai_concept_nazorg_pas_na_echte_verzending(
     provider2.send_message.assert_called_once()
     nazorg.assert_called_once()
     assert nazorg.call_args.args[4] == draft_id  # juiste concept
+
+
+# ── Blinde-wachtrij-guards (S246-review) ─────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_betaald_dossier_blokkeert_geplande_mail(
+    db: AsyncSession, session_factory, test_tenant: Tenant, test_user: User
+):
+    """Kruispunt: het dossier wordt betaald NA het inplannen. Bij een directe
+    klik ziet een mens dat; de wachtrij is blind → guard moet blokkeren."""
+    case = await _case(db, test_tenant.id)
+    await _account(db, test_tenant.id, test_user.id)
+    await db.commit()
+    row = await _queue_row(db, test_tenant.id, test_user.id, case.id,
+                           when=datetime.now(UTC) - timedelta(minutes=1))
+
+    case.status = "betaald"
+    await db.commit()
+
+    provider = _mock_provider()
+    p1, p2, p3 = _send_patches(provider)
+    with p1, p2, p3:
+        await _dispatch(session_factory)
+
+    provider.send_message.assert_not_called()  # KERN: niets de deur uit
+    await db.refresh(row)
+    assert row.status == STATUS_FAILED
+    assert "betaald" in (row.last_error or "")
+
+    notifs = list((await db.execute(
+        select(Notification).where(Notification.type == "scheduled_email_failed")
+    )).scalars().all())
+    assert len(notifs) == 1
+
+
+@pytest.mark.asyncio
+async def test_al_verstuurd_concept_blokkeert_geplande_kopie(
+    db: AsyncSession, session_factory, test_tenant: Tenant, test_user: User
+):
+    """Kruispunt: het AI-concept wordt ná het inplannen alsnog handmatig
+    verstuurd. De geplande kopie zou een DUBBELE mail aan de debiteur zijn en
+    het dossier een extra stap doorschuiven → guard moet blokkeren."""
+    from app.ai_agent.models import AIDraft, DraftStatus
+
+    case = await _case(db, test_tenant.id)
+    await _account(db, test_tenant.id, test_user.id)
+    draft = AIDraft(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, case_id=case.id,
+        subject="Sommatie", body="x", status=DraftStatus.SENT,
+    )
+    db.add(draft)
+    await db.commit()
+    row = await _queue_row(db, test_tenant.id, test_user.id, case.id,
+                           when=datetime.now(UTC) - timedelta(minutes=1),
+                           advance_draft_id=draft.id)
+
+    provider = _mock_provider()
+    p1, p2, p3 = _send_patches(provider)
+    with p1, p2, p3:
+        await _dispatch(session_factory)
+
+    provider.send_message.assert_not_called()  # geen dubbele mail
+    await db.refresh(row)
+    assert row.status == STATUS_FAILED
+    assert "al handmatig verstuurd" in (row.last_error or "")
+
+
+@pytest.mark.asyncio
+async def test_mislukte_rij_is_weg_te_halen(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Een mislukte rij mag niet eeuwig blijven staan: weghalen (→ geannuleerd)
+    moet kunnen; de foutreden blijft op de rij bewaard."""
+    case = await _case(db, test_tenant.id)
+    row = await _queue_row(db, test_tenant.id, test_user.id, case.id,
+                           when=datetime.now(UTC) - timedelta(minutes=5))
+    row.status = STATUS_FAILED
+    row.last_error = "provider down"
+    await db.commit()
+
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    resp = await client.delete(
+        f"/api/email/scheduled/{row.id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["status"] == STATUS_CANCELLED
+
+    await db.refresh(row)
+    assert row.status == STATUS_CANCELLED
+    assert row.last_error == "provider down"  # reden blijft bewaard
 
 
 # ── Afscherming ──────────────────────────────────────────────────────────────

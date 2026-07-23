@@ -66,8 +66,10 @@ export function ScheduledEmailsPanel({ caseId, hideWhenEmpty = false }: Schedule
   }
 
   const handleCancel = (item: ScheduledEmail) => {
+    const weggehaald = item.status === "failed";
     cancel.mutate(item.id, {
-      onSuccess: () => toast.success("Geplande e-mail geannuleerd"),
+      onSuccess: () =>
+        toast.success(weggehaald ? "Mislukte e-mail weggehaald" : "Geplande e-mail geannuleerd"),
       onError: (e: unknown) =>
         toast.error(e instanceof Error ? e.message : "Annuleren mislukt"),
     });
@@ -106,7 +108,7 @@ export function ScheduledEmailsPanel({ caseId, hideWhenEmpty = false }: Schedule
                 </p>
               )}
             </div>
-            {item.status === "pending" && (
+            {(item.status === "pending" || item.status === "failed") && (
               <Button
                 type="button"
                 variant="ghost"
@@ -115,7 +117,11 @@ export function ScheduledEmailsPanel({ caseId, hideWhenEmpty = false }: Schedule
                 disabled={cancel.isPending}
                 onClick={() => handleCancel(item)}
               >
-                <X className="h-3.5 w-3.5" /> Annuleren
+                {/* S246-review: een mislukte rij moet op te ruimen zijn, anders
+                    blijft hij eeuwig staan. Ander label — er valt niets meer te
+                    annuleren, alleen weg te halen. */}
+                <X className="h-3.5 w-3.5" />
+                {item.status === "failed" ? "Weghalen" : "Annuleren"}
               </Button>
             )}
           </div>

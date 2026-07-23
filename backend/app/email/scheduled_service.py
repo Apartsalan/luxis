@@ -95,6 +95,20 @@ async def schedule_compose_email(db: AsyncSession, user, data):
                 detail={"code": "DAGENBRIEF_GATE", "message": gate_reason},
             )
 
+    # S246-review: de totale grootte van meegeplakte bijlagen al bij het INPLANNEN
+    # bewaken (dezelfde grens als de verzending zelf hanteert) — anders hoort
+    # Lisanne pas de volgende ochtend dat haar mail te zwaar was. Dossierbijlagen
+    # worden pas op het verzendmoment van schijf gehaald; dit dekt de uploads.
+    if data.inline_attachments:
+        from app.email.compose_router import MAX_TOTAL_ATTACHMENT_SIZE
+
+        totaal = sum((len(a.data_base64) * 3) // 4 for a in data.inline_attachments)
+        if totaal > MAX_TOTAL_ATTACHMENT_SIZE:
+            raise BadRequestError(
+                f"De bijlagen zijn samen te groot ({totaal // (1024 * 1024)} MB, "
+                f"max {MAX_TOTAL_ATTACHMENT_SIZE // (1024 * 1024)} MB)."
+            )
+
     # De payload is de RUWE opdracht zonder het geplande moment: de bezorger draait
     # hem straks als een gewone directe verzending (anders zou hij zichzelf opnieuw
     # inplannen). advance_draft_id gaat apart mee als kolom, niet in de payload —
@@ -183,7 +197,11 @@ async def cancel_scheduled_email(
         raise BadRequestError(
             "Deze e-mail wordt op dit moment verstuurd en kan niet meer worden geannuleerd."
         )
-    if row.status != STATUS_PENDING:
+    # S246-review: 'failed' mag ook weg — anders blijft een mislukte rij eeuwig
+    # op het dossier en de Mail-pagina staan zonder opruimknop. De foutmelding
+    # blijft bewaard op de rij (last_error), alleen de status gaat naar
+    # geannuleerd zodat hij uit de standaardlijst verdwijnt.
+    if row.status not in (STATUS_PENDING, STATUS_FAILED):
         raise BadRequestError("Deze e-mail wacht niet meer — annuleren kan niet.")
 
     row.status = STATUS_CANCELLED
@@ -195,10 +213,24 @@ async def _notify_failure(
     db: AsyncSession,
     row: ScheduledEmail,
     reason: str,
+    *,
+    mail_sent: bool = False,
 ) -> None:
-    """Meld aan wie de mail inplande dat hij NIET verstuurd is."""
+    """Meld aan wie de mail inplande dat er iets misging.
+
+    `mail_sent` bepaalt de staartzin: bij een nazorg-fout ná een geslaagde
+    verzending mag er niet "verstuur hem zelf" staan (S246-review-vondst —
+    dat zou tot een dúbbele mail aan de debiteur uitnodigen).
+    """
     from app.notifications.schemas import NotificationCreate
     from app.notifications.service import create_notification
+
+    if mail_sent:
+        titel = f"Geplande e-mail: nazorg mislukt — {row.subject or '(geen onderwerp)'}"
+        staart = "De mail zelf IS verstuurd — NIET opnieuw versturen."
+    else:
+        titel = f"Geplande e-mail niet verstuurd: {row.subject or '(geen onderwerp)'}"
+        staart = "De mail is NIET opnieuw geprobeerd — controleer en verstuur hem zelf."
 
     await create_notification(
         db,
@@ -206,14 +238,51 @@ async def _notify_failure(
         row.created_by_id,
         NotificationCreate(
             type=NOTIF_SCHEDULED_EMAIL_FAILED,
-            title=f"Geplande e-mail niet verstuurd: {row.subject or '(geen onderwerp)'}",
-            message=(
-                f"Aan {row.recipients}. {reason} "
-                "De mail is NIET opnieuw geprobeerd — controleer en verstuur hem zelf."
-            ),
+            title=titel,
+            message=f"Aan {row.recipients}. {reason} {staart}",
             case_id=row.case_id,
         ),
     )
+
+
+async def _pre_send_blokkade(session: AsyncSession, row: ScheduledEmail) -> str | None:
+    """Redenen om een rijpe mail tóch niet te versturen. None = alles in orde.
+
+    S246-review-vondsten (kruispunt 'de wereld veranderde na het inplannen'):
+
+    * Het dossier is intussen betaald of afgesloten — een sommatie naar een
+      debiteur die al betaald heeft is precies wat 'nette tijden' moest voorkomen.
+    * Het AI-concept is intussen al handmatig verstuurd (dubbele mail aan de
+      debiteur + het dossier zou een éxtra stap doorschuiven) of afgewezen
+      (Lisanne wilde deze tekst juist níét versturen).
+    """
+    if row.case_id is not None:
+        from app.cases.models import Case
+        from app.cases.schemas import TERMINAL_STATUSES
+
+        case = await session.get(Case, row.case_id)
+        if case is not None and case.status in TERMINAL_STATUSES:
+            return (
+                f"Het dossier is intussen '{case.status}' — de geplande mail is "
+                "daarom NIET verstuurd."
+            )
+
+    if row.advance_draft_id is not None:
+        from app.ai_agent.draft_service import get_draft_by_id
+        from app.ai_agent.models import DraftStatus
+
+        draft = await get_draft_by_id(session, row.tenant_id, row.advance_draft_id)
+        if draft is None:
+            return "Het bijbehorende AI-concept bestaat niet meer — mail NIET verstuurd."
+        if draft.status == DraftStatus.SENT:
+            return (
+                "Het AI-concept is intussen al handmatig verstuurd — de geplande "
+                "kopie is NIET nogmaals verstuurd."
+            )
+        if draft.status == DraftStatus.DISCARDED:
+            return "Het AI-concept is intussen afgewezen — mail NIET verstuurd."
+
+    return None
 
 
 async def _claim(db: AsyncSession, row_id: uuid.UUID) -> bool:
@@ -271,6 +340,17 @@ async def _send_one(session: AsyncSession, row_id: uuid.UUID, tenant_id: uuid.UU
         await session.commit()
         return "mislukt (gebruiker weg)"
 
+    # S246-review — de wachtrij is blind: tussen inplannen en verzenden kan de
+    # wereld veranderd zijn, en anders dan bij een directe klik kijkt er nu geen
+    # mens naar het scherm. Twee guards vóór er iets de deur uit gaat:
+    blokkade = await _pre_send_blokkade(session, row)
+    if blokkade is not None:
+        row.status = STATUS_FAILED
+        row.last_error = blokkade
+        await _notify_failure(session, row, blokkade)
+        await session.commit()
+        return "mislukt (blokkade)"
+
     try:
         data = ComposeRequest(**row.payload)
         await perform_compose_send(data, user, session)
@@ -311,6 +391,7 @@ async def _send_one(session: AsyncSession, row_id: uuid.UUID, tenant_id: uuid.UU
                 row,
                 "De e-mail IS verstuurd, maar het bijbehorende concept kon niet "
                 f"worden afgerond ({exc}).",
+                mail_sent=True,
             )
 
     await session.commit()

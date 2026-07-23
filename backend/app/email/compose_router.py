@@ -208,6 +208,9 @@ class ComposeResponse(BaseModel):
 
 class RenderTemplateRequest(BaseModel):
     template_type: str = Field(..., max_length=50)
+    # S244 — antwoord-flow: het geciteerde origineel komt onderaan de shell
+    # (alleen gebruikt door "vrij_bericht"; andere sjablonen negeren dit).
+    quoted_html: str | None = Field(default=None, max_length=200000)
 
 
 class RenderTemplateResponse(BaseModel):
@@ -858,6 +861,8 @@ async def render_template_preview(
 
     # Build context and render
     context = await build_base_context(db, user.tenant_id, case)
+    if data.quoted_html:
+        context["quoted_html"] = data.quoted_html
     html = render_incasso_email(data.template_type, context)
 
     if html is None:

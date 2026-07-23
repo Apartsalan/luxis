@@ -51,6 +51,45 @@ def test_render_plain_branded_zet_citaat_onderaan():
     assert html.index("Mijn antwoord.") < html.index("L. Kesting") < html.index("Op 1 juli schreef X")
 
 
+# ── Vrij bericht (S244) ─────────────────────────────────────────────────────
+
+
+def _case_ctx() -> dict:
+    return {
+        **_ctx(),
+        "client": {"naam": "Cliënt B.V."},
+        "zaak": {"referentie_regel": "", "type": "incasso", "zaaknummer": "2026-00006"},
+    }
+
+
+def test_vrij_bericht_shell_aanhef_handtekening_lege_romp():
+    from app.email.incasso_templates import render_incasso_email
+
+    html = render_incasso_email("vrij_bericht", _case_ctx())
+    assert html is not None
+    # aanhef + handtekening + schuldhulpblok, maar géén briefinhoud
+    assert "Geachte heer, mevrouw," in html
+    assert "L. Kesting" in html
+    assert "113" in html
+    # betreft-regel in huisformaat met dossiernummer
+    assert "2026-00006" in html
+    # de shell herkent zichzelf als aangekleed (nooit dubbel wrappen)
+    assert is_branded(html) is True
+
+
+def test_vrij_bericht_citaat_onderaan_alleen_met_quoted_html():
+    from app.email.incasso_templates import render_incasso_email
+
+    quote = "<div>Op 1 juli schreef debiteur: waar blijft de creditnota?</div>"
+    met = render_incasso_email("vrij_bericht", {**_case_ctx(), "quoted_html": quote})
+    zonder = render_incasso_email("vrij_bericht", _case_ctx())
+    # citaat helemaal onderaan (na de handtekening), en alleen als het meegegeven is
+    assert met.index("Geachte heer, mevrouw,") < met.index("L. Kesting") < met.index(
+        "waar blijft de creditnota?"
+    )
+    assert "waar blijft de creditnota?" not in zonder
+
+
 @pytest.mark.asyncio
 async def test_ensure_branded_body_force_kleedt_altijd_aan(monkeypatch):
     """force=True kleedt aan, ook als de body zelf 'Betreft:' bevat (geciteerd antwoord)."""

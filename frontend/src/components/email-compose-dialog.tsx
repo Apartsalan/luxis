@@ -97,6 +97,8 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const TEMPLATE_LABELS: Record<string, string> = {
+  // ─── Vrij bericht (S244) ──────────────────────────────────
+  vrij_bericht: "Vrij bericht (lege brief in huisstijl)",
   // ─── Aanmaningen (pipeline, bestaand) ─────────────────────
   herinnering: "Herinnering",
   aanmaning: "Aanmaning",
@@ -161,7 +163,7 @@ const TEMPLATE_GROUPS: { label: string; keys: string[] }[] = [
   },
   {
     label: "Overig",
-    keys: ["herinnering", "aanmaning", "14_dagenbrief", "sommatie_eerste_opgave"],
+    keys: ["vrij_bericht", "herinnering", "aanmaning", "14_dagenbrief", "sommatie_eerste_opgave"],
   },
   {
     label: "English",
@@ -207,6 +209,9 @@ export interface EmailComposeDialogProps {
   // S233 — behandelaar vroeg "doe de facturen erbij": open met de factuur-PDF's
   // van dit dossier al aangevinkt (de gebruiker kan ze weghalen).
   preselectInvoices?: boolean;
+  // S244 — de meegegeven defaultBodyHtml draagt al de volledige huisstijl
+  // (vrij-bericht-shell bij Beantwoorden): server mag niet nogmaals aankleden.
+  defaultBodyBranded?: boolean;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -231,6 +236,7 @@ export function EmailComposeDialog({
   forwardFromEmailId,
   replySourceEmail,
   preselectInvoices = false,
+  defaultBodyBranded = false,
 }: EmailComposeDialogProps) {
   // ── State ─────────────────────────────────────────────────────────────
   const [to, setTo] = useState(defaultTo);
@@ -795,7 +801,8 @@ export function EmailComposeDialog({
       // Een gekozen incasso-template levert al opgemaakte HTML (met betreft +
       // handtekening); vrije mail/antwoord niet. AI-concepten markeert de
       // aanroepende pagina zelf (die weet dat het concept al opgemaakt is).
-      already_branded: !!selectedTemplate,
+      // S244: de vrij-bericht-shell bij Beantwoorden is óók al aangekleed.
+      already_branded: !!selectedTemplate || defaultBodyBranded,
     };
   };
 

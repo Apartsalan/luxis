@@ -2,6 +2,7 @@
 // bestaande mail. Het originele bericht wordt als geciteerd blok onder de
 // (lege) schrijfruimte gezet, Gmail/Outlook-stijl.
 
+import { api } from "@/lib/api";
 import type { SyncedEmailDetail } from "@/hooks/use-email-sync";
 
 export interface ReplyPrefill {
@@ -9,6 +10,9 @@ export interface ReplyPrefill {
   toName: string;
   subject: string;
   bodyHtml: string;
+  // S244 — true als bodyHtml al de volledige huisstijl draagt (vrij-bericht-
+  // shell); de verzendkant slaat de server-aankleding dan over.
+  branded?: boolean;
   replyToMessageId: string | null;
   // Wortel van de gespreksdraad (References-root van het origineel). Zo krijgt
   // het verzonden antwoord dezelfde draad-identiteit als de rest van de keten —
@@ -62,6 +66,34 @@ export function buildReplyPrefill(email: SyncedEmailDetail): ReplyPrefill {
     referencesRoot: email.provider_thread_id ?? null,
     forwardFromEmailId: null, // beantwoorden = geen bijlagen meesturen
   };
+}
+
+/**
+ * S244 — Beantwoorden met de vrij-bericht-shell: aanhef + huisstijl +
+ * handtekening al ingevuld, geciteerd origineel onderaan — Lisanne typt
+ * alleen nog de inhoud. Alleen voor dossier-gekoppelde mail (de shell wordt
+ * met dossiergegevens opgebouwd); anders — of als het renderen faalt — valt
+ * dit terug op de kale reply (huisstijl komt dan bij verzenden alsnog).
+ */
+export async function buildReplyPrefillWithShell(
+  email: SyncedEmailDetail
+): Promise<ReplyPrefill> {
+  const base = buildReplyPrefill(email);
+  if (!email.case_id) return base;
+  try {
+    const res = await api(`/api/email/compose/cases/${email.case_id}/render-template`, {
+      method: "POST",
+      body: JSON.stringify({ template_type: "vrij_bericht", quoted_html: base.bodyHtml }),
+    });
+    if (!res.ok) return base;
+    const d = await res.json();
+    if (d.supported && d.body_html) {
+      return { ...base, bodyHtml: d.body_html, branded: true };
+    }
+  } catch {
+    /* val terug op kale reply */
+  }
+  return base;
 }
 
 /** Doorsturen: lege ontvanger, "Fwd:", geciteerd origineel, nieuwe keten. */

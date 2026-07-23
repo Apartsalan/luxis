@@ -37,7 +37,7 @@ import { useModules } from "@/hooks/use-modules";
 import { useTimer, useAutoTimerPreference, getTimerSeconds, AUTO_SAVE_MIN_SECONDS } from "@/hooks/use-timer";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
 import { useSendViaProvider, type SyncedEmailDetail } from "@/hooks/use-email-sync";
-import { buildReplyPrefill, buildForwardPrefill, type ReplyPrefill } from "@/lib/email-reply";
+import { buildReplyPrefillWithShell, buildForwardPrefill, type ReplyPrefill } from "@/lib/email-reply";
 import { useGenerateDraftForCase } from "@/hooks/use-incasso";
 import { formatCurrency } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -182,8 +182,12 @@ export default function ZaakDetailPage() {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const sendViaProvider = useSendViaProvider(id);
 
-  const handleReplyForward = (email: SyncedEmailDetail, mode: "reply" | "forward") => {
-    setReplyPrefill(mode === "reply" ? buildReplyPrefill(email) : buildForwardPrefill(email));
+  const handleReplyForward = async (email: SyncedEmailDetail, mode: "reply" | "forward") => {
+    // S244 — Beantwoorden prefillt de vrij-bericht-shell (aanhef + huisstijl +
+    // handtekening), zodat alleen de inhoud nog getypt hoeft te worden.
+    setReplyPrefill(
+      mode === "reply" ? await buildReplyPrefillWithShell(email) : buildForwardPrefill(email)
+    );
     setCaseEmailOpen(true);
   };
 
@@ -823,6 +827,7 @@ export default function ZaakDetailPage() {
         }
         defaultBody={!replyPrefill && activeDraftId ? draftBody : ""}
         defaultBodyHtml={replyPrefill ? replyPrefill.bodyHtml : activeDraftId ? draftBodyHtml : ""}
+        defaultBodyBranded={replyPrefill?.branded ?? false}
         replyToMessageId={replyPrefill?.replyToMessageId ?? draftSourceEmail?.provider_message_id ?? null}
         referencesRoot={replyPrefill?.referencesRoot ?? draftSourceEmail?.provider_thread_id ?? null}
         forwardFromEmailId={replyPrefill?.forwardFromEmailId ?? null}

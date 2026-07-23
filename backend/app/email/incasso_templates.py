@@ -1721,6 +1721,26 @@ def _render_demand_for_payment_fai(ctx: dict) -> str:
     )
 
 
+# ── Template: Vrij bericht (lege shell, S244) ────────────────────────────
+
+
+def _render_vrij_bericht(ctx: dict) -> str:
+    """Lege brief-shell: aanhef + huisstijl + handtekening, romp leeg.
+
+    Voor vrije mails en nette antwoorden — Lisanne typt alleen de inhoud.
+    Bij een antwoord komt het geciteerde origineel via ctx["quoted_html"]
+    helemaal onderaan te staan (zelfde plek als bij de aankleding van
+    verstuurd-antwoorden in send_service).
+    """
+    body = "<p>Geachte heer, mevrouw,</p><p>&nbsp;</p>"
+    return render_plain_branded(
+        ctx,
+        betreft=_betreft(ctx, "Bericht"),
+        content_html=body,
+        quoted_html=ctx.get("quoted_html", ""),
+    )
+
+
 # ── Public API ───────────────────────────────────────────────────────────
 
 _RENDERERS: dict[str, callable] = {
@@ -1749,6 +1769,7 @@ _RENDERERS: dict[str, callable] = {
     "vaststellingsovereenkomst": _render_vaststellingsovereenkomst,
     "faillissement_dreigbrief": _render_faillissement_dreigbrief,
     "bevestiging_sluiting": _render_bevestiging_sluiting,
+    "vrij_bericht": _render_vrij_bericht,
 }
 
 

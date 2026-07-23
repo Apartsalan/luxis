@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 23 juli 2026 (S244 — mail-werkbank LIVE: draad-gegroepeerde correspondentie, draad overal, Verzonden-map, vrij bericht-shell; visueel bewezen desktop + mobiel). Rapport: entry S244 in `SESSION-NOTES.md`. **Volgende = S245: taken + meldingen (`docs/sessions/PROMPT-S245.md`).**
+**Laatst bijgewerkt:** 23 juli 2026 (S245 — taken+meldingen LIVE: dossierinfo op taken, filters, één-klik-wegklik, mail-meldingen gelezen na antwoord; visueel bewezen desktop + mobiel, Fable-review zonder reparaties). Rapport: entry S245 in `SESSION-NOTES.md`. **Volgende = S246: uitgesteld versturen (`docs/sessions/PROMPT-S246.md`).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,32 +53,33 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 23 juli 2026, S244)
+## 🎯 Huidige prioriteit (bijgewerkt 23 juli 2026, S245)
 
-> ✅ **S244 AFGEROND — mail-werkbank LIVE (demo-punten blok 1).** (1)
-> Correspondentie-tab draad-gegroepeerd (Gmail-stijl gesprekkenlijst +
-> leesvenster, nieuwste bericht open). (2) Draad overal: onder de mail in het
-> Mail-leesvenster én als rechterkolom naast het AI-concept (mobiel gestapeld).
-> (3) Verzonden-map (Alles / Postvak IN / Verzonden, server-side filter). (4)
-> Vrij bericht-sjabloon + Beantwoorden prefillt de shell (aanhef + huisstijl +
-> citaat). Klikronde-vondst direct gefixt: groepering op genormaliseerd
-> onderwerp (prod-meting: 7/47 thread-ids vs 1472 onderwerp-groepen). Alles
-> visueel bewezen op prod, desktop + mobiel, 11 screenshots. Rapport: entry
-> S244 in SESSION-NOTES. **Signalering: derde betwistingsmail IN100592 (23-7
-> 16:29) + auto-concept wachten op Lisanne.**
+> ✅ **S245 AFGEROND — taken + meldingen LIVE (demo-punten blok 2).** (1)
+> Dossierinfo op taken: zaaknummer + cliënt- + debiteurnaam via een compact
+> case-subobject (fixt zowel de Taken-pagina als het dashboard-widget). (2)
+> Filters op de Taken-pagina: vrij zoeken (dossier/naam/taak), taaktype en
+> eigenaar, client-side + filter-bewuste lege-staat. (3) Dubbel-wegklik-bug
+> weg: optimistische verwijdering + per-rij bezig-status (één klik → taak
+> direct weg; live bewezen). (4) Mail-meldingen van een dossier gelezen na een
+> verstuurd antwoord (gerichte `mark_case_type_read` op het reply-verzendpunt;
+> tenant-breed). Alles gedeployd + live-klikronde desktop/mobiel; Fable-
+> eindreview zonder reparaties. Onderdeel 4 niet live-gemaild (constraint) maar
+> met 2 route-wachters bewezen. Rapport: entry S245 in SESSION-NOTES.
+> **Openstaand besluit: scope onderdeel 4 (tenant-breed vs per-gebruiker).**
 >
-> 🎯 **VOLGENDE (S245-S247): rest demo-puntenreeks** — masterplan
-> `docs/plans/PLAN-DEMO-PUNTEN-S243.md`: S245 taken+meldingen (dossierinfo op
-> taken, filters, dubbel-wegklik-bug, mail-meldingen weg na antwoord), S246
-> uitgesteld versturen (alle 7 verzenddeuren), S247 AI-kennislaag. Harde eis:
+> 🎯 **VOLGENDE (S246-S247): rest demo-puntenreeks** — masterplan
+> `docs/plans/PLAN-DEMO-PUNTEN-S243.md`: S246 uitgesteld versturen (nieuwe tabel
+> `scheduled_emails` + RLS in dezelfde migratie, "Verstuur later" op alle 7
+> verzenddeuren, scheduler met lock-patroon), S247 AI-kennislaag. Harde eis:
 > visueel testen met Playwright + screenshots. Parallel beslispunt:
 > fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`, 406
-> dossiers, GO per groep). Verder blijven staan: IN100015-melding wegklikken
-> (onterecht, gestuit), IN100127 beoordelen, 2 open mails (IN100128/IN100586),
-> Lisanne-antwoorden (IN100592/IN100606/IN100492), verweer-parkeerstap-voorstel,
-> rest voorstel-lijst, BaseNet-delisting, kostenblokje, opmaak-restpunt S227,
-> S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's. KvK: niet naar
-> vragen.
+> dossiers, GO per groep). Verder blijven staan: IN100127 beoordelen, 2 open
+> mails (IN100128/IN100586), Lisanne-antwoorden (IN100592/IN100606/IN100492) +
+> regeling-taken IN100281/IN100537, verweer-parkeerstap-voorstel, rest
+> voorstel-lijst, BaseNet-delisting, kostenblokje, opmaak-restpunt S227,
+> S221b-rest, DMARC, cosmetisch (afgeronde taak toont "X dagen te laat", 4
+> restjes S235), sharp-CVE's. KvK: niet naar vragen.
 
 ## Projectdocumenten
 

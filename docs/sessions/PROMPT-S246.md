@@ -8,7 +8,10 @@ Dit raakt ÁLLE verzendroutes → eindreview op Fable verplicht.
 
 ## Start
 Draai `/sessie-start`. Masterplan: `docs/plans/PLAN-DEMO-PUNTEN-S243.md`
-(sectie S246). CI van S245 natrekken.
+(sectie S246). S245 (taken+meldingen) is LIVE — zie entry S245 in SESSION-NOTES.
+Openstaand mini-besluit uit S245: scope van "mail-meldingen gelezen na antwoord"
+staat nu **tenant-breed**; vraag Arsalan of dat zo blijft of per-gebruiker moet
+(`mark_case_type_read` in `notifications/service.py`). Geen CI-achterstand.
 
 ## Hoofdtaak — "verstuur om 15:00" op ELKE verzendmethode
 Wens Arsalan: incassomails alleen op nette tijden; Lisanne werkt 's avonds en

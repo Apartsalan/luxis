@@ -10970,3 +10970,95 @@ doorschuif-regels Derde→Laatste→Faillissement aanwezig. CI-afsluitcheck: zie
 ### Volgende sessie
 S235: betalingsregeling herkennen uit mail (classificatie bestaat al) + flexibel termijnschema.
 Eerst de 2 vragen hierboven met Arsalan/Lisanne afhandelen. Zie `docs/sessions/PROMPT-S235.md`.
+
+
+## Sessie 235 (22 juli 2026, Fable-review ontwerp+S234 → Opus-bouw → Fable-review + volledige live-test — betalingsregeling compleet, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S235. Vooraf twee Fable-reviews: (1) het S235-ontwerp tegen de bron
+gehouden → 3 correcties (Gat B-meting te rooskleurig: regeling-mail deed automatisch
+NIETS; Gat C zou letterlijk gebouwd altijd geweigerd worden door de hold-stap-blokkade in
+`advance_guard_reason`; wanprestatie heeft twee routes + 2 NOT NULL-velden vergen een
+keuze); (2) S234 nagereviewd → scanner-skip-motivatie klopte niet (zie gecorrigeerde
+entry S234), beslispunt werklijst, budgetfix. Daarna Opus-bouw in 5 blokken, daarna
+**alles end-to-end live getest op prod-testdossiers** (wens Arsalan: "volledig testen,
+niet een deel") en per test exact teruggedraaid.
+
+**Blok 1 — melding bij auto-afsluiten (besluit Arsalan 22-7, LIVE + live bewezen).**
+Nieuw meldingstype `case_closed_invoice`: sluit een dossier automatisch na volledige
+betaling, dan krijgen alle actieve gebruikers "Dossier {nr} volledig betaald en
+afgesloten — wil je de cliënt factureren?" met doorklik naar de facturen-tab
+(`notifications/service.py::create_case_closed_invoice_notification`, aangeroepen in
+`workflow/hooks.py::on_payment_received`; frontend-type + tab-route). Live bewezen op
+2026-00019: echte betaling €358,69 → zaak betaald + rente bevroren + concept discarded +
+advies superseded + melding bij béíde gebruikers; doorklik landde op de facturen-tab.
+Terugdraai-bijvangst: betaling verwijderen heropent de zaak automatisch (bestaand
+vangnet `_reopen_case_if_no_longer_paid` — bevestigd werkend).
+
+**Blok 2 — Gat A flexibel termijnschema (LIVE + live bewezen).** `ArrangementCreate`
+accepteert `installments[{due_date,amount}]`; som moet exact het totaalbedrag zijn
+(Decimal; 400 bij mismatch, wachter-getest), termijnen letterlijk overgenomen (gesorteerd
+op datum), `installment_amount` = eerste termijn (NOT NULL, ontwerpkeuze), start/eind =
+eerste/laatste termijn. UI (`BetalingsregelingSection`): schakelaar "Handmatig schema" →
+rijen-editor (datum+bedrag) + lopende telling in centen; Aanmaken disabled tot de som
+klopt; kaart toont "Flexibel schema" i.p.v. frequentie bij ongelijke bedragen. Live
+bewezen op 2026-00007 (2×200+1000, expres ongesorteerd aangeleverd → exact goed).
+
+**Blok 3 — Gat C pijplijnkoppeling (LIVE + live bewezen).** Nieuwe regeling →
+`_move_case_to_regeling_step`: zaak naar hold-stap 'Bijhouden regeling' via
+`move_case_to_step` (trigger_type "arrangement"); bewust NIET via `advance_guard_reason`
+(blokkeert hold-doelen), wél gesloten/verweer-checks; stap ontbreekt → log + niets.
+Wanprestatie → `_ensure_arrangement_defaulted_task` op het gedeelde punt van BEIDE
+routes (`default_arrangement` + `update_arrangement`), gededuped; annuleren/afronden
+geen taak. Live: 2026-00007 verhuisde Derde sommatie → Bijhouden regeling; wanprestatie
+gaf direct de taak "Regeling verbroken — vervolg bepalen".
+
+**Blok 4 — Gat B regeling-mail → taak (LIVE + live bewezen mét echte AI).** Nieuwe
+orchestrator-handler `handle_email_classified_arrangement` op het classified-event:
+categorie `betalingsregeling_verzoek` → `ensure_arrangement_request_task` ("Betalingsregeling
+vastleggen — {zaak}", due vandaag) op het moment van herkennen — niet in de dode
+goedkeur-wachtrij. Geen taak bij actieve regeling/gesloten zaak/open taak. Kruispunt: de
+escalate-tak van `execute_classification` slaat zijn escalatie-taak over zolang de
+gerichte taak open staat. Live: testmail "ik wil een betalingsregeling in drie termijnen"
+op 2026-00006 → echte AI classificeerde `betalingsregeling_verzoek` (0.95) → taak stond
+er direct; 0 nieuwe AI-concepten (verweer-route bleef terecht stil).
+
+**Blok 5 — budgetfix (Fable-reviewpunt S234).** Sjabloon-skips in de dagelijkse AI-batch
+worden nu vóór de budget-slice weggefilterd — een skip kost geen AI-oproep en verdringt
+geen echte sjabloonloze gevallen meer (`workflow/scheduler.py`).
+
+### Gewijzigde bestanden
+Backend: `notifications/service.py`, `workflow/hooks.py`, `workflow/scheduler.py`,
+`collections/{service,schemas}.py`, `ai_agent/{orchestrator,service}.py`. Frontend:
+`use-notifications.ts`, `use-collections.ts`, `app-header.tsx`,
+`BetalingsregelingSection.tsx`. Tests (16 nieuwe wachters):
+`test_case_closed_notification.py` (2), `test_arrangement_pipeline.py` (6),
+`test_arrangement_request_task.py` (5), `test_payment_arrangements.py` (+3).
+Docs: S235-ONTWERP.md (3 correcties), S234-entry gecorrigeerd. Commits `53d52e5`
+(ontwerp-review), `5f3dc67` (S234-correctie), `41497aa` (bouw). Backend+frontend
+gedeployd via SSH `--force-recreate` (geen migratie — alles additief op bestaande tabellen).
+
+### Verificatie
+221 tests groen (brede -k-run installment/regeling/payment/followup/arrangement);
+ruff + tsc schoon; CI groen op alle 3 commits (incl. GitHub-Deploy, geen race dit keer);
+containers healthy; login+API 200. Live-testronde op prod-testdossiers (2026-00007/-00019/
+-00006): alle vier ketens end-to-end bewezen, daarna per keten in één transactie
+teruggedraaid en nageteld (staphistorie hersteld, betaling weg, zaak heropend,
+meldingen/taken/testmail gewist). Enig blijvend spoor: 1 rij in `ai_usage` (de echte
+classificatie-call, ~¢) — dat is juist het doel van die tabel.
+
+### Bekende issues / bewust niet gedaan
+- **4 cosmetische restjes** (Fable-review, geen fix nodig): (a) geannuleerd formulier
+  onthoudt de handmatige rijen bij heropenen; (b) etiket "Flexibel schema" verschijnt
+  alleen bij ongelijke bedragen; (c) som-mismatch-melding toont bedragen met punt
+  (1400.00) i.p.v. NL-notatie; (d) status "nieuw" wordt "in_behandeling" bij regeling
+  (gevolg van de stap-zet — correct maar goed om te weten).
+- **IN100613** blijft wachten op Lisanne (niet aangeraakt).
+- **Beslispunt werklijst** (taken- vs follow-up-pagina) ligt bij Arsalan/Lisanne.
+- De 7 'Eerste sommatie'-import-dossiers hebben hun sommatie nog nooit gehad — de 7
+  pending follow-up-adviezen zijn terecht en wachten op verwerking (GO per verzending).
+
+### Volgende sessie
+S236: verwerk het antwoord van Lisanne over IN100613 (dry-run + GO + natelling) en het
+werklijst-beslispunt; daarna losse punten of nieuw hoofdonderwerp naar keuze Arsalan.
+Zie `docs/sessions/PROMPT-S236.md`.

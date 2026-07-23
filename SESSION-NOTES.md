@@ -2,10 +2,87 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 23 juli 2026 (S244 — mail-werkbank LIVE: draad-gegroepeerde correspondentie, draad overal, Verzonden-map, vrij bericht-shell).
-**Laatste feature/fix:** Mail-werkbank (5 bouw-commits) + Fable-eindreview met 4 gefixte vondsten t/m `d2aef7c` (encoding-schade, reply-aan-onszelf, onleesbare smalle rijen, mobiele herkansing) — alles live + visueel bewezen.
-**Openstaand:** demo-puntenreeks S245-S247 (taken+meldingen → uitgesteld versturen → AI-kennislaag, masterplan `docs/plans/PLAN-DEMO-PUNTEN-S243.md`); **derde betwistingsmail IN100592 (23-7 16:29) + auto-concept én 2 regeling-taken IN100281/IN100537 (oude verzoeken, S243-tegenlezing) wachten op Lisanne**; fase-heropening per groep (beslislijst `docs/plans/BASENET-STATUS-HERSTEL.md`); 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai bij Lisanne/Arsalan; IN100015-melding wegklikken; IN100127 beoordelen; 2 open mails (IN100128, IN100586) + verweer IN100592/IN100606 + IN100492 bij Lisanne; verweer-parkeerstap-voorstel; 193 ongelezen meldingen. Losse punten: BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
-**Volgende sessie:** S245 — taken + meldingen (Opus); zie `docs/sessions/PROMPT-S245.md`.
+**Laatst bijgewerkt:** 23 juli 2026 (S245 — taken+meldingen LIVE: dossierinfo op taken, filters, één-klik-wegklik, mail-meldingen gelezen na antwoord).
+**Laatste feature/fix:** 4 demo-punten blok 2 (5 commits `3cc8c37`→`bfd57b7`) + Fable-eindreview zonder reparaties; onderdeel 4 (meldingen na antwoord) niet live-gemaild (constraint) maar met 2 doorloop-tests bewezen.
+**Openstaand:** demo-puntenreeks S246-S247 (uitgesteld versturen → AI-kennislaag, masterplan `docs/plans/PLAN-DEMO-PUNTEN-S243.md`); **IN100592 3e betwisting + 2 regeling-taken IN100281/IN100537 wachten op Lisanne**; keuze onderdeel 4-scope (tenant-breed vs per-gebruiker); fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`); 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai; 117 ongelezen meldingen. Losse punten: afgeronde taak toont nog "X dagen te laat"; BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
+**Volgende sessie:** S246 — uitgesteld versturen (Opus); zie `docs/sessions/PROMPT-S246.md`.
+
+## Sessie 245 (23 juli 2026, Opus-bouw → Fable-eindreview — taken+meldingen: 4 demo-punten blok 2, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S245, op Opus (klopt met de prompt: bouwen op Opus, eindreview
+op Fable). Masterplan `PLAN-DEMO-PUNTEN-S243.md` sectie S245. Vier onderdelen
+gebouwd, elk een eigen commit, daarna gedeployd en live geverifieerd.
+
+**1. Dossierinfo op taken (`3cc8c37`).** `WorkflowTaskResponse` kreeg een compact
+`case`-subobject (zaaknummer, cliëntnaam, debiteurnaam) via een before-validator
+op het al eager geladen Case-ORM (`lazy="selectin"` op WorkflowTask.case → Case.
+client/opposing_party — geen extra selectinload nodig, geen MissingGreenlet).
+Fixt beide takeneindpunten tegelijk: `/api/workflow/tasks` én
+`/api/dashboard/my-tasks` (die de Taken-pagina echt voedt — de prompt wees naar
+`wf_list_tasks`, dat is de alias in dashboard/router). Frontend toonde
+`task.case.case_number` al maar kreeg nooit data; nu ook de debiteurnaam in de
+taakregel. Debiteur = opposing_party, cliënt = client.
+
+**2. Filters op de Taken-pagina (`2517575`).** Client-side (lijst is al volledig
+geladen): vrij zoeken (zaaknummer/cliënt-/debiteurnaam/taaktitel), taaktype-
+dropdown (alleen aanwezige types, afgeleid van de volledige lijst — stabiel) en
+eigenaar (Alle/Aan mij/Zonder eigenaar). Lege-staat is filter-bewust ("Geen
+taken gevonden") + Wissen-knop.
+
+**3. Dubbel-wegklik-bug (`91d00f1`).** Oorzaak in de bron: `completeTask.isPending`
+was globaal voor álle rijen én er was geen optimistische update — de rij bleef
+tot de refetch, dus na de eerste actie was de knop alweer klikbaar → tweede klik
+(en bij herhalende taken meteen een dubbele opvolger). Fix: optimistische status-
+update in complete/skip/restore (rij verschuift/verdwijnt meteen, rollback bij
+fout, onSettled invalidate) + per-rij bezig-indicator via `mutation.variables`.
+
+**4. Mail-meldingen gelezen na antwoord (`42c6ffb`).** Nieuwe gerichte service-
+functie `mark_case_type_read` (tenant-breed, scoped op case_id + type) naast
+`mark_type_read`. Aangeroepen op het gedeelde reply-verzendpunt
+(`compose_router.send_via_provider`) wanneer een antwoord (`reply_to_message_id`)
+op een dossier verstuurd is → ongelezen `email_received`-meldingen van dat
+dossier op gelezen. Kruispunt gemeten: `reply_to_message_id` is het enige
+reply-signaal en komt alléén in compose_router voor; de S244-shell stuurt het nog
+steeds mee (frontend geverifieerd). Verse mail/doorsturen/sjablonen raken de
+meldingen niet.
+
+### Scope-keuze om te bevestigen
+Onderdeel 4 markeert **tenant-breed** (hele kantoor), niet alleen de verzender —
+omdat die mail-meldingen ook tenant-breed worden aangemaakt en de inbound na een
+antwoord voor iedereen afgehandeld is. Makkelijk te versmallen naar per-gebruiker
+als Arsalan dat liever heeft.
+
+### Gewijzigde bestanden
+Backend: `workflow/schemas.py` (TaskCaseInfo), `notifications/service.py`
+(mark_case_type_read), `email/compose_router.py` (aanroep op reply).
+Frontend: `app/(dashboard)/taken/page.tsx` (filters + debiteur in regel + per-rij
+pending), `hooks/use-workflow.ts` (case-type + optimistische updates).
+Tests (5 nieuwe wachters): `test_workflow.py` (case-info), `test_notifications_service.py`
+(scope mark_case_type_read), `test_reply_marks_mail_read.py` (2 route-wachters:
+reply wist + scoping, verse mail wist niet). Commits `3cc8c37`/`2517575`/`91d00f1`/
+`42c6ffb`/`bfd57b7`. Backend+frontend gedeployd via SSH `--force-recreate` (geen migratie — additief).
+
+### Verificatie
+121 tests groen (brede -k "workflow or task or notification"); ruff + tsc schoon;
+CI-groen niet apart afgewacht (deploy via SSH). Live-klikronde op prod (desktop +
+mobiel 390×844, screenshots bekeken): dossierinfo op elke taak, zoeken op
+debiteurnaam versmalt correct, filtercombinaties + lege-staat, één-klik-wegklik
+bewezen op een verse testtaak (2026-00006, daarna via API opgeruimd). Fable-
+eindreview: alle 6 commits gelezen + eigen visuele ronde (desktop filters/afgerond/
+dashboard + mobiel lange debiteurnaam) — **nul reparaties**. Onderdeel 4 niet
+live-gemaild (constraint geen echte debiteuren) — bewezen met de 2 route-wachters.
+
+### Bekende issues / bewust niet gedaan
+- **Onderdeel 4-scope** (tenant-breed) wacht op bevestiging Arsalan (zie boven).
+- **Cosmetisch (van vóór deze sessie):** afgeronde taak toont nog "X dagen te laat"
+  in de regel; meldingen-teller ververst pas bij de 30s-poll (niet direct na antwoord).
+- **IN100592 3e betwisting + regeling-taken IN100281/IN100537** blijven bij Lisanne.
+
+### Volgende sessie
+S246 — uitgesteld versturen (nieuwe tabel `scheduled_emails` + RLS in dezelfde
+migratie, "Verstuur later" op alle 7 verzenddeuren, scheduler met lock-patroon).
+Masterplan sectie S246. Zie `docs/sessions/PROMPT-S246.md`.
 
 ## Sessie 244 (23 juli 2026, Opus-bouw — mail-werkbank: 4 demo-punten blok 1, LIVE)
 
@@ -741,94 +818,3 @@ alle prod-mutaties met dry-run + natelling (10/7/7/7/7/14 exact).
 S237: reacties op de 7 sommaties verwerken (IN100606-verweer ligt bij Lisanne;
 meer reacties verwacht) + de open beslispunten hierboven. Zie
 `docs/sessions/PROMPT-S237.md`.
-
-## Sessie 235 (22 juli 2026, Fable-review ontwerp+S234 → Opus-bouw → Fable-review + volledige live-test — betalingsregeling compleet, LIVE)
-
-### Samenvatting
-Startpunt PROMPT-S235. Vooraf twee Fable-reviews: (1) het S235-ontwerp tegen de bron
-gehouden → 3 correcties (Gat B-meting te rooskleurig: regeling-mail deed automatisch
-NIETS; Gat C zou letterlijk gebouwd altijd geweigerd worden door de hold-stap-blokkade in
-`advance_guard_reason`; wanprestatie heeft twee routes + 2 NOT NULL-velden vergen een
-keuze); (2) S234 nagereviewd → scanner-skip-motivatie klopte niet (zie gecorrigeerde
-entry S234), beslispunt werklijst, budgetfix. Daarna Opus-bouw in 5 blokken, daarna
-**alles end-to-end live getest op prod-testdossiers** (wens Arsalan: "volledig testen,
-niet een deel") en per test exact teruggedraaid.
-
-**Blok 1 — melding bij auto-afsluiten (besluit Arsalan 22-7, LIVE + live bewezen).**
-Nieuw meldingstype `case_closed_invoice`: sluit een dossier automatisch na volledige
-betaling, dan krijgen alle actieve gebruikers "Dossier {nr} volledig betaald en
-afgesloten — wil je de cliënt factureren?" met doorklik naar de facturen-tab
-(`notifications/service.py::create_case_closed_invoice_notification`, aangeroepen in
-`workflow/hooks.py::on_payment_received`; frontend-type + tab-route). Live bewezen op
-2026-00019: echte betaling €358,69 → zaak betaald + rente bevroren + concept discarded +
-advies superseded + melding bij béíde gebruikers; doorklik landde op de facturen-tab.
-Terugdraai-bijvangst: betaling verwijderen heropent de zaak automatisch (bestaand
-vangnet `_reopen_case_if_no_longer_paid` — bevestigd werkend).
-
-**Blok 2 — Gat A flexibel termijnschema (LIVE + live bewezen).** `ArrangementCreate`
-accepteert `installments[{due_date,amount}]`; som moet exact het totaalbedrag zijn
-(Decimal; 400 bij mismatch, wachter-getest), termijnen letterlijk overgenomen (gesorteerd
-op datum), `installment_amount` = eerste termijn (NOT NULL, ontwerpkeuze), start/eind =
-eerste/laatste termijn. UI (`BetalingsregelingSection`): schakelaar "Handmatig schema" →
-rijen-editor (datum+bedrag) + lopende telling in centen; Aanmaken disabled tot de som
-klopt; kaart toont "Flexibel schema" i.p.v. frequentie bij ongelijke bedragen. Live
-bewezen op 2026-00007 (2×200+1000, expres ongesorteerd aangeleverd → exact goed).
-
-**Blok 3 — Gat C pijplijnkoppeling (LIVE + live bewezen).** Nieuwe regeling →
-`_move_case_to_regeling_step`: zaak naar hold-stap 'Bijhouden regeling' via
-`move_case_to_step` (trigger_type "arrangement"); bewust NIET via `advance_guard_reason`
-(blokkeert hold-doelen), wél gesloten/verweer-checks; stap ontbreekt → log + niets.
-Wanprestatie → `_ensure_arrangement_defaulted_task` op het gedeelde punt van BEIDE
-routes (`default_arrangement` + `update_arrangement`), gededuped; annuleren/afronden
-geen taak. Live: 2026-00007 verhuisde Derde sommatie → Bijhouden regeling; wanprestatie
-gaf direct de taak "Regeling verbroken — vervolg bepalen".
-
-**Blok 4 — Gat B regeling-mail → taak (LIVE + live bewezen mét echte AI).** Nieuwe
-orchestrator-handler `handle_email_classified_arrangement` op het classified-event:
-categorie `betalingsregeling_verzoek` → `ensure_arrangement_request_task` ("Betalingsregeling
-vastleggen — {zaak}", due vandaag) op het moment van herkennen — niet in de dode
-goedkeur-wachtrij. Geen taak bij actieve regeling/gesloten zaak/open taak. Kruispunt: de
-escalate-tak van `execute_classification` slaat zijn escalatie-taak over zolang de
-gerichte taak open staat. Live: testmail "ik wil een betalingsregeling in drie termijnen"
-op 2026-00006 → echte AI classificeerde `betalingsregeling_verzoek` (0.95) → taak stond
-er direct; 0 nieuwe AI-concepten (verweer-route bleef terecht stil).
-
-**Blok 5 — budgetfix (Fable-reviewpunt S234).** Sjabloon-skips in de dagelijkse AI-batch
-worden nu vóór de budget-slice weggefilterd — een skip kost geen AI-oproep en verdringt
-geen echte sjabloonloze gevallen meer (`workflow/scheduler.py`).
-
-### Gewijzigde bestanden
-Backend: `notifications/service.py`, `workflow/hooks.py`, `workflow/scheduler.py`,
-`collections/{service,schemas}.py`, `ai_agent/{orchestrator,service}.py`. Frontend:
-`use-notifications.ts`, `use-collections.ts`, `app-header.tsx`,
-`BetalingsregelingSection.tsx`. Tests (16 nieuwe wachters):
-`test_case_closed_notification.py` (2), `test_arrangement_pipeline.py` (6),
-`test_arrangement_request_task.py` (5), `test_payment_arrangements.py` (+3).
-Docs: S235-ONTWERP.md (3 correcties), S234-entry gecorrigeerd. Commits `53d52e5`
-(ontwerp-review), `5f3dc67` (S234-correctie), `41497aa` (bouw). Backend+frontend
-gedeployd via SSH `--force-recreate` (geen migratie — alles additief op bestaande tabellen).
-
-### Verificatie
-221 tests groen (brede -k-run installment/regeling/payment/followup/arrangement);
-ruff + tsc schoon; CI groen op alle 3 commits (incl. GitHub-Deploy, geen race dit keer);
-containers healthy; login+API 200. Live-testronde op prod-testdossiers (2026-00007/-00019/
--00006): alle vier ketens end-to-end bewezen, daarna per keten in één transactie
-teruggedraaid en nageteld (staphistorie hersteld, betaling weg, zaak heropend,
-meldingen/taken/testmail gewist). Enig blijvend spoor: 1 rij in `ai_usage` (de echte
-classificatie-call, ~¢) — dat is juist het doel van die tabel.
-
-### Bekende issues / bewust niet gedaan
-- **4 cosmetische restjes** (Fable-review, geen fix nodig): (a) geannuleerd formulier
-  onthoudt de handmatige rijen bij heropenen; (b) etiket "Flexibel schema" verschijnt
-  alleen bij ongelijke bedragen; (c) som-mismatch-melding toont bedragen met punt
-  (1400.00) i.p.v. NL-notatie; (d) status "nieuw" wordt "in_behandeling" bij regeling
-  (gevolg van de stap-zet — correct maar goed om te weten).
-- **IN100613** blijft wachten op Lisanne (niet aangeraakt).
-- **Beslispunt werklijst** (taken- vs follow-up-pagina) ligt bij Arsalan/Lisanne.
-- De 7 'Eerste sommatie'-import-dossiers hebben hun sommatie nog nooit gehad — de 7
-  pending follow-up-adviezen zijn terecht en wachten op verwerking (GO per verzending).
-
-### Volgende sessie
-S236: verwerk het antwoord van Lisanne over IN100613 (dry-run + GO + natelling) en het
-werklijst-beslispunt; daarna losse punten of nieuw hoofdonderwerp naar keuze Arsalan.
-Zie `docs/sessions/PROMPT-S236.md`.

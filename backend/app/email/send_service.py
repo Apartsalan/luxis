@@ -227,6 +227,7 @@ async def send_with_attachment(
         document_id=document_id,
         recipient_name=recipient_name,
         sender_name=sender_name,
+        effective_from=from_address,
         template="batch_document_send",
         has_attachments=bool(attachments),
     )
@@ -253,6 +254,7 @@ async def write_outbound_log(
     template: str = "batch_document_send",
     has_attachments: bool = False,
     provider_thread_id: str | None = None,
+    effective_from: str | None = None,
 ) -> EmailLog:
     """Leg het spoor van één uitgaande mail vast — gedeeld door alle verzendroutes.
 
@@ -260,6 +262,10 @@ async def write_outbound_log(
     SyncedEmail (zichtbaar in Correspondentie) + CaseActivity (dossier-tijdlijn).
     Zo is elke verstuurde mail terugvindbaar in Luxis, ongeacht de route
     (S220 — het compose-verstuurpad legde niets vast).
+
+    `effective_from` (S242, demo-vondst): bij 'Verzenden als' het kantooradres
+    (incasso@) staat dát adres op de mail, niet de vervoerende mailbox — leg dan
+    ook dát vast, anders toont de correspondentie de verkeerde afzender.
     """
     email_log = EmailLog(
         tenant_id=tenant_id,
@@ -290,7 +296,7 @@ async def write_outbound_log(
             # als de inkomende-sync (thread_id = References[0] else message_id).
             provider_thread_id=provider_thread_id or provider_message_id,
             subject=subject,
-            from_email=account.email_address,
+            from_email=effective_from or account.email_address,
             from_name=sender_name,
             to_emails=json.dumps(to),
             cc_emails=json.dumps(cc or []),

@@ -90,3 +90,40 @@ async def test_fresh_mail_defaults_thread_to_own_message_id(
         provider_thread_id=None,
     )
     assert synced.provider_thread_id == "<fresh-999@kestinglegal.nl>"
+
+
+@pytest.mark.asyncio
+async def test_send_as_office_address_recorded_as_sender(
+    db, test_tenant, test_user, account
+):
+    """S242 (demo-vondst Arsalan): 'Verzenden als' kantooradres → het dossier
+    moet het adres tonen dat écht op de mail stond (incasso@), niet de
+    vervoerende mailbox (seidony@). Voorheen werd altijd het accountadres
+    vastgelegd — verwarrend en fout in de correspondentie-weergave."""
+    account.email_address = "seidony@kestinglegal.nl"
+    await db.flush()
+    synced = await _log(
+        db,
+        test_tenant,
+        test_user,
+        account,
+        provider_message_id="<sendas-1@kestinglegal.nl>",
+        effective_from="incasso@kestinglegal.nl",
+    )
+    assert synced.from_email == "incasso@kestinglegal.nl"
+
+
+@pytest.mark.asyncio
+async def test_plain_send_records_account_address(
+    db, test_tenant, test_user, account
+):
+    """Tegenproef: geen 'verzenden als' (effective_from None) → accountadres."""
+    synced = await _log(
+        db,
+        test_tenant,
+        test_user,
+        account,
+        provider_message_id="<plain-1@kestinglegal.nl>",
+        effective_from=None,
+    )
+    assert synced.from_email == "incasso@kestinglegal.nl"

@@ -583,6 +583,9 @@ async def send_via_provider(
         # als het gesprek. Verse mail zonder antwoord-context → None, dan valt
         # write_outbound_log terug op het eigen message-id.
         provider_thread_id=data.references_root or data.reply_to_message_id,
+        # S242 — bij 'Verzenden als' kantooradres het échte afzenderadres
+        # vastleggen, niet de vervoerende mailbox.
+        effective_from=send_from_address,
     )
 
     # S232 — doorschuiven na een verstuurde STAP-brief. Een verse dossier-mail aan de

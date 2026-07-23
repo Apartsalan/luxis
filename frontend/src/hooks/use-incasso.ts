@@ -337,6 +337,8 @@ export function useBatchExecute() {
       target_step_id?: string | null;
       auto_assign_step?: boolean;
       send_email?: boolean;
+      // S246-nacht — "Verstuur later": ISO-moment (UTC); leeg = nu uitvoeren.
+      scheduled_at?: string | null;
     }
   >({
     mutationFn: async (data) => {

@@ -544,6 +544,251 @@ async def test_mislukte_rij_is_weg_te_halen(
     assert row.last_error == "provider down"  # reden blijft bewaard
 
 
+# ── Lopende band: batch + follow-up (S246-nacht) ─────────────────────────────
+
+
+async def _step(db, tenant_id, name="Eerste sommatie", template="sommatie", order=1):
+    from app.incasso.models import IncassoPipelineStep
+
+    step = IncassoPipelineStep(
+        id=uuid.uuid4(), tenant_id=tenant_id, name=name, sort_order=order,
+        template_type=template, is_active=True,
+    )
+    db.add(step)
+    await db.flush()
+    return step
+
+
+async def _case_met_stap_en_debiteur(db, tenant_id, step, number="2026-95001"):
+    """Incassodossier op een stap, mét debiteur die een e-mailadres heeft."""
+    client = Contact(
+        id=uuid.uuid4(), tenant_id=tenant_id, contact_type="company", name="Cliënt"
+    )
+    debiteur = Contact(
+        id=uuid.uuid4(), tenant_id=tenant_id, contact_type="company",
+        name="Debiteur BV", email="debiteur@example.nl",
+    )
+    db.add_all([client, debiteur])
+    await db.flush()
+    case = Case(
+        id=uuid.uuid4(), tenant_id=tenant_id, case_number=number, case_type="incasso",
+        status="in_behandeling", debtor_type="b2b", client_id=client.id,
+        opposing_party_id=debiteur.id, date_opened=date.today(),
+        incasso_step_id=step.id,
+    )
+    db.add(case)
+    await db.flush()
+    return case
+
+
+@pytest.mark.asyncio
+async def test_batch_inplannen_verstuurt_nu_niets(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Batch met gepland moment: nu geen brief, geen mail, geen doorschuiven —
+    alleen wachtrij-rijen (één per dossier, met stap-anker)."""
+    step = await _step(db, test_tenant.id)
+    case = await _case_met_stap_en_debiteur(db, test_tenant.id, step)
+    await _account(db, test_tenant.id, test_user.id)
+    await db.commit()
+
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    when = datetime.now(UTC) + timedelta(hours=8)
+    provider = _mock_provider()
+    p1, p2, p3 = _send_patches(provider)
+    with p1, p2, p3:
+        resp = await client.post(
+            "/api/incasso/batch",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "case_ids": [str(case.id)],
+                "action": "generate_document",
+                "send_email": True,
+                "scheduled_at": when.isoformat(),
+            },
+        )
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["action"] == "schedule_document_send"
+    assert body["processed"] == 1
+    provider.send_message.assert_not_called()  # KERN: nu niets de deur uit
+
+    rows = await _rows(db, test_tenant.id)
+    assert len(rows) == 1
+    assert rows[0].kind == "batch_step"
+    assert rows[0].step_id_at_schedule == step.id
+    assert rows[0].case_id == case.id
+    # Dossier is NIET doorgeschoven en er is GEEN document gemaakt.
+    await db.refresh(case)
+    assert case.incasso_step_id == step.id
+    from app.documents.models import GeneratedDocument
+    docs = (await db.execute(
+        select(func.count()).select_from(GeneratedDocument)
+        .where(GeneratedDocument.case_id == case.id)
+    )).scalar_one()
+    assert docs == 0
+
+
+@pytest.mark.asyncio
+async def test_batch_stap_gewisseld_blokkeert_verzending(
+    db: AsyncSession, session_factory, test_tenant: Tenant, test_user: User
+):
+    """Kruispunt: het dossier wisselt van stap ná het inplannen — dan zou de
+    VERKEERDE brief uitgaan. De bezorger moet blokkeren + melden."""
+    stap_oud = await _step(db, test_tenant.id, "Eerste sommatie", "sommatie", 1)
+    stap_nieuw = await _step(db, test_tenant.id, "Tweede sommatie", "tweede_sommatie", 2)
+    case = await _case_met_stap_en_debiteur(db, test_tenant.id, stap_oud)
+    await _account(db, test_tenant.id, test_user.id)
+    await db.commit()
+
+    row = ScheduledEmail(
+        tenant_id=test_tenant.id, created_by_id=test_user.id, case_id=case.id,
+        scheduled_at=datetime.now(UTC) - timedelta(minutes=1), status=STATUS_PENDING,
+        kind="batch_step", step_id_at_schedule=stap_oud.id,
+        payload={"auto_assign_step": False},
+        subject="Stap-brief", recipients="debiteur@example.nl",
+    )
+    db.add(row)
+    case.incasso_step_id = stap_nieuw.id  # stap wisselt buitenom
+    await db.commit()
+
+    provider = _mock_provider()
+    p1, p2, p3 = _send_patches(provider)
+    with p1, p2, p3:
+        await _dispatch(session_factory)
+
+    provider.send_message.assert_not_called()
+    await db.refresh(row)
+    assert row.status == STATUS_FAILED
+    assert "andere stap" in (row.last_error or "")
+
+
+@pytest.mark.asyncio
+async def test_batch_dispatch_draait_de_echte_batchfunctie(
+    db: AsyncSession, session_factory, test_tenant: Tenant, test_user: User
+):
+    """Bedrading: op het verzendmoment draait EXACT batch_execute (zelfde functie
+    als de knop). Geslaagd (1 mail) → sent; niets verstuurd → failed mét reden."""
+    from unittest.mock import AsyncMock as AM
+
+    from app.incasso.schemas import BatchActionResult
+
+    step = await _step(db, test_tenant.id)
+    case = await _case_met_stap_en_debiteur(db, test_tenant.id, step)
+    await db.commit()
+
+    def rij(when_offset=-1):
+        return ScheduledEmail(
+            tenant_id=test_tenant.id, created_by_id=test_user.id, case_id=case.id,
+            scheduled_at=datetime.now(UTC) + timedelta(minutes=when_offset),
+            status=STATUS_PENDING, kind="batch_step", step_id_at_schedule=step.id,
+            payload={"auto_assign_step": False},
+            subject="Stap-brief", recipients="debiteur@example.nl",
+        )
+
+    ok = rij(); db.add(ok); await db.commit(); await db.refresh(ok)
+    goed = BatchActionResult(action="generate_document", processed=1, skipped=0,
+                             errors=[], emails_sent=1)
+    with patch("app.incasso.service.batch_execute", new_callable=AM, return_value=goed) as be:
+        await _dispatch(session_factory)
+    be.assert_called_once()
+    assert be.call_args.args[3] == [case.id]  # één dossier per rij
+    await db.refresh(ok)
+    assert ok.status == STATUS_SENT
+
+    fout = rij(); db.add(fout); await db.commit(); await db.refresh(fout)
+    mislukt = BatchActionResult(action="generate_document", processed=0, skipped=1,
+                                errors=["2026-95001: e-mail mislukt — provider down"],
+                                emails_sent=0)
+    with patch("app.incasso.service.batch_execute", new_callable=AM, return_value=mislukt):
+        await _dispatch(session_factory)
+    await db.refresh(fout)
+    assert fout.status == STATUS_FAILED
+    assert "provider down" in (fout.last_error or "")
+
+
+async def _aanbeveling(db, tenant_id, case, step, status="pending"):
+    from app.ai_agent.followup_models import FollowupRecommendation
+
+    rec = FollowupRecommendation(
+        id=uuid.uuid4(), tenant_id=tenant_id, case_id=case.id,
+        incasso_step_id=step.id, recommended_action="generate_document",
+        reasoning="test", days_in_step=10, outstanding_amount=100,
+        status=status,
+    )
+    db.add(rec)
+    await db.flush()
+    return rec
+
+
+@pytest.mark.asyncio
+async def test_followup_inplannen_keurt_goed_en_plant(
+    client, db: AsyncSession, test_tenant: Tenant, test_user: User
+):
+    """Goedkeuren gebeurt NU (besluit van vanavond), uitvoeren wacht in de
+    wachtrij. Dubbel inplannen wordt geweigerd."""
+    step = await _step(db, test_tenant.id)
+    case = await _case_met_stap_en_debiteur(db, test_tenant.id, step)
+    rec = await _aanbeveling(db, test_tenant.id, case, step)
+    await db.commit()
+
+    token = create_access_token(str(test_user.id), str(test_tenant.id))
+    when = datetime.now(UTC) + timedelta(hours=8)
+    resp = await client.post(
+        f"/api/followup/{rec.id}/schedule-execute",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"scheduled_at": when.isoformat()},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["scheduled"] is True
+
+    await db.refresh(rec)
+    assert rec.status == "approved"  # goedgekeurd, NIET uitgevoerd
+    rows = await _rows(db, test_tenant.id)
+    assert len(rows) == 1 and rows[0].kind == "followup"
+
+    # Nogmaals inplannen → geweigerd (anders 2× dezelfde brief morgen).
+    resp2 = await client.post(
+        f"/api/followup/{rec.id}/schedule-execute",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"scheduled_at": when.isoformat()},
+    )
+    assert resp2.status_code == 400
+    assert "al ingepland" in resp2.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_followup_verouderd_of_uitgevoerd_blokkeert(
+    db: AsyncSession, session_factory, test_tenant: Tenant, test_user: User
+):
+    """Kruispunt: de aanbeveling is intussen al uitgevoerd (of verouderd door een
+    stapwissel). De bezorger voert dan NIETS uit — echte statusmachine, geen mock."""
+    step = await _step(db, test_tenant.id)
+    case = await _case_met_stap_en_debiteur(db, test_tenant.id, step)
+    rec = await _aanbeveling(db, test_tenant.id, case, step, status="executed")
+    await db.commit()
+
+    row = ScheduledEmail(
+        tenant_id=test_tenant.id, created_by_id=test_user.id, case_id=case.id,
+        scheduled_at=datetime.now(UTC) - timedelta(minutes=1), status=STATUS_PENDING,
+        kind="followup", payload={"rec_id": str(rec.id)},
+        subject="Follow-up", recipients="debiteur@example.nl",
+    )
+    db.add(row)
+    await db.commit()
+
+    provider = _mock_provider()
+    p1, p2, p3 = _send_patches(provider)
+    with p1, p2, p3:
+        await _dispatch(session_factory)
+
+    provider.send_message.assert_not_called()
+    await db.refresh(row)
+    assert row.status == STATUS_FAILED
+    assert "intussen" in (row.last_error or "")
+
+
 # ── Afscherming ──────────────────────────────────────────────────────────────
 
 

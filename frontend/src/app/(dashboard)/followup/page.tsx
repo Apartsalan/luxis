@@ -24,6 +24,7 @@ import {
   useApproveAndExecuteFollowup,
   useFollowupPreview,
   useRejectFollowup,
+  useScheduleExecuteFollowup,
 } from "@/hooks/use-followup";
 import {
   Dialog,
@@ -38,6 +39,7 @@ import { sanitizeHtml } from "@/lib/sanitize";
 import { QueryError } from "@/components/query-error";
 import { toast } from "sonner";
 import { openAttachment } from "@/lib/attachments";
+import { VerstuurLaterMenu } from "@/components/verstuur-later-menu";
 
 // ── Status config ────────────────────────────────────────────────────────────
 
@@ -106,6 +108,7 @@ export default function FollowupPage() {
   );
   const { data: stats } = useFollowupStats();
   const approveAndExecute = useApproveAndExecuteFollowup();
+  const scheduleExecute = useScheduleExecuteFollowup();
   const reject = useRejectFollowup();
   // B13 — geen één-klik-verzending: eerst een voorvertoning tonen.
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -125,6 +128,22 @@ export default function FollowupPage() {
         onError: (err) => {
           toast.error(err.message || "Uitvoeren mislukt");
         },
+      },
+    );
+  }
+
+  function handleScheduleExecute(id: string, iso: string) {
+    scheduleExecute.mutate(
+      { id, scheduledAt: iso },
+      {
+        onSuccess: () => {
+          setPreviewId(null);
+          const wanneer = new Date(iso).toLocaleString("nl-NL", {
+            weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+          });
+          toast.success(`Goedgekeurd — wordt verstuurd ${wanneer}`);
+        },
+        onError: (err) => toast.error(err.message || "Inplannen mislukt"),
       },
     );
   }
@@ -558,7 +577,8 @@ export default function FollowupPage() {
         previewId={previewId}
         onClose={() => setPreviewId(null)}
         onConfirm={handleConfirmSend}
-        isSending={approveAndExecute.isPending}
+        onSchedule={handleScheduleExecute}
+        isSending={approveAndExecute.isPending || scheduleExecute.isPending}
       />
     </div>
   );
@@ -570,11 +590,14 @@ function SendPreviewDialog({
   previewId,
   onClose,
   onConfirm,
+  onSchedule,
   isSending,
 }: {
   previewId: string | null;
   onClose: () => void;
   onConfirm: (id: string) => void;
+  // S246-nacht — "Verstuur later": goedkeuren nu, uitvoeren op het gekozen moment.
+  onSchedule: (id: string, iso: string) => void;
   isSending: boolean;
 }) {
   const { data: preview, isLoading, error } = useFollowupPreview(previewId);
@@ -680,6 +703,10 @@ function SendPreviewDialog({
           >
             Annuleren
           </button>
+          <VerstuurLaterMenu
+            disabled={isSending || !preview?.can_send}
+            onSchedule={(iso) => previewId && onSchedule(previewId, iso)}
+          />
           <button
             onClick={() => previewId && onConfirm(previewId)}
             disabled={isSending || !preview?.can_send}

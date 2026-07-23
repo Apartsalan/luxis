@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useConfirm } from "@/components/confirm-dialog";
+import { VerstuurLaterMenu } from "@/components/verstuur-later-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Gavel,
@@ -957,6 +959,7 @@ function WerkstroomTab() {
   const { data: queueCounts } = useIncassoQueueCounts();
   const batchPreview = useBatchPreview();
   const batchExecute = useBatchExecute();
+  const queryClient = useQueryClient();
   const setVerweer = useSetVerweer();
 
   // AI-UX-05: pending classifications per case
@@ -1098,7 +1101,7 @@ function WerkstroomTab() {
     }
   };
 
-  const handleExecuteBatch = () => {
+  const handleExecuteBatch = (scheduledAt?: string) => {
     if (!batchAction) return;
     batchExecute.mutate(
       {
@@ -1107,9 +1110,35 @@ function WerkstroomTab() {
         target_step_id: targetStepId || null,
         auto_assign_step: true,
         send_email: batchAction === "generate_document" ? sendEmail : false,
+        // S246-nacht — "Verstuur later" op de batch: nu niets doen, wachtrij-rij
+        // per dossier; de bezorger draait dezelfde batchfunctie op dit moment.
+        scheduled_at: scheduledAt ?? null,
       },
       {
         onSuccess: (result) => {
+          if (scheduledAt) {
+            const wanneer = new Date(scheduledAt).toLocaleString("nl-NL", {
+              weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+            });
+            const parts = [`${result.processed} brief/brieven ingepland voor ${wanneer}`];
+            if (result.skipped > 0) parts.push(`${result.skipped} niet ingepland`);
+            const errorLines = result.errors ?? [];
+            if (errorLines.length > 0) {
+              toast.warning(parts.join(", "), {
+                description:
+                  errorLines.slice(0, 5).join("\n") +
+                  (errorLines.length > 5 ? `\n… en ${errorLines.length - 5} meer` : ""),
+                duration: 10000,
+              });
+            } else {
+              toast.success(parts.join(", "));
+            }
+            queryClient.invalidateQueries({ queryKey: ["scheduled-emails"] });
+            setShowPreview(false);
+            setSelectedIds(new Set());
+            setBatchAction(null);
+            return;
+          }
           const parts: string[] = [`${result.processed} dossier(s) verwerkt`];
           if (result.skipped > 0) parts.push(`${result.skipped} overgeslagen`);
           const docCount = result.generated_document_ids?.length ?? 0;
@@ -1527,7 +1556,8 @@ function WerkstroomTab() {
           onTargetStepChange={setTargetStepId}
           sendEmail={sendEmail}
           onSendEmailChange={setSendEmail}
-          onConfirm={handleExecuteBatch}
+          onConfirm={() => handleExecuteBatch()}
+          onConfirmScheduled={(iso) => handleExecuteBatch(iso)}
           onClose={() => {
             setShowPreview(false);
             setBatchAction(null);
@@ -1732,6 +1762,7 @@ function PreFlightDialog({
   sendEmail,
   onSendEmailChange,
   onConfirm,
+  onConfirmScheduled,
   onClose,
 }: {
   action: string;
@@ -1744,6 +1775,8 @@ function PreFlightDialog({
   sendEmail: boolean;
   onSendEmailChange: (v: boolean) => void;
   onConfirm: () => void;
+  // S246-nacht — "Verstuur later": alleen zinvol bij genereer-en-verstuur.
+  onConfirmScheduled: (iso: string) => void;
   onClose: () => void;
 }) {
   const actionLabels: Record<string, string> = {
@@ -1916,13 +1949,22 @@ function PreFlightDialog({
         )}
 
         {/* Actions */}
-        <div className="mt-6 flex items-center justify-end gap-2">
+        <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
           <button
             onClick={onClose}
             className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
           >
             Annuleren
           </button>
+          {/* S246-nacht — batch klaarzetten voor een nette tijd; er gebeurt dan
+              NU niets (geen brief, geen doorschuiven), alles op het gekozen
+              moment via de wachtrij. Alleen op de verzend-variant. */}
+          {action === "generate_document" && sendEmail && (
+            <VerstuurLaterMenu
+              disabled={isLoading || isExecuting || !preview || preview.ready === 0}
+              onSchedule={onConfirmScheduled}
+            />
+          )}
           <button
             onClick={onConfirm}
             disabled={isLoading || isExecuting || !preview || preview.ready === 0}

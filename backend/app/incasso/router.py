@@ -29,7 +29,7 @@ from app.incasso.schemas import (
     TransitionResponse,
     TransitionUpdate,
 )
-from app.shared.exceptions import NotFoundError
+from app.shared.exceptions import BadRequestError, NotFoundError
 
 router = APIRouter(prefix="/api/incasso", tags=["incasso"])
 
@@ -289,6 +289,23 @@ async def batch_execute(
     db: AsyncSession = Depends(get_db),
 ):
     """Execute a batch action on selected incasso cases."""
+    # S246-nacht — "Verstuur later": nu niets doen, per dossier een wachtrij-rij.
+    # De bezorger draait op het gekozen moment exact deze batchfunctie.
+    if data.scheduled_at is not None:
+        if data.action != "generate_document" or not data.send_email:
+            raise BadRequestError(
+                "Alleen 'genereer en verstuur' kan later worden verstuurd."
+            )
+        from app.email.scheduled_service import schedule_batch_send
+
+        return await schedule_batch_send(
+            db,
+            current_user,
+            data.case_ids,
+            data.scheduled_at,
+            auto_assign_step=data.auto_assign_step,
+        )
+
     return await service.batch_execute(
         db,
         current_user.tenant_id,

@@ -180,6 +180,36 @@ export function useApproveAndExecuteFollowup() {
   });
 }
 
+export function useScheduleExecuteFollowup() {
+  const queryClient = useQueryClient();
+
+  // S246-nacht — "Verstuur later" op de follow-up-knop: goedkeuren gebeurt nú,
+  // de uitvoering (brief maken + versturen + doorschuiven) wacht in de wachtrij.
+  return useMutation<
+    { scheduled: boolean; scheduled_email_id: string; scheduled_at: string },
+    Error,
+    { id: string; scheduledAt: string }
+  >({
+    mutationFn: async ({ id, scheduledAt }) => {
+      const res = await api(`/api/followup/${id}/schedule-execute`, {
+        method: "POST",
+        body: JSON.stringify({ scheduled_at: scheduledAt }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail ?? "Inplannen mislukt");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["followup"] });
+      queryClient.invalidateQueries({ queryKey: ["followup-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["followup-pending-count"] });
+      queryClient.invalidateQueries({ queryKey: ["scheduled-emails"] });
+    },
+  });
+}
+
 export function useApproveFollowup() {
   const queryClient = useQueryClient();
 

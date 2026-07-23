@@ -198,6 +198,11 @@ class BatchActionRequest(BaseModel):
     target_step_id: uuid.UUID | None = None
     auto_assign_step: bool = False
     send_email: bool = False
+    # S246-nacht — "Verstuur later" op de batch: gevuld = nu NIETS doen (geen
+    # brief, geen verzending, geen doorschuiven) maar per dossier een wachtrij-
+    # rij; de bezorger draait op dat moment dezelfde batchfunctie. Alleen
+    # geldig bij action=generate_document + send_email=True.
+    scheduled_at: datetime | None = None
 
 
 class BatchActionResult(BaseModel):

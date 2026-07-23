@@ -29,6 +29,17 @@ STATUS_SENT = "sent"
 STATUS_CANCELLED = "cancelled"
 STATUS_FAILED = "failed"
 
+# Soorten (S246-nacht): wat de bezorger op het verzendmoment moet draaien.
+# 'compose'   → perform_compose_send met de payload als ComposeRequest.
+# 'batch_step'→ de batch-stapverzending voor ÉÉN dossier (zelfde functie als de
+#               knop 'Verstuur brief' in de pijplijn; brief wordt dan pas
+#               gemaakt, met de rentestand van het verzendmoment).
+# 'followup'  → een goedgekeurde follow-up-aanbeveling uitvoeren (zelfde functie
+#               als de knop 'Uitvoeren').
+KIND_COMPOSE = "compose"
+KIND_BATCH_STEP = "batch_step"
+KIND_FOLLOWUP = "followup"
+
 
 class ScheduledEmail(TenantBase):
     """Eén ingeplande uitgaande mail."""
@@ -54,7 +65,21 @@ class ScheduledEmail(TenantBase):
         String(20), nullable=False, default=STATUS_PENDING, index=True
     )
 
-    # De volledige ComposeRequest als JSON — de bezorger bouwt hem hieruit terug.
+    # Wat de bezorger moet draaien (zie KIND_* hierboven).
+    kind: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=KIND_COMPOSE
+    )
+
+    # Alleen voor 'batch_step': de pijplijnstap waarop het dossier stond bij het
+    # INPLANNEN. Staat het dossier op het verzendmoment op een ándere stap, dan
+    # wordt er NIET verstuurd (er zou de verkeerde brief uitgaan) → mislukt +
+    # melding. Follow-up heeft dit niet nodig: daar dekt de eigen status
+    # ('superseded' bij een stapwissel buitenom) hetzelfde gat.
+    step_id_at_schedule: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
+
+    # De volledige verzendopdracht als JSON — de bezorger bouwt hem hieruit terug.
+    # Voor 'compose' een ComposeRequest; voor 'batch_step'/'followup' de kleine
+    # opdracht (dossier-/aanbevelings-verwijzing + vlaggen).
     payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
 
     # Uitgelicht voor de lijstweergave, zodat die niet door de payload hoeft.

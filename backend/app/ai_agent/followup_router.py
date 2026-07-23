@@ -1,8 +1,10 @@
 """Follow-up router — endpoints for follow-up recommendation review and execution."""
 
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai_agent.followup_schemas import (
@@ -27,6 +29,12 @@ from app.database import get_db
 from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/api/followup", tags=["followup"])
+
+
+class FollowupScheduleIn(BaseModel):
+    """S246-nacht — gepland uitvoermoment (ISO-tijd mét zone, van de voorkant)."""
+
+    scheduled_at: datetime
 
 
 @router.get("", response_model=FollowupRecommendationList)
@@ -146,6 +154,31 @@ async def execute_followup(
     await db.commit()
     result = await get_recommendation(db, current_user.tenant_id, rec_id)
     return result
+
+
+@router.post("/{rec_id}/schedule-execute")
+async def schedule_execute_followup(
+    rec_id: uuid.UUID,
+    data: FollowupScheduleIn,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """S246-nacht — 'Verstuur later' op de follow-up-knop.
+
+    Goedkeuren gebeurt NU (Lisannes besluit van vanavond); alleen de uitvoering
+    (brief maken, versturen, doorschuiven) wacht tot het gekozen moment via de
+    verzend-wachtrij. Stap gewisseld intussen → aanbeveling wordt 'verouderd'
+    en de bezorger voert niets uit.
+    """
+    from app.email.scheduled_service import schedule_followup_execute
+
+    row = await schedule_followup_execute(db, current_user, rec_id, data.scheduled_at)
+    await db.commit()
+    return {
+        "scheduled": True,
+        "scheduled_email_id": str(row.id),
+        "scheduled_at": row.scheduled_at.isoformat(),
+    }
 
 
 @router.post("/{rec_id}/approve-and-execute", response_model=FollowupRecommendationOut)

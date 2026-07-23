@@ -23,6 +23,8 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.email.scheduled_models import (
+    KIND_BATCH_STEP,
+    KIND_FOLLOWUP,
     STATUS_CANCELLED,
     STATUS_FAILED,
     STATUS_PENDING,
@@ -46,6 +48,21 @@ STUCK_CLAIM_MINUTES = 10
 MAX_SCHEDULE_AHEAD_DAYS = 365
 
 
+def _validate_when(moment: datetime) -> datetime:
+    """Gedeelde tijdcontrole voor alle inplan-routes: toekomst, niet absurd ver."""
+    when = _as_utc(moment)
+    now = datetime.now(UTC)
+    if when <= now:
+        raise BadRequestError(
+            "Het gekozen verzendmoment ligt in het verleden. Kies een tijdstip in de toekomst."
+        )
+    if when > now + timedelta(days=MAX_SCHEDULE_AHEAD_DAYS):
+        raise BadRequestError(
+            f"Een mail kan maximaal {MAX_SCHEDULE_AHEAD_DAYS} dagen vooruit worden ingepland."
+        )
+    return when
+
+
 def _as_utc(moment: datetime) -> datetime:
     """Maak het moment tijdzone-bewust in UTC.
 
@@ -66,16 +83,7 @@ async def schedule_compose_email(db: AsyncSession, user, data):
     """
     from app.email.compose_router import ComposeResponse
 
-    when = _as_utc(data.scheduled_at)
-    now = datetime.now(UTC)
-    if when <= now:
-        raise BadRequestError(
-            "Het gekozen verzendmoment ligt in het verleden. Kies een tijdstip in de toekomst."
-        )
-    if when > now + timedelta(days=MAX_SCHEDULE_AHEAD_DAYS):
-        raise BadRequestError(
-            f"Een mail kan maximaal {MAX_SCHEDULE_AHEAD_DAYS} dagen vooruit worden ingepland."
-        )
+    when = _validate_when(data.scheduled_at)
 
     # Zelfde 14-dagenbrief-waarborg als het directe pad (art. 6:96 lid 6 BW): alleen
     # bij een VERSE dossier-mail. Hier alleen CONTROLEREN — het onuitwisbare spoor van
@@ -143,6 +151,196 @@ async def schedule_compose_email(db: AsyncSession, user, data):
         scheduled_email_id=row.id,
         scheduled_at=when,
     )
+
+
+async def schedule_batch_send(
+    db: AsyncSession,
+    user,
+    case_ids: list[uuid.UUID],
+    scheduled_at: datetime,
+    *,
+    auto_assign_step: bool = False,
+):
+    """Plan de batch-stapverzending in: één wachtrij-rij per dossier.
+
+    S246-nacht (GO Arsalan). Er wordt NU niets gemaakt of verstuurd — geen brief,
+    geen document, geen doorschuiven. Op het verzendmoment draait de bezorger per
+    dossier exact dezelfde batchfunctie als de knop 'Verstuur brief', dus de brief
+    krijgt de rentestand van dát moment en het dossier schuift dan pas door.
+
+    Per dossier lichte controles nú (zelfde als de batch zelf zou doen), zodat
+    Lisanne 's avonds meteen hoort welke dossiers niet meekunnen: stap aanwezig,
+    briefsjabloon aanwezig, e-mailadres aanwezig, 14-dagenbrief-poort.
+    """
+    from app.cases.models import Case
+    from app.cases.schemas import TERMINAL_STATUSES
+    from app.collections.compliance import check_dagenbrief_gate
+    from app.incasso.schemas import BatchActionResult
+    from app.incasso.service import list_pipeline_steps
+
+    if not case_ids:
+        raise BadRequestError("Geen dossiers geselecteerd")
+    when = _validate_when(scheduled_at)
+
+    steps = await list_pipeline_steps(db, user.tenant_id, active_only=True)
+    step_map = {s.id: s for s in steps}
+
+    result = await db.execute(
+        select(Case).where(
+            Case.tenant_id == user.tenant_id,
+            Case.id.in_(case_ids),
+            Case.case_type == "incasso",
+            Case.is_active.is_(True),
+        )
+    )
+    cases = list(result.scalars().all())
+
+    ingepland = 0
+    skipped = 0
+    errors: list[str] = []
+    for case in cases:
+        step = step_map.get(case.incasso_step_id) if case.incasso_step_id else None
+        if step is None:
+            skipped += 1
+            errors.append(f"{case.case_number}: geen pipeline stap — niet ingepland")
+            continue
+        if not step.template_type:
+            skipped += 1
+            errors.append(
+                f"{case.case_number}: stap '{step.name}' gebruikt AI-concepten — niet ingepland"
+            )
+            continue
+        if case.status in TERMINAL_STATUSES:
+            skipped += 1
+            errors.append(f"{case.case_number}: status '{case.status}' — niet ingepland")
+            continue
+        debtor_email = (
+            case.opposing_party.email if case.opposing_party else None
+        )
+        if not debtor_email:
+            skipped += 1
+            errors.append(
+                f"{case.case_number}: geen e-mailadres wederpartij — niet ingepland"
+            )
+            continue
+        gate_reason = await check_dagenbrief_gate(
+            db, user.tenant_id, case, step.name, case_number=case.case_number
+        )
+        if gate_reason is not None:
+            skipped += 1
+            errors.append(gate_reason)
+            continue
+
+        db.add(ScheduledEmail(
+            tenant_id=user.tenant_id,
+            created_by_id=user.id,
+            case_id=case.id,
+            scheduled_at=when,
+            status=STATUS_PENDING,
+            kind=KIND_BATCH_STEP,
+            step_id_at_schedule=case.incasso_step_id,
+            payload={"auto_assign_step": auto_assign_step},
+            subject=f"Stap-brief: {step.name} — {case.case_number}"[:500],
+            recipients=debtor_email[:1000],
+        ))
+        ingepland += 1
+
+    await db.flush()
+    logger.info(
+        "Batch-verzending ingepland (tenant=%s): %d dossiers op %s, %d overgeslagen",
+        user.tenant_id, ingepland, when.isoformat(), skipped,
+    )
+    # Zelfde antwoordvorm als de batch zelf, zodat de bestaande toast-opbouw
+    # (verwerkt/overgeslagen/redenen) op de voorkant gewoon blijft werken.
+    return BatchActionResult(
+        action="schedule_document_send",
+        processed=ingepland,
+        skipped=skipped,
+        errors=errors,
+    )
+
+
+async def schedule_followup_execute(
+    db: AsyncSession,
+    user,
+    rec_id: uuid.UUID,
+    scheduled_at: datetime,
+) -> ScheduledEmail:
+    """Plan een follow-up-'Uitvoeren' in.
+
+    Het GOEDKEUREN gebeurt nú (dat is Lisannes besluit van vanavond); alleen de
+    uitvoering — brief maken, versturen, doorschuiven — wacht tot het gekozen
+    moment. Verandert de stap intussen buitenom, dan zet de bestaande scanner de
+    aanbeveling op 'verouderd' en voert de bezorger niets uit (mislukt + melding).
+    """
+    from app.ai_agent.followup_models import FollowupRecommendation, RecommendationStatus
+    from app.ai_agent.followup_service import approve_recommendation
+    from app.cases.models import Case
+    from app.incasso.models import IncassoPipelineStep
+
+    when = _validate_when(scheduled_at)
+
+    rec = (
+        await db.execute(
+            select(FollowupRecommendation).where(
+                FollowupRecommendation.tenant_id == user.tenant_id,
+                FollowupRecommendation.id == rec_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if rec is None:
+        raise NotFoundError("Aanbeveling niet gevonden")
+
+    if rec.status == RecommendationStatus.PENDING:
+        rec = await approve_recommendation(db, user.tenant_id, rec_id, user.id)
+        if rec is None:  # pragma: no cover — race met een andere klik
+            raise BadRequestError("Aanbeveling kon niet worden goedgekeurd")
+    elif rec.status != RecommendationStatus.APPROVED:
+        raise BadRequestError(
+            "Deze aanbeveling is niet meer uit te voeren "
+            f"(status: {rec.status})."
+        )
+
+    # Dubbel-plan-guard: één open wachtrij-rij per aanbeveling.
+    bestaand = (
+        await db.execute(
+            select(ScheduledEmail).where(
+                ScheduledEmail.tenant_id == user.tenant_id,
+                ScheduledEmail.kind == KIND_FOLLOWUP,
+                ScheduledEmail.status == STATUS_PENDING,
+                ScheduledEmail.payload["rec_id"].astext == str(rec_id),
+            )
+        )
+    ).scalar_one_or_none()
+    if bestaand is not None:
+        raise BadRequestError(
+            "Deze aanbeveling staat al ingepland — annuleer eerst de bestaande planning."
+        )
+
+    case = await db.get(Case, rec.case_id)
+    step = await db.get(IncassoPipelineStep, rec.incasso_step_id)
+    debtor_email = (
+        case.opposing_party.email if case and case.opposing_party else ""
+    ) or ""
+
+    row = ScheduledEmail(
+        tenant_id=user.tenant_id,
+        created_by_id=user.id,
+        case_id=rec.case_id,
+        scheduled_at=when,
+        status=STATUS_PENDING,
+        kind=KIND_FOLLOWUP,
+        payload={"rec_id": str(rec_id)},
+        subject=(
+            f"Follow-up: {step.name if step else 'stap-brief'} — "
+            f"{case.case_number if case else ''}"
+        )[:500],
+        recipients=debtor_email[:1000],
+    )
+    db.add(row)
+    await db.flush()
+    await db.refresh(row)
+    return row
 
 
 async def list_scheduled_emails(
@@ -352,8 +550,13 @@ async def _send_one(session: AsyncSession, row_id: uuid.UUID, tenant_id: uuid.UU
         return "mislukt (blokkade)"
 
     try:
-        data = ComposeRequest(**row.payload)
-        await perform_compose_send(data, user, session)
+        if row.kind == KIND_BATCH_STEP:
+            await _run_batch_step(session, row)
+        elif row.kind == KIND_FOLLOWUP:
+            await _run_followup(session, row)
+        else:
+            data = ComposeRequest(**row.payload)
+            await perform_compose_send(data, user, session)
     except Exception as exc:
         # Sessie is vervuild door de fout → eerst schoon terug, dan pas de
         # statusregel + melding schrijven (les S203/S205: nooit op een vervuilde
@@ -396,6 +599,62 @@ async def _send_one(session: AsyncSession, row_id: uuid.UUID, tenant_id: uuid.UU
 
     await session.commit()
     return "verstuurd"
+
+
+async def _run_batch_step(session: AsyncSession, row: ScheduledEmail) -> None:
+    """Verzendmoment van een ingeplande batch-stapverzending (één dossier).
+
+    Draait exact dezelfde batchfunctie als de knop 'Verstuur brief' — brief
+    maken (rentestand van nú), versturen via het kantoorkanaal, taken afronden,
+    doorschuiven. Eén extra guard vooraf: staat het dossier nog op de stap van
+    het inplanmoment? Zo niet, dan zou de VERKEERDE brief uitgaan → fout.
+    """
+    from app.cases.models import Case
+    from app.incasso.service import batch_execute
+
+    case = await session.get(Case, row.case_id)
+    if case is None:
+        raise BadRequestError("Dossier bestaat niet meer — niets verstuurd.")
+    if case.incasso_step_id != row.step_id_at_schedule:
+        raise BadRequestError(
+            "Het dossier staat intussen op een andere stap dan bij het inplannen "
+            "— de geplande stap-brief is NIET verstuurd."
+        )
+
+    result = await batch_execute(
+        session,
+        row.tenant_id,
+        row.created_by_id,
+        [row.case_id],
+        "generate_document",
+        None,
+        bool(row.payload.get("auto_assign_step", False)),
+        True,  # send_email — inplannen bestaat alléén voor de verzend-variant
+    )
+    if result.emails_sent < 1:
+        # batch_execute rapporteert redenen in errors; maak er één fout van
+        # zodat status/melding het echte verhaal dragen.
+        raise BadRequestError(
+            "; ".join(result.errors) or "Verzending is niet gelukt (geen reden gemeld)."
+        )
+
+
+async def _run_followup(session: AsyncSession, row: ScheduledEmail) -> None:
+    """Verzendmoment van een ingeplande follow-up-uitvoering.
+
+    Zelfde functie als de knop 'Uitvoeren'. Geeft die None terug, dan is de
+    aanbeveling intussen al uitgevoerd, afgewezen of verouderd (stap wisselde
+    buitenom) — dan hoort er niets te gebeuren behalve een eerlijke melding.
+    """
+    from app.ai_agent.followup_service import execute_recommendation
+
+    rec_id = uuid.UUID(row.payload["rec_id"])
+    rec = await execute_recommendation(session, row.tenant_id, rec_id, row.created_by_id)
+    if rec is None:
+        raise BadRequestError(
+            "De aanbeveling is intussen al uitgevoerd, afgewezen of verouderd "
+            "— de geplande uitvoering is NIET gedraaid."
+        )
 
 
 async def _fail_stuck_claims(session: AsyncSession) -> int:

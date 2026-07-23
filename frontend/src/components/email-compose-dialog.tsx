@@ -6,6 +6,7 @@ import { useUnsavedWarning } from "@/hooks/use-unsaved-warning";
 import {
   Mail, Paperclip, Loader2, X, Plus,
   ExternalLink, FileText, Upload, FolderSearch, BookMarked, Search, Briefcase,
+  Clock, ChevronDown,
 } from "lucide-react";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -45,6 +46,9 @@ export interface EmailComposeData {
   references_root?: string | null;
   forward_from_email_id?: string | null;
   already_branded?: boolean;
+  // S246 — "Verstuur later": gekozen verzendmoment als ISO-tijd mét zone (de
+  // browser rekent de Nederlandse kloktijd om). Leeg/afwezig = nu versturen.
+  scheduled_at?: string | null;
 }
 
 export interface EmailRecipient {
@@ -251,6 +255,9 @@ export function EmailComposeDialog({
   const [body, setBody] = useState(defaultBody);
   const [selectedChip, setSelectedChip] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // S246 — eigen tijdstip voor 'Verstuur later' (datetime-local, lokale tijd).
+  const [customMoment, setCustomMoment] = useState("");
+  const [showCustomMoment, setShowCustomMoment] = useState(false);
 
   // Internal case selection (free-compose dossier-zoek)
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
@@ -816,6 +823,37 @@ export function EmailComposeDialog({
     } else {
       onSend(data);
     }
+  };
+
+  // ── Verstuur later (S246) ─────────────────────────────────────────────
+  // Lisanne werkt 's avonds maar incassomail hoort op nette tijden weg te gaan.
+  // De browser staat in Nederlandse tijd, dus een Date die hier op 09:00 staat
+  // draagt vanzelf de juiste zone; toISOString() maakt er de UTC-tijd van die de
+  // server bewaart.
+  const buildPreset = (dagenVooruit: number, uur: number): Date => {
+    const d = new Date();
+    d.setDate(d.getDate() + dagenVooruit);
+    d.setHours(uur, 0, 0, 0);
+    return d;
+  };
+
+  const submitScheduled = (moment: Date) => {
+    if (moment.getTime() <= Date.now()) {
+      setErrors({ scheduled: "Kies een tijdstip in de toekomst" });
+      return;
+    }
+    const data = buildEmailData();
+    if (!data) return;
+    const payload = { ...data, scheduled_at: moment.toISOString() };
+    if (onSendDirect) onSendDirect(payload);
+    else onSend(payload);
+  };
+
+  const submitCustomMoment = () => {
+    if (!customMoment) return;
+    // datetime-local levert een kale kloktijd → de browser leest hem als lokale
+    // (Nederlandse) tijd, precies wat Lisanne intypte.
+    submitScheduled(new Date(customMoment));
   };
 
   const handleOpenInOutlook = () => {
@@ -1413,15 +1451,72 @@ export function EmailComposeDialog({
                   </Button>
                 )}
               </div>
-              <Button type="submit" size="sm" disabled={isSending || !to.trim()} className="gap-1.5 max-sm:w-full">
-                {isSending ? (
-                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Bezig...</>
-                ) : (
-                  <><Mail className="h-3.5 w-3.5" /> Versturen</>
-                )}
-              </Button>
+              {/* S246 — Verstuur later. Naast (niet in plaats van) Versturen:
+                  's avonds klaarzetten voor een nette tijd de volgende dag. */}
+              <div className="flex items-center gap-2 max-sm:w-full">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={isSending || !to.trim()}
+                      className="gap-1.5 max-sm:flex-1"
+                    >
+                      <Clock className="h-3.5 w-3.5" /> Verstuur later
+                      <ChevronDown className="h-3 w-3 opacity-60" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => submitScheduled(buildPreset(1, 9))}>
+                      Morgen 09:00
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => submitScheduled(buildPreset(1, 15))}>
+                      Morgen 15:00
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowCustomMoment(true)}>
+                      Eigen tijdstip…
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button type="submit" size="sm" disabled={isSending || !to.trim()} className="gap-1.5 max-sm:flex-1">
+                  {isSending ? (
+                    <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Bezig...</>
+                  ) : (
+                    <><Mail className="h-3.5 w-3.5" /> Versturen</>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
+
+          {/* Eigen tijdstip — verschijnt onder de knoppen zodat de dialoog niet
+              in een tweede venster verdwijnt (mobiel blijft dit werkbaar). */}
+          {showCustomMoment && (
+            <div className="border-t px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-end gap-2 shrink-0">
+              <div className="flex-1 space-y-1">
+                <Label htmlFor="eigen-moment" className="text-xs">Verstuur op (Nederlandse tijd)</Label>
+                <Input
+                  id="eigen-moment"
+                  type="datetime-local"
+                  value={customMoment}
+                  onChange={(e) => { setCustomMoment(e.target.value); setErrors((p) => ({ ...p, scheduled: "" })); }}
+                  className="h-9"
+                />
+                {errors.scheduled && (
+                  <p className="text-xs text-destructive">{errors.scheduled}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={() => { setShowCustomMoment(false); setCustomMoment(""); }}>
+                  Annuleren
+                </Button>
+                <Button type="button" size="sm" disabled={!customMoment || isSending} onClick={submitCustomMoment} className="gap-1.5">
+                  <Clock className="h-3.5 w-3.5" /> Inplannen
+                </Button>
+              </div>
+            </div>
+          )}
         </form>
         </div>
 

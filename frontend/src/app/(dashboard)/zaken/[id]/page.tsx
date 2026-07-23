@@ -33,6 +33,7 @@ import {
   type EmailComposeData,
   type EmailRecipient,
 } from "@/components/email-compose-dialog";
+import { ScheduledEmailsPanel } from "@/components/scheduled-emails-panel";
 import { useModules } from "@/hooks/use-modules";
 import { useTimer, useAutoTimerPreference, getTimerSeconds, AUTO_SAVE_MIN_SECONDS } from "@/hooks/use-timer";
 import { useBreadcrumbs } from "@/components/layout/breadcrumb-context";
@@ -446,6 +447,14 @@ export default function ZaakDetailPage() {
         // S232: bij een AI-concept-review regelt advance-after-send de doorschuif —
         // compose/send moet 'm dan overslaan, anders schuift het dossier dubbel door.
         skip_pipeline_advance: !!activeDraftId,
+        // S246 — "Verstuur later". Leeg = nu versturen (ongewijzigd).
+        scheduled_at: data.scheduled_at ?? null,
+        // Bij een INGEPLANDE AI-concept-mail mag de nazorg (concept afvinken +
+        // dossier doorschuiven) pas draaien als de mail écht weg is — anders
+        // loopt het dossier vooruit op een mail die nog in de wachtrij staat.
+        // We geven het concept daarom mee aan de wachtrij; bij direct versturen
+        // blijft de voorkant het zelf doen via advance-after-send.
+        advance_draft_id: data.scheduled_at ? (activeDraftId ?? null) : null,
       }),
     });
   };
@@ -491,6 +500,18 @@ export default function ZaakDetailPage() {
               ? detail.map((d: { msg?: string }) => d.msg ?? JSON.stringify(d)).join(", ")
               : "E-mail verzenden mislukt";
         throw new Error(msg);
+      }
+
+      // S246 — ingepland i.p.v. verstuurd: andere melding, en géén nazorg nu.
+      // De wachtrij doet het afvinken + doorschuiven zodra de mail écht weg is.
+      if (data.scheduled_at) {
+        const wanneer = new Date(data.scheduled_at).toLocaleString("nl-NL", {
+          weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+        });
+        toast.success(`E-mail ingepland voor ${wanneer}`);
+        setCaseEmailOpen(false);
+        queryClient.invalidateQueries({ queryKey: ["scheduled-emails"] });
+        return;
       }
 
       toast.success("E-mail verzonden");
@@ -765,7 +786,11 @@ export default function ZaakDetailPage() {
             )}
             {safeTab === "correspondentie" && (
               <ErrorBoundary key="correspondentie" fallback={<TabErrorFallback tabName="Correspondentie" />}>
-                <CorrespondentieTab caseId={id} onCompose={() => setCaseEmailOpen(true)} onReply={handleReplyForward} onOpenDraft={openDraftDialog} />
+                <div className="space-y-4">
+                  {/* S246 — geplande mails van dít dossier, bovenaan. Leeg = uit beeld. */}
+                  <ScheduledEmailsPanel caseId={id} hideWhenEmpty />
+                  <CorrespondentieTab caseId={id} onCompose={() => setCaseEmailOpen(true)} onReply={handleReplyForward} onOpenDraft={openDraftDialog} />
+                </div>
               </ErrorBoundary>
             )}
             {safeTab === "tijdlijn" && (

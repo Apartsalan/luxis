@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Mail,
@@ -52,6 +53,7 @@ import {
 import { useDebounce } from "@/hooks/use-debounce";
 import { EmailComposeDialog, type EmailComposeData } from "@/components/email-compose-dialog";
 import { MailThreadPanel } from "@/components/mail-thread-panel";
+import { ScheduledEmailsPanel } from "@/components/scheduled-emails-panel";
 import { api } from "@/lib/api";
 import { openAttachment } from "@/lib/attachments";
 import { toast } from "sonner";
@@ -63,6 +65,7 @@ import { Reply, Forward } from "lucide-react";
 // ── Main Page ────────────────────────────────────────────────────────────────
 
 export default function CorrespondentiePage() {
+  const queryClient = useQueryClient();
   // Tab state — S240: ?filter=unlinked (melding-doorklik + dashboard-link)
   // opent direct de Ongesorteerd-tab. Via useSearchParams (patroon zaken-
   // pagina), niet window.location bij mount: een klik op de meldingen-bel
@@ -172,6 +175,11 @@ export default function CorrespondentiePage() {
           forward_from_email_id: data.forward_from_email_id,
           already_branded: data.already_branded || !!data.body_html,
           skip_pipeline_advance: true,
+          // S246 — "Verstuur later". Leeg = nu versturen (ongewijzigd).
+          scheduled_at: data.scheduled_at ?? null,
+          // Ingepland → de concept-nazorg draait pas als de mail écht weg is;
+          // de wachtrij doet 'm dan. Bij direct versturen blijft het hieronder.
+          advance_draft_id: data.scheduled_at ? aiDraft.id : null,
         }),
       });
       if (!res.ok) {
@@ -183,6 +191,14 @@ export default function CorrespondentiePage() {
             ? detail.map((d: { msg?: string }) => d.msg ?? JSON.stringify(d)).join(", ")
             : "Antwoord verzenden mislukt";
         throw new Error(msg);
+      }
+      if (data.scheduled_at) {
+        const wanneer = new Date(data.scheduled_at).toLocaleString("nl-NL", {
+          weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+        });
+        toast.success(`Antwoord ingepland voor ${wanneer}`);
+        setAiDraft(null);
+        return;
       }
       await api(`/api/incasso/cases/${aiDraft.caseId}/advance-after-send`, {
         method: "POST",
@@ -217,6 +233,8 @@ export default function CorrespondentiePage() {
           references_root: data.references_root,
           forward_from_email_id: data.forward_from_email_id,
           already_branded: data.already_branded,
+          // S246 — "Verstuur later". Leeg = nu versturen (ongewijzigd).
+          scheduled_at: data.scheduled_at ?? null,
         }),
       });
       if (!res.ok) {
@@ -228,6 +246,15 @@ export default function CorrespondentiePage() {
             ? detail.map((d: { msg?: string }) => d.msg ?? JSON.stringify(d)).join(", ")
             : "E-mail verzenden mislukt";
         throw new Error(msg);
+      }
+      if (data.scheduled_at) {
+        const wanneer = new Date(data.scheduled_at).toLocaleString("nl-NL", {
+          weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+        });
+        toast.success(`E-mail ingepland voor ${wanneer}`);
+        setShowComposeDialog(false);
+        queryClient.invalidateQueries({ queryKey: ["scheduled-emails"] });
+        return;
       }
       toast.success("E-mail verzonden");
       setShowComposeDialog(false);
@@ -587,6 +614,11 @@ export default function CorrespondentiePage() {
       {activeTab === "alle" && (
         <div className="flex gap-4">
           <div className={selectedEmailId ? "hidden lg:block lg:w-2/5" : "w-full"}>
+            {/* S246 — wat er klaarstaat om later te versturen, bovenaan zodat je
+                het ziet vóór je een nieuwe mail opstelt. Leeg = niet in beeld. */}
+            <div className="mb-3">
+              <ScheduledEmailsPanel hideWhenEmpty />
+            </div>
             {/* S244 — Postvak IN / Verzonden */}
             <div className="mb-3 flex gap-1 rounded-lg bg-muted/50 p-1 w-fit">
               {([["all", "Alles"], ["inbound", "Postvak IN"], ["outbound", "Verzonden"]] as const).map(

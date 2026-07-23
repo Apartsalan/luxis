@@ -2,10 +2,77 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 23 juli 2026 (S239 afgerond — scenario-nachtronde: 32 scenario's, 13 vondsten, 5 fixes LIVE; GO voor S240: bouwen + testronde 2).
-**Laatste feature/fix:** Scenario-nachtronde "een week uit het leven van Lisanne": 5 gefixte vondsten live (overbetaal-poort, samengesteld-kenmerk-herkenning, spooktaken bij weggegooid concept, regeling-afgerond-taak, zoeken op factuurnummer). Detail: entry S239 (tussenstand) + `docs/sessions/S239-SCENARIOS.md`.
-**Openstaand (→ vervolg S239):** voorstel-lijst 7 punten uit de nachtronde (sterkste: melding ongesorteerde bak — het S237-gat, nu gekwantificeerd); **2 echte mails wachten op antwoord (IN100128 update-verzoek 13-7, IN100586 uithanden-mail 17-6 — vannacht teruggevonden)**; verweer-concepten IN100592 + IN100606 en IN100492-vraag bij Lisanne; opruimronde mét Lisanne (nu incl. 7 resterende spooktaken + 40+ oude testdossier-taken). Losse punten: BaseNet-delisting, derde AI-testronde, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, testdata, 4 cosmetische restjes S235, sharp-CVE's.
-**Volgende sessie:** S240 (Opus) — zie `docs/sessions/PROMPT-S240.md`.
+**Laatst bijgewerkt:** 23 juli 2026 (S241 afgerond — testronde 3 + Negeren-fix + meldingen-bundeling LIVE; de S240-entry volgt nog uit de parallelle terminal, logboek staat al in `docs/sessions/S240-SCENARIOS.md`).
+**Laatste feature/fix:** Meldingen-bundeling in de bel (3+ ongelezen van zelfde type = één rij; klik = overzichtspagina + stapel gelezen) + fix "Negeren wint van elke sync". Detail: entry S241 + `docs/sessions/S241-SCENARIOS.md`.
+**Openstaand:** voorstel-lijst (S242-kandidaten: dubbelklik-betaling-slot, belofte×regeling dubbel werk, eigenaarloze-taken-melding; rest S239-lijst onaangeraakt); 2 echte mails (IN100128, IN100586) + verweer IN100592/IN100606 + IN100492 bij Lisanne; opruimronde mét Lisanne; **2 verjaringsmeldingen (IN100015 VERJAARD, IN100127) nu zichtbaar door de bundeling — aandacht Lisanne/Arsalan**. Losse punten: BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, testdata, 4 cosmetische restjes S235, sharp-CVE's; derde AI-testronde bewust afgevoerd (S241).
+**Volgende sessie:** S242 (Opus) — zie `docs/sessions/PROMPT-S242.md`.
+
+## Sessie 241 (23 juli 2026, Fable-testronde → Opus-bouw → Fable-tegenlezing — testronde 3 + Negeren-fix + meldingen-bundeling, LIVE)
+
+### Samenvatting
+Parallel aan de S240-afronding in een andere terminal (afspraak: administratie
+dáár, dus deze afsluiting kwam pas na expliciete opdracht van Arsalan; de
+S240-entry ontbreekt hier nog). Model-cyclus netjes gevolgd: testronde op Fable,
+bundeling gebouwd op Opus (wissel door Arsalan), Fable-tegenlezing erna.
+
+**Testronde 3 — 10 scenario's, drie verse brillen** (logboek:
+`docs/sessions/S241-SCENARIOS.md`; verwacht-resultaat vooraf, wegwerpdossier
+2026-00021 volledig gewist + nageteld 0, lokale wegwerp-medewerker idem):
+- **Bril A (S240-functies op kruispunten):** belofte-taak met verleden-datum,
+  auto-sluiten bij betaling, heropening, dossier-sync×melding — allemaal goed.
+  **Vondst 1 (gefixt, `da81429`): een met "Negeren" weggedrukte mail werd bij een
+  latere sync stil aan een dossier gekoppeld** (via dossier-sync én via later
+  aangemaakt dossiernummer). Rode test eerst; Negeren wint nu van elke sync,
+  bounces mogen wél blijven koppelen (tegenproef). 6 wachters, 1002 tests groen.
+- **Bril B (twee gebruikers/rollen):** werklijst-verschil seidony 61 vs kesting 38
+  = puur toewijzing + bewuste eigenaarloze-taken-regel; rollen-matrix klopt (droog
+  + live steekproef lokale omgeving: 4× 403 beheer, 200 dagelijks werk).
+- **Bril C (de ochtend van morgen):** server draait UTC → jobs 08:00-10:00 NL;
+  morgen kleurt 1 taak, 0 nieuwe meldingen (30-dagen-dedup werkt). Werklast-meting:
+  65 taken (39 test/26 echt), 21 adviezen (14/7), 16 aanvragen — opruimronde is de
+  sleutel, niet nieuwe bouw. Blok D (derde AI-ronde) bewust overgeslagen: S238
+  testte de antwoordlaag vers en S240/S241 raakten dat pad niet.
+
+**Meldingen-bundeling gebouwd + LIVE (GO Arsalan, `275d9f4`).** Meting: 112
+ongelezen bij seidony, 93 bij kesting (63× taak-te-laat, 25× nieuwe-mail) — de
+bel was onbruikbaar. Nu: typen met 3+ ongelezen worden één bundel-rij met teller
+("63 taken of deadlines te laat"); klik → overzichtspagina van dat type + hele
+stapel in één keer gelezen (nieuwe route `PUT /read-by-type`, alleen eigen
+gebruiker+type). Bundels altijd bovenaan (nooit weggedrukt door de 15-rijen-kap);
+losse + gelezen meldingen onveranderd; platte lijst (dossier-actiefeed) expliciet
+ongewijzigd — wachter bewaakt beide. Direct effect: 2 verjaringswaarschuwingen
+("VERJAARD! Direct actie vereist", IN100015 + IN100127) werden zichtbaar die
+eerst in de stapel verdronken → **inhoudelijk oppakken is aan Lisanne/Arsalan
+(rolverdeling S240)**. Fable-tegenlezing: geen fouten; 3 bewuste nuances
+gedocumenteerd (snooze telt mee in bundel-klik, zelfde rijen als dossier-feed,
+badge blijft ruw aantal).
+
+### Gewijzigde bestanden
+`backend/app/email/sync_service.py` (Negeren-poort),
+`backend/app/notifications/{service,schemas,router}.py` (bundeling),
+`frontend/src/hooks/use-notifications.ts`,
+`frontend/src/components/layout/app-header.tsx`. Nieuwe tests:
+`test_s241_sync_kruispunten.py` (6), `test_notification_bundling.py` (7).
+Logboek: `docs/sessions/S241-SCENARIOS.md`.
+
+### Verificatie
+Email/sync-suite 1002 groen + 33 meldingen-tests groen; ruff + tsc schoon; 2×
+gedeployd via SSH `--force-recreate` (backend; daarna backend+frontend),
+containers healthy, login 200, prod-logs 0 fouten. Bundeling live nageteld
+(gebundelde én platte lijst naast elkaar); klik-flow live bewezen met 3
+wegwerp-meldingen (precies 3 gelezen, 0 andere geraakt, daarna gewist,
+natelling 0). CI: fix-commit groen (alleen bekende sharp-audit rood, mag falen);
+bundeling-commit liep nog bij afsluiten — **natrekken bij S242-start**.
+
+### Bekende issues
+- S240-entry in dit bestand ontbreekt nog (parallelle terminal) — staat die er
+  bij S242-start nog niet, schrijf hem dan compact uit `S240-SCENARIOS.md` + git log.
+- Voorstellen (niet gebouwd, scope-hek): belofte-taak naast actieve regeling =
+  dubbel bewakingswerk; eigenaarloze te-laat-taken melden bij "eerste" gebruiker
+  (willekeurige volgorde).
+
+### Volgende sessie
+S242 (Opus): kleine veegsessie voorstel-lijst — zie `docs/sessions/PROMPT-S242.md`.
 
 ## Sessie 239 (22/23 juli 2026, nacht — Fable autonoom: scenario-nachtronde + fixloop, LIVE)
 
@@ -681,124 +748,3 @@ skip-guard), `zaken/page.tsx` (filter-geheugen).
   (data/ontwerpkeuze voor S234; de mechaniek dekt het dan zonder codewijziging).
 - **Batch- en follow-up-route** houden hun eigen "volgende in de lijst"-logica — recht te
   trekken in de S234-stappensessie.
-
-## Sessie 230/231 (20 juli 2026, Fable-onderzoek + Opus-bouw — werkorders V1-V4 + drie live storingen)
-
-### Samenvatting
-Begonnen als afwerksessie van de S229-eindkeuring; halverwege omgeslagen naar
-storingsdienst tijdens Arsalans demo met Lisanne. Alles hieronder is live en
-nageteld op prod.
-
-**V1 — 27 consumentendossiers gecorrigeerd (€ 9.794,65).** Meting vers herhaald,
-onafhankelijk van S229: hoofdsom per dossier opnieuw opgeteld uit de losse
-vorderingen, eigen staffelberekening, plus kruiscontrole via de app-API
-(`GET /api/cases/{id}/bik`) — 4/4 identiek. Arsalans twijfel ("waarom zag je dit
-pas nu?") beantwoord met de import-datum: alle 27 kwamen op 3 juli binnen; de
-S229-keuring was de eerste brede financiële controle ná die import. **Nieuw t.o.v.
-S229:** de 26 "afgesloten" dossiers bleken géén afgehandelde zaken — in BaseNet
-stonden ze 21× Lopend / 3× Wacht / 2× Gereed / 1× Geannuleerd, 0 van de 27 volledig
-betaald, 25 zonder één cent betaling, samen € 172.692,60 hoofdsom open, 16 met
-mailverkeer in 2026. Daarmee verviel het bezwaar tegen corrigeren. Na GO van
-Arsalan (alle 27 bevestigd particulier): `bik_override` → NULL in één transactie,
-gejoind op id én exact oud bedrag (`UPDATE 27`), oude waarden dubbel bewaard
-(`_s230_bik_backup` + lokale kopie). Natelling: sweep 0, IN100082 nu € 1.102,21,
-IN100345 € 385,30; doorwerking bewezen op IN100009 (openstaand zakte exact de
-€ 66,96 te veel geheven kosten). **Wachter:** `find_bik_above_staffel()` loopt de
-hele DB af (dagelijks 06:45 UTC) — de twee bestaande wachters keken alleen naar het
-moment van handelen, de import kwam daar buitenom. 7 tests.
-
-**V2 — handelsrente 1-7-2026 (10,40%).** Op verzoek eerst bewezen dát het ontbrak:
-prod-tabel eindigde bij 10,15% (1-7-2025), alle 150 rijen aangemaakt op 18-02-2026
-en nooit gewijzigd (de BaseNet-import raakt deze tabel niet — de importcode schrijft
-alleen een contractueel percentage op de zaak). Twee onafhankelijke bronnen:
-Rijksoverheid ("sinds 1 juli 2026 10,4%") + rekenregel art. 6:119a lid 2 (ECB-refi
-2,40% per 17-6-2026 + 8pp). Losse rentetabel-sites liepen achter — vandaar de
-kruiscontrole. Migratie `s230_handelsrente_2026_07` (commercial + government),
-natelling 51 rijen per soort. **Wachter:** actualiteitscheck met peildatum-constante
-(>7 maanden → rood), bewust niet "nieuwste rij" zodat een halfjaar zónder
-tariefwijziging geen vals alarm geeft.
-
-**V4 — .env-rechten.** Bleek zes bestanden i.p.v. één: naast `.env` stonden vijf
-oudere kopieën met echte waarden ook op 644. Alle zes → 600. Ook de S229-aanname
-"alleen root heeft shell" weerlegd: `github-runner` heeft `/bin/bash` én zit in de
-`docker`-groep (de facto root).
-
-**V3 — auto-conceptpoort AAN.** S222-herbeoordeling zelf nagerekend op prod: € 40,87
-(IN100418) en € 22,64 (IN100122) zijn exact de echte openstaande bedragen; IN100370
-staat letterlijk in de onderwerpregel. Corrector herkalibreerd (3 regels), niet-
-debiteurenmails weigeren nu netjes i.p.v. JSON-crash. Volledige ronde: 55 gevallen,
-0 storingen, 54 beoordeeld, 3 afgekeurd — waarvan **2 opnieuw corrector-missers**
-(bedrag + dossiernummer) en 1 échte vondst ("onderneem geen verdere actie tot u van
-ons hoort" leest als opschorting → spelregel toegevoegd). Netto ~1 echte fout op 54.
-Steekproef door Fable i.p.v. Lisanne (op verzoek): 10 goud-gevallen naast Lisannes
-echte antwoorden, 6/6 bedragen live geverifieerd. Poort AAN na bewijs dat de batch
-alléén concepten maakt (taak "Bekijk en verstuur", plafond 50/dag).
-
-**Kosten meetbaar (los verzoek).** Nieuwe globale tabel `ai_usage`: elke aanroep in
-`kimi_client` schrijft doel, model, 4 tokentellingen en kosten (Decimal, officiële
-prijstabel; cache-lezen 0,1×, cache-schrijven 1,25×). Eigen sessie met gedempte
-fouten — meten mag een aanroep nooit laten falen. Live bewezen; ving diezelfde
-middag 2 echte concepten (~$0,075).
-
-**Storing 1 — bijlagen niet te openen (Arsalan, demo).** Vijf plekken toonden
-bijlagen, drie konden ze niet openen: dossier-chip klikte in het luchtledige
-(bestand zat niet in `inlineFiles`), "gaat automatisch mee"-etiketten waren
-doodlopend, Mail-pagina linkte kaal zonder inlogbewijs (401). Fix als gedeelde
-route: `frontend/src/lib/attachments.ts` + bijlagen krijgen serverkant een ADRES
-(`template_type` of `case_file_id`); facturen per stuk i.p.v. als telling.
-Bulkscherm kreeg een informatieregel (geen knoppen — bij tientallen dossiers ruis).
-**Reviewvondst op eigen werk:** de opvolg-voorvertoning wijst óók stap-brieven aan,
-maar `render-pdf` weigerde alles buiten mijn eigen whitelist — precies de
-kruispuntfout die de fix moest oplossen. Eigen lijst weg; `render_docx` is de ene
-registry.
-
-**Storing 2 — mail kaatst terug (demo).** Bounce zelf gelezen: Microsoft weigert
-BaseNets uitgaande relay 194.180.216.120 (550 5.7.1, S3150). Lisannes BaseNet-
-webmail kwam wél aan → andere uitgang, dus zelf oplosbaar. Vervoer en afzender
-gescheiden: `resolve_office_channel()` kiest (1) kantooradres via Graph, (2) ander
-Graph-account mét incasso@ als afzender, (3) BaseNet als vanouds. Arsalan zette
-`incasso@` als gedeeld postvak + Verzenden-als in M365. **Live bewezen:** proefmail
-kwam aan in Arsalans hotmail-inbox (niet in ongewenst); daarna sommatie IN100605
-opnieuw verstuurd zonder bounce.
-
-**Storing 3 — badge "Nog te openen" op een heropend dossier.** De herkomst-badge
-keek alleen naar de BaseNet-herkomst, niet naar de huidige status → IN100605 (fase 1
-LegalWork, in behandeling) toonde nog "Nog te openen". Nu "Heropend" (groen).
-
-### Gewijzigde bestanden
-`backend/app/collections/compliance.py` (sweep), `backend/app/workflow/scheduler.py`
-(dagelijkse BIK-check), `backend/app/notifications/service.py`,
-`backend/alembic/versions/s230_handelsrente_2026_07.py`, `s230b_ai_usage.py`,
-`backend/app/ai_agent/kimi_client.py` + `models.py` (AIUsage),
-`backend/app/email/oauth_service.py` (`resolve_office_channel`), `send_service.py`,
-`compose_router.py`, `providers/{base,outlook,imap_provider}.py`,
-`backend/app/documents/router.py`, `backend/app/ai_agent/followup_{service,schemas}.py`,
-`frontend/src/lib/attachments.ts` (nieuw), `status-constants.ts`,
-`email-compose-dialog.tsx`, `correspondentie/page.tsx`, `followup/page.tsx`,
-`incasso/page.tsx`, `zaken/page.tsx`, `DetailsTab.tsx`,
-`scripts/ai/antwoord_testronde.py`. Nieuwe tests:
-`test_interest_rate_freshness_guard.py`, `test_bik_staffel_sweep.py`,
-`test_ai_usage.py`, `test_attachment_openable_guard.py`,
-`test_office_channel_guard.py`. Docs: `docs/sessions/S230-werkorders.md`,
-deploy-regels-skill (docker cp-valkuil).
-
-### Bekende issues
-- **Sjabloon-route schuift niet door.** Een eerste sommatie via de mail-dialoog met
-  sjabloon beweegt de pijplijn niet; alleen de AI-conceptroute doet dat
-  (`incasso/router.py::advance_after_send`, gate `intent in (None,"next_step")`).
-  Arsalan verwacht terecht dat de sjabloon-route hetzelfde doet — kruispuntfout.
-  **IN100605 staat daardoor nog op Eerste sommatie terwijl de sommatie eruit is.**
-- **BaseNet-relay nog steeds geblokkeerd** bij Microsoft. Wij omzeilen het; melden
-  bij BaseNet is nog niet gedaan (conceptmail staat in het sessieverloop).
-- **Kostenmeting begint pas 20 juli** — waar de eerdere ~€10 heenging is niet meer
-  te achterhalen. Voorstel (niet gebouwd): kostenblokje op het dashboard.
-- **Derde AI-testronde niet gedraaid** (meet het effect van de laatste 2 ingrepen);
-  bewust niet ongevraagd i.v.m. het kostenpunt. Lisanne-steekproef op de echte
-  batch (eerste draait 21-7 08:00 UTC) staat nog open.
-- Niet met een browser doorgeklikt: de nieuwe bijlage-knoppen (wel alle
-  onderliggende routes live bewezen + tsc/lint schoon).
-
-### Volgende sessie
-S232: sjabloon-verzendroute laten doorschuiven naar de volgende stap (zelfde regel
-als `advance_after_send`, met wachter over álle verzendroutes), daarna IN100605
-handmatig rechtzetten. Zie `docs/sessions/PROMPT-S232.md`.

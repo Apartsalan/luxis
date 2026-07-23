@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 23 juli 2026 (S239 — scenario-nachtronde: 32 scenario's, 13 vondsten, 5 fixes LIVE; logboek `docs/sessions/S239-SCENARIOS.md`). Rapport: entry S239 in `SESSION-NOTES.md`. **Volgende = S240 (Opus): bak-melding + belofte-bewaking bouwen, daarna testronde 2 (slordige gebruiker + klik-ronde).**
+**Laatst bijgewerkt:** 23 juli 2026 (S241 — testronde 3, Negeren-fix + meldingen-bundeling LIVE; logboek `docs/sessions/S241-SCENARIOS.md`; S240-entry volgt uit de parallelle terminal). Rapport: entry S241 in `SESSION-NOTES.md`. **Volgende = S242 (Opus): kleine veegsessie voorstel-lijst (dubbelklik-betaling-slot, belofte×regeling, eigenaarloze-taken-melding).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,27 +53,29 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 23 juli 2026, S239)
+## 🎯 Huidige prioriteit (bijgewerkt 23 juli 2026, S241)
 
-> ✅ **S239 AFGEROND — SCENARIO-NACHTRONDE "EEN WEEK UIT HET LEVEN VAN LISANNE" (LIVE).**
-> 32 scenario's (werkdag, rare debiteur, cliënt-kant, tijd/termijnen, rand/systeem) met
-> verwacht-resultaat vooraf; 13 vondsten, waarvan 5 gefixt + gedeployd + live nageteld
-> (overbetaal-poort/negatief openstaand, samengesteld-kenmerk-herkenning — 2 échte mails
-> direct gekoppeld, spooktaken bij concept-weggooien, regeling-afgerond-taak, zoeken op
-> factuurnummer). 10 nieuwe wachters, 351 tests groen, CI groen. Volledig logboek +
-> voorstel-lijst (7): `docs/sessions/S239-SCENARIOS.md`; entry S239 in SESSION-NOTES.
+> ✅ **S240+S241 AFGEROND (LIVE).** S240 (parallelle terminal): bak-melding +
+> betaalbelofte-bewaking gebouwd + testronde 2 (logboek `docs/sessions/S240-SCENARIOS.md`;
+> SESSION-NOTES-entry volgt daar nog). S241: testronde 3 (10 scenario's, 3 verse brillen)
+> → fix "Negeren wint van elke sync" (6 wachters); daarna op GO Arsalan de
+> **meldingen-bundeling** gebouwd (3+ ongelezen zelfde type = één bundel-rij, klik =
+> overzicht + stapel gelezen; 7 wachters). Live nageteld; 2 verjaringsmeldingen
+> (IN100015 VERJAARD, IN100127) werden er direct zichtbaar door. Logboek:
+> `docs/sessions/S241-SCENARIOS.md`; entry S241 in SESSION-NOTES.
 >
-> 🎯 **VOLGENDE (S240, op Opus): twee functies bouwen + testronde 2.** (1) Melding/teller
-> voor de ongesorteerde mailbak (het S237-gat — vannacht gekwantificeerd: 2 echte mails
-> bleven er 9 dagen/5 weken hangen); (2) betaalbelofte-bewaking (taak op promise_date —
-> datum+bedrag worden al herkend). Daarna testronde 2 met brillen "slordige gebruiker" +
-> "klik-ronde als Lisanne" (keuze Arsalan 23-7). **Eerst in de ochtend: 2 gevonden mails
-> beantwoorden (IN100128 update-verzoek, IN100586 uithanden-mail).** Daarnaast blijven
-> staan: Lisanne-antwoorden (IN100592/IN100606/IN100492), opruimronde mét GO (nu incl.
-> 7 resterende spooktaken + 40+ oude testdossier-taken), voorstel-lijst punten 3-7,
-> BaseNet-delisting, derde AI-testronde + Lisanne-steekproef, kostenblokje,
-> fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen,
-> 4 cosmetische restjes S235, sharp-CVE's. KvK: niet naar vragen.
+> 🎯 **VOLGENDE (S242, op Opus): kleine veegsessie voorstel-lijst.** (1) Dubbelklik/2
+> tabs kan een deelbetaling dubbel boeken (S240 vondst 2) — idempotentie-slot; (2)
+> belofte-taak naast actieve regeling = dubbel bewakingswerk (S241 voorstel 2) — kies +
+> onderbouw; (3) eigenaarloze te-laat-taken melden bij "willekeurig eerste" gebruiker
+> (S241 voorstel 3). **Signaleren bij start: 2 verjaringsmeldingen (IN100015/IN100127)
+> voor Lisanne/Arsalan.** Daarnaast blijven staan: 2 open mails (IN100128, IN100586),
+> Lisanne-antwoorden (IN100592/IN100606/IN100492), opruimronde mét GO, rest
+> S239-voorstel-lijst (categorie 'onduidelijk', overbetaling-knop, cascade,
+> weekend-logica), BaseNet-delisting, kostenblokje, fysieke-telefoon-check,
+> opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen, 4 cosmetische restjes
+> S235, sharp-CVE's. KvK: niet naar vragen. Derde AI-testronde: afgevoerd (S241) —
+> pas weer bij wijzigingen aan prompts/schema's/antwoord-logica.
 
 ## Projectdocumenten
 

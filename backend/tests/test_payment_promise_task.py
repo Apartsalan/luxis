@@ -295,3 +295,100 @@ async def test_manual_close_skips_promise_task(
     tasks = await _tasks(db, test_tenant.id, case.id)
     assert len(tasks) == 1
     assert tasks[0].status == "skipped"
+
+
+@pytest.mark.asyncio
+async def test_promise_with_active_arrangement_makes_no_task(
+    db, test_tenant, test_user, test_company
+):
+    """S242 (S241 voorstel 2): belofte-mail op een zaak met lopende regeling →
+    géén belofte-taak. De termijn-bewaking bewaakt die betaling al (te-laat-
+    termijnen → wanprestatie-route → taak 'Regeling verbroken'); een tweede
+    bewakingstaak op dezelfde betaling is dubbel werk (S241 live bewezen:
+    zelfde datum, twee taken). Zelfde poort als de regeling-verzoek-taak."""
+    from app.collections.schemas import ArrangementCreate
+    from app.collections.service import create_arrangement
+
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user, case_number="2026-09811"
+    )
+    await create_arrangement(
+        db, test_tenant.id, case.id,
+        ArrangementCreate(
+            total_amount=Decimal("900.00"), num_installments=3,
+            frequency="monthly", start_date=date.today() + timedelta(days=7),
+        ),
+    )
+    c = await _make_classification(
+        db, test_tenant.id, case.id, test_user.id,
+        promise_date=date.today() + timedelta(days=7),
+        promise_amount=Decimal("300.00"),
+    )
+    await _fire(db, test_tenant.id, case.id, c)
+
+    assert await _tasks(db, test_tenant.id, case.id) == []
+
+
+@pytest.mark.asyncio
+async def test_promise_after_ended_arrangement_still_makes_task(
+    db, test_tenant, test_user, test_company
+):
+    """Tegenproef: een geannuleerde/verbroken regeling bewaakt niets meer —
+    dan moet een nieuwe belofte wél gewoon een taak geven."""
+    from app.collections.schemas import ArrangementCreate
+    from app.collections.service import cancel_arrangement, create_arrangement
+
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user, case_number="2026-09812"
+    )
+    arrangement = await create_arrangement(
+        db, test_tenant.id, case.id,
+        ArrangementCreate(
+            total_amount=Decimal("900.00"), num_installments=3,
+            frequency="monthly", start_date=date.today() + timedelta(days=7),
+        ),
+    )
+    await cancel_arrangement(db, test_tenant.id, arrangement.id)
+
+    c = await _make_classification(
+        db, test_tenant.id, case.id, test_user.id,
+        promise_date=date.today() + timedelta(days=7),
+    )
+    await _fire(db, test_tenant.id, case.id, c)
+
+    assert len(await _tasks(db, test_tenant.id, case.id)) == 1
+
+
+@pytest.mark.asyncio
+async def test_new_arrangement_skips_open_promise_task(
+    db, test_tenant, test_user, test_company
+):
+    """S242 — omgekeerde volgorde van hetzelfde dubbel-werk: de belofte-taak
+    staat al open en dáárna wordt de regeling vastgelegd (de gewone gang:
+    debiteur belooft → vraagt regeling → Lisanne legt vast). De regeling
+    neemt de bewaking over → open belofte-taak wordt 'skipped'
+    (S236-conventie: achterhaald, niet volbracht)."""
+    from app.collections.schemas import ArrangementCreate
+    from app.collections.service import create_arrangement
+
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user, case_number="2026-09813"
+    )
+    c = await _make_classification(
+        db, test_tenant.id, case.id, test_user.id,
+        promise_date=date.today() + timedelta(days=5),
+    )
+    await _fire(db, test_tenant.id, case.id, c)
+    assert len(await _tasks(db, test_tenant.id, case.id)) == 1
+
+    await create_arrangement(
+        db, test_tenant.id, case.id,
+        ArrangementCreate(
+            total_amount=Decimal("900.00"), num_installments=3,
+            frequency="monthly", start_date=date.today() + timedelta(days=7),
+        ),
+    )
+
+    tasks = await _tasks(db, test_tenant.id, case.id)
+    assert len(tasks) == 1
+    assert tasks[0].status == "skipped"

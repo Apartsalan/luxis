@@ -1029,6 +1029,22 @@ async def ensure_payment_promise_task(
     if case is None or case.status in TERMINAL_STATUSES:
         return False
 
+    # S242 (S241 voorstel 2): loopt er een actieve regeling, dan bewaakt de
+    # termijn-bewaking die betaling al (te-late termijn → wanprestatie-route →
+    # taak "Regeling verbroken") — een tweede bewakingstaak op dezelfde
+    # betaling is dubbel werk. Zelfde poort als ensure_arrangement_request_task.
+    active_arr = (
+        await db.execute(
+            select(PaymentArrangement.id).where(
+                PaymentArrangement.tenant_id == tenant_id,
+                PaymentArrangement.case_id == case_id,
+                PaymentArrangement.status == "active",
+            ).limit(1)
+        )
+    ).scalar_one_or_none()
+    if active_arr:
+        return False
+
     existing = (
         await db.execute(
             select(WorkflowTask.id).where(
@@ -1176,6 +1192,9 @@ async def create_arrangement(
         await db.flush()
         # S235 — regeling getroffen → zaak naar 'Bijhouden regeling' (hold).
         await _move_case_to_regeling_step(db, tenant_id, case_id)
+        # S242 — de regeling neemt de bewaking over: open belofte-taak wordt
+        # 'skipped' (achterhaald, niet volbracht — S236-conventie).
+        await close_payment_promise_tasks(db, tenant_id, case_id, outcome="skipped")
         await db.refresh(arrangement)
         return arrangement
 
@@ -1238,6 +1257,9 @@ async def create_arrangement(
     await db.flush()
     # S235 — regeling getroffen → zaak naar 'Bijhouden regeling' (hold).
     await _move_case_to_regeling_step(db, tenant_id, case_id)
+    # S242 — de regeling neemt de bewaking over: open belofte-taak wordt
+    # 'skipped' (achterhaald, niet volbracht — S236-conventie).
+    await close_payment_promise_tasks(db, tenant_id, case_id, outcome="skipped")
     await db.refresh(arrangement)
     return arrangement
 

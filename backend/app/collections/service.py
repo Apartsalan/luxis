@@ -1023,14 +1023,21 @@ async def close_payment_promise_tasks(
     db: AsyncSession,
     tenant_id: uuid.UUID,
     case_id: uuid.UUID,
+    *,
+    outcome: str = "completed",
 ) -> int:
-    """S240 — zaak volledig betaald → open betaalbelofte-taken zijn klaar.
+    """S240 — open betaalbelofte-taken sluiten als er niets meer te bewaken valt.
 
-    Aangehaakt op on_payment_received (het gedeelde punt van álle betaalroutes;
-    gekozen boven een check bij taak-weergave omdat de taak dan ook écht dicht
-    staat in tellers en lijsten). Elke volledige betaling sluit de taak — ook
-    een betaling ná de beloofde datum maakt bewaken zinloos. Returnt het aantal
-    gesloten taken.
+    Twee aanroepers (S236-conventie completed vs skipped):
+    - on_payment_received (zaak volledig betaald) → 'completed'; het gedeelde
+      punt van álle betaalroutes — gekozen boven een check bij taak-weergave
+      omdat de taak dan ook écht dicht staat in tellers en lijsten. Ook een
+      betaling ná de beloofde datum maakt bewaken zinloos.
+    - update_case_status (handmatig afgesloten, bv. cliënt trekt in) →
+      'skipped'; de belofte is niet nagekomen maar achterhaald. Zonder deze
+      route bleef de taak eeuwig open op een gesloten dossier (S239-
+      spooktaken-patroon, Fable-review).
+    Returnt het aantal gesloten taken.
     """
     from app.workflow.models import WorkflowTask
 
@@ -1045,7 +1052,7 @@ async def close_payment_promise_tasks(
     )
     tasks = list(result.scalars().all())
     for task in tasks:
-        task.status = "completed"
+        task.status = outcome
         task.completed_at = datetime.now(UTC)
     if tasks:
         await db.flush()

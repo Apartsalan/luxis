@@ -851,6 +851,15 @@ async def update_case_status(
             db, tenant_id, case_id, reason=f"Zaak gesloten (status '{new_status}')"
         )
 
+        # S240 (Fable-review) — gesloten zaak → open betaalbelofte-taken zijn
+        # achterhaald ('skipped', S236-conventie); anders blijven ze eeuwig
+        # open op een dicht dossier (S239-spooktaken-patroon).
+        from app.collections.service import close_payment_promise_tasks
+
+        await close_payment_promise_tasks(
+            db, tenant_id, case_id, outcome="skipped"
+        )
+
     await db.refresh(case)
     return case
 

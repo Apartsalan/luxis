@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Mail,
   ArrowDownLeft,
@@ -62,14 +63,14 @@ import { Reply, Forward } from "lucide-react";
 
 export default function CorrespondentiePage() {
   // Tab state — S240: ?filter=unlinked (melding-doorklik + dashboard-link)
-  // opent direct de Ongesorteerd-tab. ponytail: query-param direct lezen bij
-  // mount — vermijdt useSearchParams + Suspense-eis (zelfde patroon als
-  // instellingen).
-  const [activeTab, setActiveTab] = useState<"alle" | "ongesorteerd" | "aanvragen">(() => {
-    if (typeof window === "undefined") return "alle";
-    const filter = new URLSearchParams(window.location.search).get("filter");
-    return filter === "unlinked" ? "ongesorteerd" : "alle";
-  });
+  // opent direct de Ongesorteerd-tab. Via useSearchParams (patroon zaken-
+  // pagina), niet window.location bij mount: een klik op de meldingen-bel
+  // terwijl je al óp de Mail-pagina staat is een navigatie zonder remount —
+  // alleen dit abonnement ziet die wissel (Fable-review S240).
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<"alle" | "ongesorteerd" | "aanvragen">(() =>
+    searchParams.get("filter") === "unlinked" ? "ongesorteerd" : "alle"
+  );
 
   // Data hooks
   const { data: unlinkedData, isLoading } = useUnlinkedEmails(100);
@@ -103,6 +104,16 @@ export default function CorrespondentiePage() {
     attachInvoices: boolean;
   } | null>(null);
   const [aiDraftSending, setAiDraftSending] = useState(false);
+
+  // S240 — melding-doorklik terwijl de Mail-pagina al open staat: navigatie
+  // zonder remount → alleen dit abonnement ziet de wissel naar ?filter=unlinked.
+  useEffect(() => {
+    if (searchParams.get("filter") === "unlinked") {
+      setActiveTab("ongesorteerd");
+      setSelectedEmailId(null);
+      setSelectedIds(new Set());
+    }
+  }, [searchParams]);
 
   const openAiDraft = async (draftId: string, sourceEmail: SyncedEmailDetail) => {
     try {

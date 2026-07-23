@@ -264,3 +264,34 @@ async def test_partial_payment_keeps_promise_task_open(
     tasks = await _tasks(db, test_tenant.id, case.id)
     assert len(tasks) == 1
     assert tasks[0].status in ("pending", "due")
+
+
+@pytest.mark.asyncio
+async def test_manual_close_skips_promise_task(
+    db, test_tenant, test_user, test_company
+):
+    """S240 Fable-review: zaak handmatig afgesloten (cliënt trekt in, debiteur
+    betaalde rechtstreeks) → open betaalbelofte-taak wordt 'skipped' — er valt
+    niets meer te bewaken. Zonder dit blijft de taak eeuwig open op een gesloten
+    dossier (het S239-spooktaken-patroon)."""
+    from app.cases.schemas import CaseStatusUpdate
+    from app.cases.service import update_case_status
+
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user, case_number="2026-09810"
+    )
+    c = await _make_classification(
+        db, test_tenant.id, case.id, test_user.id,
+        promise_date=date.today() + timedelta(days=5),
+    )
+    await _fire(db, test_tenant.id, case.id, c)
+    assert len(await _tasks(db, test_tenant.id, case.id)) == 1
+
+    await update_case_status(
+        db, test_tenant.id, case.id, test_user.id,
+        CaseStatusUpdate(new_status="afgesloten", note="S240-test"),
+    )
+
+    tasks = await _tasks(db, test_tenant.id, case.id)
+    assert len(tasks) == 1
+    assert tasks[0].status == "skipped"

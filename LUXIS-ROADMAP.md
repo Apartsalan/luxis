@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 23 juli 2026 (S243 — opruimronde, 607-check + fase-vindbaarheid LIVE, 11 dagvaarden-dossiers heropend, 4-sessieplan demo-punten). Rapport: entry S243 in `SESSION-NOTES.md`. **Volgende = S244: mail-werkbank (`docs/sessions/PROMPT-S244.md`).**
+**Laatst bijgewerkt:** 23 juli 2026 (S244 — mail-werkbank LIVE: draad-gegroepeerde correspondentie, draad overal, Verzonden-map, vrij bericht-shell; visueel bewezen desktop + mobiel). Rapport: entry S244 in `SESSION-NOTES.md`. **Volgende = S245: taken + meldingen (`docs/sessions/PROMPT-S245.md`).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,22 +53,25 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 23 juli 2026, S243)
+## 🎯 Huidige prioriteit (bijgewerkt 23 juli 2026, S244)
 
-> ✅ **S243 AFGEROND.** (1) Opruimronde: 37 test-taken, 14 test-adviezen, 38
-> testmails, 15 test-intakes afgevoerd (dry-run + natelling exact); 4 echte mails
-> + 1 echte intake liggen bij Lisanne/Arsalan. (2) Bewezen: alle 607
-> BaseNet-export-dossiers staan 1-op-1 in Luxis; vindbaarheids-gat gedicht
-> (zoeken + filter op BaseNet-fase, `062ac4b`, visueel bewezen). (3) De 11
-> "Akkoord dagvaarden"-dossiers heropend (stap gelijknamig, eigenaar Lisanne,
-> rente loopt, 0 mails). (4) Demo-puntenlijst (13 punten) gemeten en verdeeld
-> over 4 sessies. Rapport: entry S243 in SESSION-NOTES.
+> ✅ **S244 AFGEROND — mail-werkbank LIVE (demo-punten blok 1).** (1)
+> Correspondentie-tab draad-gegroepeerd (Gmail-stijl gesprekkenlijst +
+> leesvenster, nieuwste bericht open). (2) Draad overal: onder de mail in het
+> Mail-leesvenster én als rechterkolom naast het AI-concept (mobiel gestapeld).
+> (3) Verzonden-map (Alles / Postvak IN / Verzonden, server-side filter). (4)
+> Vrij bericht-sjabloon + Beantwoorden prefillt de shell (aanhef + huisstijl +
+> citaat). Klikronde-vondst direct gefixt: groepering op genormaliseerd
+> onderwerp (prod-meting: 7/47 thread-ids vs 1472 onderwerp-groepen). Alles
+> visueel bewezen op prod, desktop + mobiel, 11 screenshots. Rapport: entry
+> S244 in SESSION-NOTES. **Signalering: derde betwistingsmail IN100592 (23-7
+> 16:29) + auto-concept wachten op Lisanne.**
 >
-> 🎯 **VOLGENDE (S244-S247): demo-puntenreeks** — masterplan
-> `docs/plans/PLAN-DEMO-PUNTEN-S243.md`: S244 mail-werkbank (correspondentie-tab
-> redesign, draad overal, Verzonden-map, lege sjabloon), S245 taken+meldingen,
-> S246 uitgesteld versturen (alle 7 verzenddeuren), S247 AI-kennislaag. Harde
-> eis: visueel testen met Playwright + screenshots. Parallel beslispunt:
+> 🎯 **VOLGENDE (S245-S247): rest demo-puntenreeks** — masterplan
+> `docs/plans/PLAN-DEMO-PUNTEN-S243.md`: S245 taken+meldingen (dossierinfo op
+> taken, filters, dubbel-wegklik-bug, mail-meldingen weg na antwoord), S246
+> uitgesteld versturen (alle 7 verzenddeuren), S247 AI-kennislaag. Harde eis:
+> visueel testen met Playwright + screenshots. Parallel beslispunt:
 > fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`, 406
 > dossiers, GO per groep). Verder blijven staan: IN100015-melding wegklikken
 > (onterecht, gestuit), IN100127 beoordelen, 2 open mails (IN100128/IN100586),

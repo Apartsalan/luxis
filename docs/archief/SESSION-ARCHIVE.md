@@ -10887,3 +10887,86 @@ Live-bewijzen op prod: draad 0→2, factuurwaarschuwing zichtbaar, reply-call 40
 S234: incassostappen kritisch herzien — situatie-stappen i.p.v. platte lijst; brief
 koppelen aan derde/laatste sommatie; batch/follow-up op de gedeelde doorschuif-logica.
 Zie `docs/sessions/PROMPT-S234.md`.
+
+## Sessie 234 (21 juli 2026, Fable-onderzoek/ontwerp → Opus-bouw → Fable-review — incassostappen situatie-gestuurd afgemaakt, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S234. In de bron gemeten (fable-diepte): het stappen-model is onder
+water al situatie-gestuurd (stilte → follow-up-advies + AI-concept; verweer → auto-switch;
+betaling; regeling). Geen nieuw model nodig — de gaten gedicht. **Kernvondst tijdens de
+plan-review: mijn eigen vraag-premisse klopte niet** — het systeem zet een dossier ál
+automatisch op 'betaald' bij volledige betaling (`workflow/hooks.py::on_payment_received`);
+Blok C-betaling daarom NIET gebouwd, als vraag voor Arsalan neergelegd.
+
+**Blok A — één doorschuif-motor (LIVE).** `advance_after_step_send` is nu de enige motor
+voor álle stap-brief-routes (compose/send + AI-concept gebruikten 'm al; batch + follow-up
+gemigreerd). Nieuwe gedeelde guard `advance_guard_reason`: niet doorschuiven bij gesloten
+zaak, openstaand verweer, terminale/hold-doelstap, of **consumentendossier → zakelijke stap**
+(nieuw gat: na de derde sommatie zijn alle vervolgstappen b2b → een b2c-zaak zou richting
+faillissement geduwd worden; nu gestopt + eenmalige "vervolg bepalen"-taak). Deze waarborgen
+zaten eerder alléén in `_try_auto_advance` (verwijderd). `record_send`-vlag behoudt "batch-
+generatie zónder verzending schuift door zonder email_sent te zetten".
+
+**Blok B — derde + laatste sommatie een brief (LIVE, prod-mutatie).** Derde sommatie →
+`wederom_sommatie_kort`, laatste → `sommatie_laatste_voor_fai` (bestaande BaseNet-renderers).
+2 UPDATEs op prod (dry-run + natelling: beide stappen NULL → gezet; 11 geraakte dossiers zijn
+testdata; sjablonen nergens anders in gebruik). Nu draagt het hele hoofdpad (6 stappen) een
+brief → verzending schuift die stappen door (S232-mechaniek, geen codewijziging), doorschuif-
+regels bestaan al. `STEP_TEMPLATE_FAMILIES` kreeg een eigen derde-familie.
+
+**Blok D — stilte zonder AI-kosten (LIVE, wens Arsalan tijdens review).** De dagelijkse
+AI-conceptbatch slaat nu elke match over waarvan de doelstap een sjabloon heeft → 0 AI-oproepen
+voor stilte (was 21 op 21-7); verweer-concepten (mail-hook) + handmatige AI-knoppen blijven.
+De follow-up-adviseur (elke 30 min, géén AI) is het seintje "tijd voor {volgende sommatie}" +
+sjabloon-verzending. Scanner-skip op open staphistorie met email_sent toegevoegd (geen
+her-advies van een via de app verstuurde brief). **CORRECTIE (Fable-review 22-7): de
+motivatie voor die skip klopte niet** — voor de 7 'Eerste sommatie'-dossiers is in Luxis
+nooit iets verstuurd (0 mail-logs/documenten/uitgaande mails) en ze hebben als
+import-dossiers géén staphistorie, dus de skip raakt ze per definitie niet. "Brief 12
+dagen weg" was vermoedelijk de ouderdom van het openstaande advies (aangemaakt 9-7). De
+7 pending adviezen zijn TERECHT (bevestigd Arsalan 22-7: BaseNet doet geen incasso meer,
+Luxis is de waarheid) en wachten op verwerking. De skip zelf is onschadelijk en blijft
+(dekt toekomstige echte verstuurd-maar-niet-doorgeschoven-gevallen).
+`evaluate_timeout_rules` filtert
+gesloten/verweer/b2c→b2b — **IN100613** (afgesloten, maar op 'Tweede sommatie') kreeg daardoor
+elke ochtend een nieuw sommatie-concept; die stroom is nu dicht (de zaak zelf onaangeraakt).
+
+### Gewijzigde bestanden
+Backend: `incasso/service.py` (guard + motor + families + seed + `_ensure_followup_decision_task`,
+`_try_auto_advance` weg), `incasso/automation_service.py` (evaluator-guard),
+`ai_agent/followup_service.py` (motor + scanner-skip), `workflow/scheduler.py` (batch-skip).
+Tests: `test_advance_after_send_routes.py` (guard-matrix + b2c-taak + verweer), `test_followup.py`
+(scanner-skip), `test_incasso_pipeline.py` (evaluator-skip; `_try_auto_advance`-tests weg).
+1 commit (`bd81744`), backend gedeployd via SSH `--force-recreate` (geen migratie). Prod-DB:
+2 UPDATEs op `incasso_pipeline_steps` (template_type).
+
+### Verificatie
+423 tests groen in de brede -k-run (1 test-isolatie-ERROR die geïsoleerd slaagt, raakt niet
+mijn code); gerichte suites groen (incasso 55, follow-up+advance 61). Ruff `app/` schoon.
+Backend healthy na deploy. Prod nageteld: hoofdpad = 6 stappen mét sjabloon (AI-batch-skip-set);
+doorschuif-regels Derde→Laatste→Faillissement aanwezig. CI-afsluitcheck: zie kop.
+
+### Bekende issues / bewust niet gedaan
+- **Blok C betaling NIET gebouwd** — foute premisse: `on_payment_received` sluit al
+  automatisch af bij €0 openstaand. Arsalans keuze "taak i.p.v. automatisch" = wijziging van
+  bestaand gedrag → eerst bevestigen. **Vraag voor Arsalan.**
+- **IN100613 onaangeraakt** — afgesloten (15-7) maar op stap 'Tweede sommatie'. Codefix stopt
+  de dagelijkse concept-stroom; de zaak-data zelf raak ik niet aan. **Vraag voor Lisanne
+  klaargezet** (wat is er gebeurd, mag 'ie naar 'Afgesloten').
+- **Geen live-mailproef** — echt versturen is een naar-buiten-actie (GO per geval); Arsalan
+  keek niet mee. Keten is unit+integratie-getest + op prod-data nageteld. Arsalan kan het op
+  2026-00006 (zijn gmail) zelf natrekken.
+- **Generate-only batch schuift nog steeds door zonder verzending** (bestaand gedrag, bewust
+  behouden via `record_send=False`) — latente eigenaardigheid, buiten S234-scope.
+- **Uit de Fable-review 22-7 (naast de scanner-correctie hierboven):** (a) doorschuiven
+  maakt geen taak meer aan op de nieuwe stap (`_create_tasks_for_step` verdween uit de
+  batch/follow-up-route; compose/AI hadden 'm sinds S232 al niet) — takenpagina leunt nu
+  volledig op de follow-up-adviseur; **beslispunt voor Arsalan/Lisanne** welke pagina de
+  werklijst is. (b) In de dagelijkse AI-batch tellen sjabloon-skips mee voor het
+  50/dag-budget (randgeval, éénregel-fix, kan mee in S235). (c) De b2c-"vervolg
+  bepalen"-taak wordt niet aangemaakt als de doelstap óók hold/terminaal is
+  (guard-volgorde) — speelt met de huidige prod-stappen niet.
+
+### Volgende sessie
+S235: betalingsregeling herkennen uit mail (classificatie bestaat al) + flexibel termijnschema.
+Eerst de 2 vragen hierboven met Arsalan/Lisanne afhandelen. Zie `docs/sessions/PROMPT-S235.md`.

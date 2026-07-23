@@ -2,10 +2,100 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 23 juli 2026 (S243 — opruimronde + 607-check + fase-vindbaarheid LIVE + 11 dagvaarden-dossiers heropend + 4-sessieplan demo-punten).
-**Laatste feature/fix:** Dossiers vindbaar op BaseNet-werkfase (zoekbalk + fase-filter, `062ac4b`, live + visueel bewezen); 11 "Akkoord dagvaarden"-dossiers heropend op de gelijknamige stap.
-**Openstaand:** demo-puntenreeks S244-S247 (mail-werkbank → taken+meldingen → uitgesteld versturen → AI-kennislaag, masterplan `docs/plans/PLAN-DEMO-PUNTEN-S243.md`); fase-heropening per groep (beslislijst `docs/plans/BASENET-STATUS-HERSTEL.md`, GO Lisanne/Arsalan); 4 review-mails in de ongesorteerde bak (Incassocenter, Factuur F2026-00001, 2× Purple Exchange) + intake Ram Charan Sukhdai (€ 10.824,97) bij Lisanne/Arsalan; IN100015-melding wegklikken (onterecht, gestuit); IN100127 beoordelen; 2 open mails (IN100128, IN100586) + verweer IN100592/IN100606 + IN100492 bij Lisanne; verweer-parkeerstap-voorstel; 193 ongelezen meldingen (optioneel opruimen). Losse punten: BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
-**Volgende sessie:** S244 — mail-werkbank (Opus); zie `docs/sessions/PROMPT-S244.md`.
+**Laatst bijgewerkt:** 23 juli 2026 (S244 — mail-werkbank LIVE: draad-gegroepeerde correspondentie, draad overal, Verzonden-map, vrij bericht-shell).
+**Laatste feature/fix:** Mail-werkbank (5 commits t/m `206def8`, live + visueel bewezen desktop en mobiel); klikronde-vondst direct gefixt: draad-groepering op genormaliseerd onderwerp (prod-meting: thread-ids bijna waardeloos op dossier-mails).
+**Openstaand:** demo-puntenreeks S245-S247 (taken+meldingen → uitgesteld versturen → AI-kennislaag, masterplan `docs/plans/PLAN-DEMO-PUNTEN-S243.md`); **nieuwe derde betwistingsmail IN100592 (23-7 16:29) + auto-concept wachten op Lisanne**; fase-heropening per groep (beslislijst `docs/plans/BASENET-STATUS-HERSTEL.md`); 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai bij Lisanne/Arsalan; IN100015-melding wegklikken; IN100127 beoordelen; 2 open mails (IN100128, IN100586) + verweer IN100592/IN100606 + IN100492 bij Lisanne; verweer-parkeerstap-voorstel; 193 ongelezen meldingen. Losse punten: BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
+**Volgende sessie:** S245 — taken + meldingen (Opus); zie `docs/sessions/PROMPT-S245.md`.
+
+## Sessie 244 (23 juli 2026, Opus-bouw — mail-werkbank: 4 demo-punten blok 1, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S244, op Opus (klopt met de prompt). Sessie-start: CI S243
+nagetrokken (feature-commit + docs-commit + Deploys groen). Referentie-onderzoek
+kort: Gmail/Outlook = conversation-lijst + leesvenster; Clio heeft juist een plat
+logboek (precies wat onwerkbaar bleek) — Gmail/Outlook als model. Plan
+voorgelegd, GO Arsalan ("ga gewoon door"), daarna 4 onderdelen gebouwd, elk een
+eigen commit:
+
+**1. Correspondentie-tab draad-gegroepeerd (`ed11d7a`).** De platte maillijst op
+het dossier is nu een gesprekkenlijst (compacte rij: richting-pijl, afzender,
+onderwerp + aantal, datum, ongelezen-vet, Review-badge, paperclip). Klik opent
+het gesprek in het leesvenster: berichten chronologisch, nieuwste open, oudere
+ingeklapt en lazy geladen; per bericht volledige kop, AI-beoordeling
+(ClassificationCard), bijlagen (download + opslaan in dossier) en acties
+(AI-antwoord/Beantwoorden/Doorsturen). Verzend-logboekregels (SMTP-brieven)
+staan als compacte regel in het gesprek (inhoud staat in Documenten).
+
+**2. Draad overal (`02ab4d9`).** (a) Mail-leesvenster (beide tabs): eerdere
+mailtjes van dezelfde draad onder de geopende mail (MailThreadPanel met nieuwe
+hideSource-vlag; alleen dossier-gekoppelde mail). (b) AI-concept-/opsteldialoog:
+op lg+ wordt het paneel breder (max-w-5xl) met de draad als rechterkolom (380px)
+naast het concept; onder lg blijft de S233-strook onderin (mobiel gestapeld).
+
+**3. Verzonden-map (`dec2c2a`).** direction-parameter (inbound/outbound,
+patroon-gevalideerd) op `/api/email/all` + schakelaar Alles / Postvak IN /
+Verzonden binnen "Alle e-mails". Server-side, dus zoeken + "meer laden" werken
+erdoorheen. Wachter dekt beide richtingen, geen-filter en 422.
+
+**4. Vrij bericht + nette beantwoorden (`a8e4cba`).** Renderer `vrij_bericht`:
+aanhef "Geachte heer, mevrouw," (huisconventie van álle sjablonen — prompt zei
+"heer/mevrouw", bewust afgeweken voor consistentie) + lege romp + bestaande
+huisstijl/handtekening/schuldhulpblok via render_plain_branded; in de dropdown
+onder "Overig". "Beantwoorden" op dossier-mail prefillt voortaan deze shell met
+het geciteerde origineel onderaan (nieuw optioneel quoted_html-veld op
+render-template); de shell is al aangekleed → defaultBodyBranded-vlag voorkomt
+dubbele aankleding. Zonder dossier: kale reply, huisstijl komt bij verzenden
+(bestaand gedrag). Kruispunt-check verzendroute: vrij_bericht kan nooit
+doorschuiven (geen stap-sjabloon), krijgt geen auto-bijlagen, reply-pad slaat
+sjabloon-afleiding over. 2 wachters (shell-inhoud, citaat-afbakening).
+
+**5. Klikronde-vondst → fix (`206def8`, LIVE).** Het antwoord van 13:18 op
+IN100592 stond los van zijn gesprek: de provider gaf het een nieuw
+conversation-id. In de bron gemeten: maar 7 van de 47 provider-threads op
+dossier-mails dragen >1 bericht, terwijl 1472 onderwerp-groepen dat wél doen
+(BaseNet-import heeft geen bruikbare thread-ids). Groepering nu op
+genormaliseerd onderwerp (Re:/Fwd: eraf; leeg onderwerp → thread-id → eigen id);
+MailThreadPanel matcht op onderwerp óf thread-id. Na de fix: het
+Verweer-gesprek is één draad met 3 berichten.
+
+### Gewijzigde bestanden
+Frontend: `zaken/[id]/components/CorrespondentieTab.tsx` (herschreven),
+`components/mail-thread-panel.tsx`, `components/email-compose-dialog.tsx`,
+`correspondentie/page.tsx`, `zaken/[id]/page.tsx`, `lib/email-reply.ts`,
+`hooks/use-email-sync.ts`. Backend: `email/{sync_service,sync_router,
+compose_router,incasso_templates}.py`. Tests: `test_email_sync.py` (+1 helper-
+param, +1 wachter), `test_email_branding.py` (+2 wachters). Commits `ed11d7a`,
+`02ab4d9`, `dec2c2a`, `a8e4cba`, `206def8`; 2× deploy via SSH `--force-recreate`
+(geen migratie).
+
+### Verificatie
+Brede run compose/send/template/branding 200 groen + test_email_sync 37 groen;
+ruff + tsc schoon na elk onderdeel. Playwright-klikronde op prod als Lisanne,
+desktop 1440×900 + mobiel 390×844, 11 screenshots bewaard (`~/s244-01` t/m
+`-11`): draadlijst, gesprek met 3 berichten (nieuwste open, ouder uitklappen met
+lazy-load + beoordeling), Beantwoorden-shell (aanhef/handtekening/betreft/citaat
+in de editor gemeten), Verzonden-map (3393 uit / 3137 in, rijen 200/0 en 0/200),
+leesvenster-draad "(2)", AI-concept naast draad (dialoog 1024px, kolom 380px;
+mobiel gestapeld, geen h-scroll). Login 200, containers healthy, 0 echte
+consolefouten. Testspoor opgeruimd: eigen testconcept discarded (natelling:
+alleen de automatische systeemdraft + taak van 16:36 blijft — echt werk).
+CI: `ed11d7a` + `a8e4cba` + S243-docs-run groen; `02ab4d9`/`dec2c2a`/`206def8`
+liepen nog bij schrijven — natrekken bij S245-start.
+
+### Bekende issues / bewust niet gedaan
+- **Verzonden-map toont alleen gesynchte mail** — oude SMTP-brieven (email_logs
+  zonder synced-spiegel) staan er niet in; die blijven zichtbaar op het dossier.
+- Onderwerp-groepering kan binnen één dossier mails van verschillende afzenders
+  met identiek onderwerp samenvoegen (bewust: zelfde partijen, zelfde gesprek).
+- Reply-shell + gebruiker wist álles in de editor → mail vertrekt zonder
+  huisstijl (randgeval; already_branded staat dan al vast).
+- Draadpaneel in het Mail-leesvenster alleen voor dossier-gekoppelde mail.
+- **Signalering (rolverdeling S240): derde betwistingsmail IN100592 binnengekomen
+  23-7 16:29** + automatische concept-draft/nakijk-taak van 16:36 — inhoudelijk
+  oppakken is aan Lisanne/Arsalan.
+
+### Volgende sessie
+S245 (Opus): taken + meldingen — zie `docs/sessions/PROMPT-S245.md`.
 
 ## Sessie 243 (23 juli 2026, Opus (start Fable) — opruimronde + demo-puntenlijst: meting, plan, fase-vindbaarheid, 11 heropend)
 
@@ -684,86 +774,3 @@ classificatie-call, ~¢) — dat is juist het doel van die tabel.
 S236: verwerk het antwoord van Lisanne over IN100613 (dry-run + GO + natelling) en het
 werklijst-beslispunt; daarna losse punten of nieuw hoofdonderwerp naar keuze Arsalan.
 Zie `docs/sessions/PROMPT-S236.md`.
-
-## Sessie 234 (21 juli 2026, Fable-onderzoek/ontwerp → Opus-bouw → Fable-review — incassostappen situatie-gestuurd afgemaakt, LIVE)
-
-### Samenvatting
-Startpunt PROMPT-S234. In de bron gemeten (fable-diepte): het stappen-model is onder
-water al situatie-gestuurd (stilte → follow-up-advies + AI-concept; verweer → auto-switch;
-betaling; regeling). Geen nieuw model nodig — de gaten gedicht. **Kernvondst tijdens de
-plan-review: mijn eigen vraag-premisse klopte niet** — het systeem zet een dossier ál
-automatisch op 'betaald' bij volledige betaling (`workflow/hooks.py::on_payment_received`);
-Blok C-betaling daarom NIET gebouwd, als vraag voor Arsalan neergelegd.
-
-**Blok A — één doorschuif-motor (LIVE).** `advance_after_step_send` is nu de enige motor
-voor álle stap-brief-routes (compose/send + AI-concept gebruikten 'm al; batch + follow-up
-gemigreerd). Nieuwe gedeelde guard `advance_guard_reason`: niet doorschuiven bij gesloten
-zaak, openstaand verweer, terminale/hold-doelstap, of **consumentendossier → zakelijke stap**
-(nieuw gat: na de derde sommatie zijn alle vervolgstappen b2b → een b2c-zaak zou richting
-faillissement geduwd worden; nu gestopt + eenmalige "vervolg bepalen"-taak). Deze waarborgen
-zaten eerder alléén in `_try_auto_advance` (verwijderd). `record_send`-vlag behoudt "batch-
-generatie zónder verzending schuift door zonder email_sent te zetten".
-
-**Blok B — derde + laatste sommatie een brief (LIVE, prod-mutatie).** Derde sommatie →
-`wederom_sommatie_kort`, laatste → `sommatie_laatste_voor_fai` (bestaande BaseNet-renderers).
-2 UPDATEs op prod (dry-run + natelling: beide stappen NULL → gezet; 11 geraakte dossiers zijn
-testdata; sjablonen nergens anders in gebruik). Nu draagt het hele hoofdpad (6 stappen) een
-brief → verzending schuift die stappen door (S232-mechaniek, geen codewijziging), doorschuif-
-regels bestaan al. `STEP_TEMPLATE_FAMILIES` kreeg een eigen derde-familie.
-
-**Blok D — stilte zonder AI-kosten (LIVE, wens Arsalan tijdens review).** De dagelijkse
-AI-conceptbatch slaat nu elke match over waarvan de doelstap een sjabloon heeft → 0 AI-oproepen
-voor stilte (was 21 op 21-7); verweer-concepten (mail-hook) + handmatige AI-knoppen blijven.
-De follow-up-adviseur (elke 30 min, géén AI) is het seintje "tijd voor {volgende sommatie}" +
-sjabloon-verzending. Scanner-skip op open staphistorie met email_sent toegevoegd (geen
-her-advies van een via de app verstuurde brief). **CORRECTIE (Fable-review 22-7): de
-motivatie voor die skip klopte niet** — voor de 7 'Eerste sommatie'-dossiers is in Luxis
-nooit iets verstuurd (0 mail-logs/documenten/uitgaande mails) en ze hebben als
-import-dossiers géén staphistorie, dus de skip raakt ze per definitie niet. "Brief 12
-dagen weg" was vermoedelijk de ouderdom van het openstaande advies (aangemaakt 9-7). De
-7 pending adviezen zijn TERECHT (bevestigd Arsalan 22-7: BaseNet doet geen incasso meer,
-Luxis is de waarheid) en wachten op verwerking. De skip zelf is onschadelijk en blijft
-(dekt toekomstige echte verstuurd-maar-niet-doorgeschoven-gevallen).
-`evaluate_timeout_rules` filtert
-gesloten/verweer/b2c→b2b — **IN100613** (afgesloten, maar op 'Tweede sommatie') kreeg daardoor
-elke ochtend een nieuw sommatie-concept; die stroom is nu dicht (de zaak zelf onaangeraakt).
-
-### Gewijzigde bestanden
-Backend: `incasso/service.py` (guard + motor + families + seed + `_ensure_followup_decision_task`,
-`_try_auto_advance` weg), `incasso/automation_service.py` (evaluator-guard),
-`ai_agent/followup_service.py` (motor + scanner-skip), `workflow/scheduler.py` (batch-skip).
-Tests: `test_advance_after_send_routes.py` (guard-matrix + b2c-taak + verweer), `test_followup.py`
-(scanner-skip), `test_incasso_pipeline.py` (evaluator-skip; `_try_auto_advance`-tests weg).
-1 commit (`bd81744`), backend gedeployd via SSH `--force-recreate` (geen migratie). Prod-DB:
-2 UPDATEs op `incasso_pipeline_steps` (template_type).
-
-### Verificatie
-423 tests groen in de brede -k-run (1 test-isolatie-ERROR die geïsoleerd slaagt, raakt niet
-mijn code); gerichte suites groen (incasso 55, follow-up+advance 61). Ruff `app/` schoon.
-Backend healthy na deploy. Prod nageteld: hoofdpad = 6 stappen mét sjabloon (AI-batch-skip-set);
-doorschuif-regels Derde→Laatste→Faillissement aanwezig. CI-afsluitcheck: zie kop.
-
-### Bekende issues / bewust niet gedaan
-- **Blok C betaling NIET gebouwd** — foute premisse: `on_payment_received` sluit al
-  automatisch af bij €0 openstaand. Arsalans keuze "taak i.p.v. automatisch" = wijziging van
-  bestaand gedrag → eerst bevestigen. **Vraag voor Arsalan.**
-- **IN100613 onaangeraakt** — afgesloten (15-7) maar op stap 'Tweede sommatie'. Codefix stopt
-  de dagelijkse concept-stroom; de zaak-data zelf raak ik niet aan. **Vraag voor Lisanne
-  klaargezet** (wat is er gebeurd, mag 'ie naar 'Afgesloten').
-- **Geen live-mailproef** — echt versturen is een naar-buiten-actie (GO per geval); Arsalan
-  keek niet mee. Keten is unit+integratie-getest + op prod-data nageteld. Arsalan kan het op
-  2026-00006 (zijn gmail) zelf natrekken.
-- **Generate-only batch schuift nog steeds door zonder verzending** (bestaand gedrag, bewust
-  behouden via `record_send=False`) — latente eigenaardigheid, buiten S234-scope.
-- **Uit de Fable-review 22-7 (naast de scanner-correctie hierboven):** (a) doorschuiven
-  maakt geen taak meer aan op de nieuwe stap (`_create_tasks_for_step` verdween uit de
-  batch/follow-up-route; compose/AI hadden 'm sinds S232 al niet) — takenpagina leunt nu
-  volledig op de follow-up-adviseur; **beslispunt voor Arsalan/Lisanne** welke pagina de
-  werklijst is. (b) In de dagelijkse AI-batch tellen sjabloon-skips mee voor het
-  50/dag-budget (randgeval, éénregel-fix, kan mee in S235). (c) De b2c-"vervolg
-  bepalen"-taak wordt niet aangemaakt als de doelstap óók hold/terminaal is
-  (guard-volgorde) — speelt met de huidige prod-stappen niet.
-
-### Volgende sessie
-S235: betalingsregeling herkennen uit mail (classificatie bestaat al) + flexibel termijnschema.
-Eerst de 2 vragen hierboven met Arsalan/Lisanne afhandelen. Zie `docs/sessions/PROMPT-S235.md`.

@@ -13,7 +13,7 @@ Deze migratie is bewust apart: s246 is al uitgerold, dus databases die hem al
 draaiden hebben deze reparatie nodig. ALTER ... SET DEFAULT is idempotent, dus
 een verse installatie (die s246 al gefixt binnenkrijgt) heeft er geen last van.
 
-Revision ID: s246b_scheduled_emails_timestamps
+Revision ID: s246b_sched_ts
 Revises: s246_scheduled_emails
 """
 
@@ -21,7 +21,7 @@ from collections.abc import Sequence
 
 from alembic import op
 
-revision: str = "s246b_scheduled_emails_timestamps"
+revision: str = "s246b_sched_ts"
 down_revision: str | None = "s246_scheduled_emails"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

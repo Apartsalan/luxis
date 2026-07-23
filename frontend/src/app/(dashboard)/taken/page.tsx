@@ -21,6 +21,7 @@ import {
   Eye,
   ArrowUpRight,
   RotateCcw,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -357,6 +358,9 @@ function DagstartLinks() {
 
 export default function TakenPage() {
   const [filter, setFilter] = useState<TaskFilter>("open");
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | "unassigned">("all");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     case_id: "",
@@ -437,23 +441,44 @@ export default function TakenPage() {
     });
   };
 
-  // Also fetch completed tasks for the "all" and "completed" views
-  // The my-tasks endpoint only returns open tasks, so we handle completed separately
+  // Taaktypes die daadwerkelijk in de lijst voorkomen — geen lege opties tonen.
+  const presentTypes = useMemo(() => {
+    const seen = new Set((tasks ?? []).map((t) => t.task_type));
+    return Array.from(seen);
+  }, [tasks]);
+
+  const hasActiveFilters = search.trim() !== "" || typeFilter !== "all" || ownerFilter !== "all";
+
+  // Status-weergave (Openstaand/Alles/Afgerond) + client-side filters:
+  // vrij zoeken op dossier/naam/taak, taaktype en eigenaar (aan mij / zonder).
   const filteredTasks = useMemo(() => {
     if (!tasks) return [];
-    switch (filter) {
-      case "open":
-        return tasks.filter(
-          (t) => t.status !== "completed" && t.status !== "skipped"
-        );
-      case "completed":
-        return tasks.filter(
-          (t) => t.status === "completed" || t.status === "skipped"
-        );
-      default:
-        return tasks;
+    let list = tasks;
+    if (filter === "open") {
+      list = list.filter((t) => t.status !== "completed" && t.status !== "skipped");
+    } else if (filter === "completed") {
+      list = list.filter((t) => t.status === "completed" || t.status === "skipped");
     }
-  }, [tasks, filter]);
+    if (typeFilter !== "all") {
+      list = list.filter((t) => t.task_type === typeFilter);
+    }
+    if (ownerFilter === "mine") {
+      list = list.filter((t) => t.assigned_to_id === user?.id);
+    } else if (ownerFilter === "unassigned") {
+      list = list.filter((t) => t.assigned_to_id === null);
+    }
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter((t) =>
+        [t.title, t.case?.case_number, t.case?.client_name, t.case?.debtor_name]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase()
+          .includes(q)
+      );
+    }
+    return list;
+  }, [tasks, filter, typeFilter, ownerFilter, search, user?.id]);
 
   const groups = useMemo(() => groupTasksByDate(filteredTasks), [filteredTasks]);
 
@@ -560,6 +585,57 @@ export default function TakenPage() {
           pagina + zijbalk-badge; hier alleen een compacte verwijzing (dagstart-hub)
           i.p.v. de volledige gekopieerde kaartlijsten. */}
       <DagstartLinks />
+
+      {/* Filters (client-side): vrij zoeken op dossier/naam/taak, taaktype, eigenaar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[180px]">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Zoek op dossier, naam of taak..."
+            aria-label="Zoek taken"
+            className="w-full rounded-lg border border-input bg-background py-2 pl-9 pr-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+          />
+        </div>
+        <select
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          aria-label="Filter op taaktype"
+          className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+        >
+          <option value="all">Alle types</option>
+          {presentTypes.map((t) => (
+            <option key={t} value={t}>
+              {TASK_TYPE_LABELS[t] || t}
+            </option>
+          ))}
+        </select>
+        <select
+          value={ownerFilter}
+          onChange={(e) => setOwnerFilter(e.target.value as "all" | "mine" | "unassigned")}
+          aria-label="Filter op eigenaar"
+          className="rounded-lg border border-input bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-colors"
+        >
+          <option value="all">Alle eigenaren</option>
+          <option value="mine">Aan mij</option>
+          <option value="unassigned">Zonder eigenaar</option>
+        </select>
+        {hasActiveFilters && (
+          <button
+            onClick={() => {
+              setSearch("");
+              setTypeFilter("all");
+              setOwnerFilter("all");
+            }}
+            className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <X className="h-3.5 w-3.5" />
+            Wissen
+          </button>
+        )}
+      </div>
 
       {/* Create task form */}
       {showForm && (
@@ -711,7 +787,7 @@ export default function TakenPage() {
 
       {/* Task groups */}
       {groups.length === 0 ? (
-        <EmptyState filter={filter} />
+        <EmptyState filter={filter} filtered={hasActiveFilters} />
       ) : (
         <div className="space-y-6">
           {groups.map((group) => (
@@ -754,7 +830,23 @@ export default function TakenPage() {
 
 // ── Empty State ──────────────────────────────────────────────────────────────
 
-function EmptyState({ filter }: { filter: TaskFilter }) {
+function EmptyState({ filter, filtered }: { filter: TaskFilter; filtered?: boolean }) {
+  if (filtered) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-20">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+          <Search className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <p className="mt-5 text-base font-medium text-muted-foreground">
+          Geen taken gevonden
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Geen taken die aan deze filters voldoen. Pas de filters aan of wis ze.
+        </p>
+      </div>
+    );
+  }
+
   if (filter === "completed") {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card/50 py-20">

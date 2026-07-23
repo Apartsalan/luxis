@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 23 juli 2026 (S246 — "Verstuur later" LIVE op alle zelf-opgestelde mails; live bewezen: mail vertrok automatisch en kwam aan). Rapport: entry S246 in `SESSION-NOTES.md`. **Volgende = eerst Fable-eindreview S246, daarna S247 AI-kennislaag (`docs/sessions/PROMPT-S247.md`).**
+**Laatst bijgewerkt:** 24 juli 2026, nacht (S246-nacht — eindreview + 4 reviewfixes live; "Verstuur later" nu óók op batch en follow-up, beide live bewezen op testdossiers en teruggezet). Rapport: entry S246-nacht in `SESSION-NOTES.md`. **Volgende = S247: verse-ogen-review nachtdiff + AI-kennislaag (`docs/sessions/PROMPT-S247.md`).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -69,13 +69,16 @@
 > Twee echte bugs onderweg gevangen (claim-terugdraai = dubbelverzendrisico;
 > ontbrekende DB-default liet inplannen op prod crashen — nu met wachter die de
 > hele foutsoort dekt). Rapport: entry S246 in SESSION-NOTES.
-> **Bewust uitgesteld (besluit Arsalan):** "Verstuur later" op de lopende-band-
-> knoppen (incassostap/opvolging over meerdere dossiers). Daar zit doc-generatie
-> + doorschuiven in de aanroeper, dus dat vraagt eerst een keuze: schuift de zaak
-> door bij het inplannen of pas bij verzending?
+> **S246-nacht (GO Arsalan):** eindreview gedraaid → 4 vondsten gefixt (betaald
+> dossier / al-verstuurd concept blokkeren de geplande mail; mislukte rijen
+> opruimbaar; meldingstekst). Lopende band alsnog gebouwd: batch + follow-up
+> uitstelbaar; bij inplannen gebeurt NIETS, op het verzendmoment draait exact de
+> knop-functie (brief met rentestand van dat moment, doorschuiven pas dan);
+> stap-anker-guard tegen de verkeerde brief. Beide ketens live bewezen op
+> testdossiers (00:14:22 en 00:19:22), dossiers teruggezet.
 >
-> 🎯 **VOLGENDE: (1) Fable-eindreview van S246** — verplicht, dit raakt alle
-> verzendroutes; nog niet gedraaid. (2) **S247 AI-kennislaag** — masterplan
+> 🎯 **VOLGENDE: (1) verse-ogen-review van de nachtdiff** (`90aa57f`+`8ef2d88`
+> — gebouwd én getest door dezelfde instantie). (2) **S247 AI-kennislaag** — masterplan
 > `docs/plans/PLAN-DEMO-PUNTEN-S243.md`: placeholder-bug in de prompt fixen +
 > wachter, juridische kennisregels via de bestaande goedkeur-flow (élke regel
 > langs Lisanne; 132 learned_answers wachten al), en na prompt-wijzigingen een

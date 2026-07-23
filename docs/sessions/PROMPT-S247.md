@@ -1,71 +1,61 @@
 cd Documents\luxis && claude --dangerously-skip-permissions
 
-Sessie 247 — Fable-eindreview S246 + AI-kennislaag (demo-punten blok 4)
+Sessie 247 — verse-ogen-review nachtdiff + AI-kennislaag (demo-punten blok 4)
 
 ## Model
-Deze sessie begint met REVIEW → start op **Fable** (`/model` → Fable 5,
-`/effort max`). Pas ná deel A omschakelen naar **Opus** voor het bouwwerk.
-**Meld de wissel zelf** — les S246: "bouwen → Opus" in een sessieprompt slaat op
-de BOUWfase; de plan- en reviewfase zijn altijd Fable.
+Start op **Fable** (`/effort max`) voor deel A (review). Daarna **Opus** voor
+deel B (bouwen). Meld de wissel zelf — les S246: "bouwen → Opus" in een
+sessieprompt slaat op de BOUWfase; plan- en reviewfase zijn altijd Fable.
 
 ## Start
 Draai `/sessie-start`. Masterplan: `docs/plans/PLAN-DEMO-PUNTEN-S243.md`
-(sectie S247). S246 (uitgesteld versturen) is LIVE — zie entry S246 in
-SESSION-NOTES. CI van S246 natrekken.
+(sectie S247). Lees entry **S246-nacht** in SESSION-NOTES: eindreview S246 is
+gedraaid (4 fixes live) én de lopende band (batch + follow-up) heeft nu ook
+"Verstuur later", beide live bewezen op testdossiers. CI van de nacht-commits
+natrekken.
 
-## Deel A (Fable) — eindreview S246, VERPLICHT en eerst
-S246 raakte élke verzendroute en de eindreview is nog niet gedraaid. Geen snelle
-zelfcontrole maar een zelfstandige brede jacht:
-- Lees de hele diff `9197f66`→`4269592` vers tegen.
-- Kruispunt-matrix over alle verzendroutes: doet een INGEPLANDE mail iets anders
-  dan een direct verstuurde? Let vooral op de afsplitsing `perform_compose_send`
-  in `compose_router.py` — is er gedrag verloren gegaan?
-- Actief proberen te weerleggen: wat als de gebruiker die de mail inplande
-  intussen gedeactiveerd is of van rol wisselt? Als het dossier gesloten/betaald
-  is? Als een bijlage van schijf verdwenen is? Bij twee backend-instanties
-  (claim-vangrail)? Blijven 'mislukt'-rijen ergens zichtbaar of verdwijnen ze
-  stil? Wat gebeurt er met een geplande mail als de wederpartij intussen
-  antwoordt?
-- Eigen visuele ronde op prod (desktop + mobiel), screenshots ook echt bekijken.
-- Bevindingen eerst voorleggen; repareren gebeurt op Opus.
+## Deel A (Fable) — verse-ogen-review van de NACHTDIFF
+De nacht-commits `90aa57f` + `8ef2d88` zijn gebouwd én getest door dezelfde
+Fable-instantie — tegen de vaste cyclus in (nachtopdracht Arsalan). Daarom:
+één verse tegenlezing van precies die twee commits. Aandachtspunten:
+- `_pre_send_blokkade` + `_run_batch_step`/`_run_followup` in
+  `email/scheduled_service.py`: sessie-/transactiegrenzen (claim-commit,
+  rollback-pad), tenant-context na commits.
+- Batch-inplannen: dekt de avondcontrole écht dezelfde gevallen als
+  `batch_execute` zelf zou weigeren? (stap, sjabloon, e-mail, poort)
+- Follow-up: goedkeuren-nu + uitvoeren-later — klopt de statusmachine in alle
+  volgordes (afwijzen ná inplannen, tweede planning, superseded)?
+- UI: `verstuur-later-menu.tsx` in batch- en follow-upvenster; "Weghalen" op
+  mislukte rijen. Visueel nalopen (screenshots bekijken).
+Repareren mag direct (kleine vondsten); grote vondsten eerst voorleggen.
 
 ## Deel B (Opus, na de review) — AI-kennislaag
-1. **Placeholder-bug IN100606** (demo-vraag Arsalan: "waarom kan Luxis hier geen
-   antwoord op geven?"). Gemeten (S243): de placeholder is bewust ontwerp
-   (`backend/app/ai_agent/incasso_email_prompts.py:314-318` — onbekend verweer →
-   placeholder i.p.v. verzonnen argument), maar de AI kopieerde de mal
-   `<kernverweer letterlijk uit incoming_defense>` LETTERLIJK in het concept
-   i.p.v. het echte verweer in te vullen. Fix de prompt-instructie + wachter op
-   de substitutie. Leg Arsalan in gewone taal uit: dit is een vangnet, geen fout
-   — Luxis verzint bewust geen juridische argumenten die Lisanne niet heeft
-   goedgekeurd.
-2. **Juridische kennisregels** (demo-wens IN100458: wederpartij-BV "wil de AV
-   vernietigen" — juridisch kansloos, art. 6:235 BW, maar Luxis herkent zulke
-   standaard-onzin niet). Ontwerp op Fable: curated bibliotheek
-   "veelvoorkomende onjuiste stellingen + standaard-weerlegging" als uitbreiding
-   van de bestaande verweer-bibliotheek (learned_answers, 132 rijen), via
-   DEZELFDE goedkeur-flow — élke regel langs Lisanne vóór gebruik. Géén
-   hardgecodeerde wetsartikelen zonder haar toets (juridische twijfel = flaggen).
-   Signaleer ook: de 132 bestaande kandidaten wachten al op Lisanne.
+1. **Placeholder-bug IN100606** (demo-vraag Arsalan). Gemeten (S243): de
+   placeholder is bewust ontwerp (`backend/app/ai_agent/incasso_email_prompts.py:314-318`
+   — onbekend verweer → placeholder i.p.v. verzonnen argument), maar de AI
+   kopieerde de mal `<kernverweer letterlijk uit incoming_defense>` LETTERLIJK
+   in het concept. Fix de prompt-instructie + wachter op de substitutie. Leg
+   Arsalan in gewone taal uit: dit is een vangnet, geen fout.
+2. **Juridische kennisregels** (demo-wens IN100458: BV "wil de AV vernietigen"
+   — kansloos, art. 6:235 BW, maar Luxis herkent zulke standaard-onzin niet).
+   Ontwerp op Fable: curated bibliotheek "veelvoorkomende onjuiste stellingen +
+   standaard-weerlegging" als uitbreiding van de verweer-bibliotheek
+   (learned_answers, 132 rijen), via DEZELFDE goedkeur-flow — élke regel langs
+   Lisanne vóór gebruik. Signaleer ook: de 132 kandidaten wachten al op haar.
 
 ## Verificatie
-- Kruispunt-check skill `breed-testen`: wachter per foutSOORT, niet per geval.
+- Kruispunt-check skill `breed-testen`; wachter per foutSOORT.
 - Wachters op prompt↔schema-sync (test_kimi_client_structured-patroon).
-- Derde AI-testronde: verse AI-antwoorden op de goud-gevallen
-  (`scripts/ai/antwoord_testronde.py`, rapport S238 als vergelijk), niets
-  versturen.
-- **Eén testrun tegelijk** — twee gelijktijdige pytest-runs op dezelfde testDB
-  gaven in S246 68 spookfouten die op een regressie leken.
-- uvx ruff; tsc; CI groen; deploy via SSH; login 200.
+- Derde AI-testronde na promptwijziging: verse AI-antwoorden op de goud-gevallen
+  (`scripts/ai/antwoord_testronde.py`, S238-rapport als vergelijk), niets versturen.
+- **Eén pytest-run tegelijk** (S246: twee gelijktijdige runs = 68 spookfouten).
+- uvx ruff; tsc; deploy via SSH; login 200.
 
 ## Constraints (wat NIET doen)
-- **Geen "Verstuur later" op de lopende-band-knoppen** (batch/follow-up) zonder
-  expliciet besluit van Arsalan — bewust uitgesteld in S246. Daar zit
-  doc-generatie + doorschuiven in de aanroeper, dus het vraagt eerst een keuze:
-  schuift de zaak door bij het inplannen, of pas als de mail echt weg is?
-- Geen echte debiteuren mailen; kostenbewust testen (ai_usage natellen).
-- Geen inhoudelijk dossierwerk (mails beantwoorden, dossierbeslissingen) — dat is
-  Lisanne. Vondsten signaleren in het verslag, niet aanbieden op te pakken.
+- Geen echte debiteuren mailen; testverzendingen alleen op testdossiers
+  (2026-00006/…-00015, gmail Arsalan) en netjes terugzetten.
+- Kostenbewust testen (ai_usage natellen).
+- Geen inhoudelijk dossierwerk — signaleren, niet oppakken (Lisanne).
 - KvK: niet naar vragen.
 
 ## Commit

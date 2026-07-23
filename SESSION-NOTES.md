@@ -2,10 +2,74 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 23 juli 2026 (S246 — "Verstuur later" LIVE op alle zelf-opgestelde mails; live-bewijs: mail vertrok automatisch om 23:25).
-**Laatste feature/fix:** wachtrij `scheduled_emails` + minuut-bezorger + knop met presets (4 commits `9197f66`→`4269592`); 2 echte bugs onderweg gevangen (claim-terugdraai = dubbelverzendrisico; ontbrekende DB-default liet inplannen op prod crashen).
-**Openstaand:** S247 AI-kennislaag (masterplan `docs/plans/PLAN-DEMO-PUNTEN-S243.md`); **"Verstuur later" op de lopende-band-knoppen (batch/follow-up) bewust uitgesteld — besluit Arsalan S246**; Fable-eindreview S246 nog niet gedraaid; **IN100592 3e betwisting + 2 regeling-taken IN100281/IN100537 wachten op Lisanne**; fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`); 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai. Losse punten: afgeronde taak toont nog "X dagen te laat"; BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
-**Volgende sessie:** S247 — AI-kennislaag (Opus), maar eerst Fable-eindreview van S246; zie `docs/sessions/PROMPT-S247.md`.
+**Laatst bijgewerkt:** 24 juli 2026, nacht (S246-nacht — Fable-eindreview gedraaid + 4 reviewfixes live + "Verstuur later" óók op batch/follow-up, beide live bewezen op testdossiers).
+**Laatste feature/fix:** blinde-wachtrij-guards (betaald dossier / al-verstuurd concept blokkeren) + lopende band uitstelbaar met stap-anker-guard (commits `90aa57f` + `8ef2d88`); beide soorten vertrokken automatisch en dossiers zijn teruggezet.
+**Openstaand:** S247 AI-kennislaag (masterplan `docs/plans/PLAN-DEMO-PUNTEN-S243.md`); verse-ogen-review van de NACHT-commits (gebouwd én getest door dezelfde Fable-instantie); **IN100592 3e betwisting + 2 regeling-taken IN100281/IN100537 wachten op Lisanne**; fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`); 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai. Losse punten: afgeronde taak toont nog "X dagen te laat"; melding bij mislukte geplande mail gaat alleen naar de inplanner (onzichtbaar als die inactief wordt); BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
+**Volgende sessie:** S247 — verse-ogen-review nachtdiff + AI-kennislaag; zie `docs/sessions/PROMPT-S247.md`.
+
+## Sessie 246-nacht (24 juli 2026, Fable solo op GO Arsalan — eindreview + reviewfixes + lopende band, LIVE)
+
+### Samenvatting
+Nachtopdracht Arsalan ("doe zoveel mogelijk, probeer ook de lopende band met
+testdossiers, fix het gewoon"). Alles op Fable gedaan — óók de bouw, want
+Arsalan sliep en kon niet naar Opus wisselen; kostenafwijking bewust genomen.
+
+**1. Fable-eindreview S246 (was verplicht open).** Hele diff tegen­gelezen op het
+kruispunt "de wereld verandert tussen inplannen en verzenden, en er kijkt geen
+mens meer": 4 vondsten, alle gefixt + wachters (`90aa57f`):
+- Dossier intussen betaald/afgesloten → geplande mail werd tóch verstuurd. Nu: guard blokkeert + melding.
+- AI-concept intussen handmatig verstuurd/afgewezen → geplande kopie = dubbele mail aan debiteur + extra doorschuif. Nu: guard blokkeert + melding.
+- Mislukte rij was onopruimbaar (bleef eeuwig staan). Nu: "Weghalen"-knop, foutreden blijft bewaard.
+- Nazorg-fout-melding zei "mail IS verstuurd" én "verstuur hem zelf" (uitnodiging tot dubbel). Tekst hangt nu af van of de mail echt weg is. Plus: bijlage-totaalgrootte al bij inplannen bewaakt.
+
+**2. Lopende band (`8ef2d88`, migratie s246c).** Het open ontwerpbesluit is
+genomen: bij inplannen gebeurt er NIETS (geen brief, geen document, geen
+doorschuiven); op het gekozen moment draait de bezorger exact dezelfde functie
+als de knop (batch_execute per dossier / execute_recommendation) — brief krijgt
+de rentestand van het verzendmoment, dossier schuift dan pas door. Follow-up:
+goedkeuren gebeurt wél meteen (besluit van vanavond), alleen uitvoeren wacht.
+Guards: stap-anker (batch: dossier op andere stap → verkeerde brief zou uitgaan
+→ blokkeer+meld), follow-up via de bestaande statusmachine (verouderd/al
+uitgevoerd → niets + melding), dubbel-plan-guard per aanbeveling. Wachtrij
+kreeg een soort-veld ('compose'/'batch_step'/'followup'). UI: gedeelde
+"Verstuur later"-knop in het batch-venster en de follow-up-voorvertoning.
+
+**3. Live bewezen op testdossiers (beide ketens, prod):**
+- Batch: 2026-00006 (Tweede sommatie) om 00:12 ingepland → 00:14:22 automatisch
+  vertrokken; brief gegenereerd óp het verzendmoment, mail via incasso@ in de
+  correspondentie, dossier doorgeschoven naar Derde sommatie. Daarna teruggezet.
+- Follow-up: 2026-00015 via de nieuwe UI-knop (voorvertoning → Verstuur later →
+  eigen tijdstip) → aanbeveling meteen 'approved', uitvoering 00:19:22:
+  brief verstuurd, aanbeveling 'executed', dossier doorgeschoven. Teruggezet
+  naar Derde sommatie (de verbruikte aanbeveling maakt de 30-min-scanner
+  vanzelf opnieuw aan als het dossier weer lang genoeg stilstaat).
+
+### Gewijzigde bestanden
+Backend: `email/scheduled_service.py` (guards + 2 soorten + inplan-functies),
+`email/scheduled_models.py`, migratie `s246c_sched_kinds.py`,
+`incasso/router.py`+`schemas.py` (batch scheduled_at),
+`ai_agent/followup_router.py` (schedule-execute).
+Frontend: `verstuur-later-menu.tsx` (nieuw, gedeeld), `incasso/page.tsx`,
+`followup/page.tsx`, `scheduled-emails-panel.tsx` (Weghalen), hooks.
+Tests: `test_scheduled_emails.py` 12→20 wachters. Commits `90aa57f`, `8ef2d88`.
+
+### Verificatie
+20 wachtrij-wachters + 78 keten-tests + 181 batch/follow-up/incasso-tests groen
+(runs ná elkaar, één tegelijk); ruff + tsc schoon; migratie s246c op prod; alle
+containers healthy; login 200; screenshots van batch-venster, follow-up-venster
+en wachtrij-blok bekeken; beide live-verzendingen in de database nagetrokken
+(rij sent/1 poging, document, synced_email via incasso@, stap-verschuiving).
+
+### Bekende issues / bewust niet gedaan
+- **Verse-ogen-review nodig op de nachtdiff** (`90aa57f`+`8ef2d88`): gebouwd én
+  getest door dezelfde instantie — tegen de vaste cyclus in; eerste taak S247.
+- Melding bij mislukte geplande verzending gaat alleen naar wie hem inplande;
+  wordt die gebruiker inactief, dan ziet niemand hem (klein, 2 gebruikers).
+- Batch-inplannen via de "Per stap"-weergave niet apart getest (zelfde dialoog).
+- CI-runs van de nacht-commits niet afgewacht (deploy via SSH; tests lokaal groen).
+
+### Volgende sessie
+S247: verse-ogen-review nachtdiff → AI-kennislaag. Zie `docs/sessions/PROMPT-S247.md`.
 
 ## Sessie 246 (23 juli 2026, Fable-plan → Opus-bouw — uitgesteld versturen, LIVE + live-bewijs)
 
@@ -741,75 +805,3 @@ S239: **Arsalan legt de hoofdtaak bij start zelf uit** (aangekondigd bij dit
 sessie-einde). Achtergrond-punten die er nog liggen (Lisanne-antwoorden,
 opruimronde, onbekend-afzender-gat) staan als context in
 `docs/sessions/PROMPT-S239.md`.
-
-## Sessie 237 (22 juli 2026, Fable-meting → Opus-bouw → Fable-review + Fable-onderzoek — sommatie-reacties + escalatie-taken LIVE + toekomst-repos)
-
-### Samenvatting
-Startpunt PROMPT-S237. Model-cyclus expliciet gevolgd na correctie Arsalan
-("dit is denkwerk → Fable"): meting/review/onderzoek op Fable, bouw op Opus.
-
-**1. Reacties op de 7 sommaties van 22-7 (vers gemeten op prod).** 0 bounces.
-Drie afzenders reageerden:
-- **IN100606 (Maatwerk)** — bekende betwisting; concept klaar, wacht op Lisanne
-  (keuze Arsalan: laten liggen).
-- **IN100592 (Onbevreesd) — nieuwe betwisting die het systeem NIET zag:** debiteur
-  Zwartbol mailde 2× vanaf privé-hotmail (ander adres dan waar de sommatie heen
-  ging, geen dossiernummer) → ongesorteerde bak, geen melding/beoordeling. Na
-  handmatig koppelen (keuze Arsalan, via de gewone app-route) deed Luxis de rest
-  binnen 6 min zélf: 2× betwisting geclassificeerd (85%/92%), zaak → 'Verweer
-  beantwoorden', concept klaar. Bijvangst: 2 concepten + 2 nakijk-taken (elke mail
-  triggerde er één) — opruimronde. **Structureel gat genoteerd: debiteur-reactie
-  vanaf onbekend adres valt stil** (alleen zichtbaar in ongesorteerde bak).
-- **IN100492 (Petri, buiten de 7)** — debiteur vraagt update op een AFGESLOTEN
-  dossier met €0 betaald (~€1.950 open). Vraag voor Lisanne.
-
-**2. Escalatie-taken op de werklijst (keuze Arsalan, LIVE + nageteld).** Elk open
-escalatie-advies krijgt een taak "Vervolg bepalen — {zaaknummer}" (source
-`followup_escalate`), knop "Beoordelen" → /followup. Sluit mee via supersede/
-afwijzen (skipped); de doorschuif-motor sluit bewust alléén verstuur-taken
-(brief ≠ escalatie-besluit); 'Uitvoeren' dedupet tegen de spiegel-taak.
-Prod: 14 taken = exact de 14 geldige pending escalate-adviezen (waarvan 4 échte
-'Voorstel dagvaarding'); IN100521 terecht overgeslagen (advies stale — zaak al op
-'Verzoekschrift faillissement'). Fable-review: GO; idempotentie live bewezen
-(2e scan → nog steeds 14/14), 0 onterechte sluitingen. Eén cosmetisch restje:
-logboekregel zegt "taak aangemaakt" ook als de spiegel al bestond.
-
-**3. Open-source-onderzoek (verzoek Arsalan, 10 videotools + GitHub-breed).**
-Uitkomst: architectuur gevalideerd — géén lijst "werk voor niks". Enige echte
-nu-klus: **Anthropic native structured outputs** vervangt de kwetsbare trefwoord-
-schema-detectie (`kimi_client._detect_schema`) → **hoofdtaak S238**. Besluiten
-Arsalan: (a) **agent-laag komt er t.z.t.** (als Luxis zo goed als klaar is), dan op
-pydantic-ai — tot die tijd alles agent-compatibel bouwen (service-laag-eerst, nu
-Working Agreement in CLAUDE.md); (b) toekomst-adopties met triggers in
-`docs/TOEKOMST-REPOS.md` (CAMT bij 2e bank, Langfuse self-host bij AI×10, Ollama
-bij klant-eis, pgvector bij RAG-heroverweging, Docling, mail-parser-reply) mét
-attendering-plicht; (c) afgewezen zonder nieuwe feiten: LiteLLM/Outlines/Chonkie/
-Crawl4AI/Qdrant/DSPy/Marker.
-
-### Gewijzigde bestanden
-Backend: `incasso/service.py` (close_followup_send_tasks → sources-parameter),
-`ai_agent/followup_service.py` (escalatie-spiegel + execute-dedupe). Frontend:
-`taken/page.tsx` (knop "Beoordelen"). Tests: `test_followup_send_tasks.py`
-(+5, 15 totaal). Docs: `docs/TOEKOMST-REPOS.md` (nieuw), `CLAUDE.md`
-(agent-compatibel-regel). Commits `ff21d81`, `2a05a6d`; backend+frontend via SSH
-`--force-recreate` (geen migratie). Prod-mutatie: 2 mails gekoppeld aan IN100592
-via de app-API (natelling 2/2).
-
-### Verificatie
-15 wachters groen; kruispunt-run followup/advance/workflow/arrangement 152 groen;
-ruff + tsc schoon; CI groen op ff21d81 (conclusion=success via API); containers
-healthy, login 200. Werklijst-natelling prod 14/14 met tweede scan (idempotent),
-0 onterechte taak-sluitingen. Onderzoek: web-bronnen in sessieverloop.
-
-### Bekende issues / bewust niet gedaan
-- **Gat: debiteur-reactie vanaf onbekend mailadres valt stil** (geen melding) —
-  kandidaat-verbetering, niet gebouwd (scope).
-- Opruimronde wacht op Arsalan+Lisanne: IN100607/IN100613/IN100521 stale adviezen,
-  6 oude nakijk-taken van 21-7, dubbel concept+taak IN100592, logboekregeltje
-  execute-escalate.
-- "Beoordelen"-knop niet visueel doorgeklikt (zelfde patroon als S236-knop; tsc schoon).
-- Verweer-concepten IN100592/IN100606 en IN100492-vraag liggen bij Lisanne.
-
-### Volgende sessie
-S238: native structured outputs-refactor (alle AI-aanroepen, eigen sessie, Opus +
-volle kruispunt-discipline). Zie `docs/sessions/PROMPT-S238.md`.

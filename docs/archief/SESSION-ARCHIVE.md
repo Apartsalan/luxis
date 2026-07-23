@@ -11151,3 +11151,75 @@ alle prod-mutaties met dry-run + natelling (10/7/7/7/7/14 exact).
 S237: reacties op de 7 sommaties verwerken (IN100606-verweer ligt bij Lisanne;
 meer reacties verwacht) + de open beslispunten hierboven. Zie
 `docs/sessions/PROMPT-S237.md`.
+
+## Sessie 237 (22 juli 2026, Fable-meting → Opus-bouw → Fable-review + Fable-onderzoek — sommatie-reacties + escalatie-taken LIVE + toekomst-repos)
+
+### Samenvatting
+Startpunt PROMPT-S237. Model-cyclus expliciet gevolgd na correctie Arsalan
+("dit is denkwerk → Fable"): meting/review/onderzoek op Fable, bouw op Opus.
+
+**1. Reacties op de 7 sommaties van 22-7 (vers gemeten op prod).** 0 bounces.
+Drie afzenders reageerden:
+- **IN100606 (Maatwerk)** — bekende betwisting; concept klaar, wacht op Lisanne
+  (keuze Arsalan: laten liggen).
+- **IN100592 (Onbevreesd) — nieuwe betwisting die het systeem NIET zag:** debiteur
+  Zwartbol mailde 2× vanaf privé-hotmail (ander adres dan waar de sommatie heen
+  ging, geen dossiernummer) → ongesorteerde bak, geen melding/beoordeling. Na
+  handmatig koppelen (keuze Arsalan, via de gewone app-route) deed Luxis de rest
+  binnen 6 min zélf: 2× betwisting geclassificeerd (85%/92%), zaak → 'Verweer
+  beantwoorden', concept klaar. Bijvangst: 2 concepten + 2 nakijk-taken (elke mail
+  triggerde er één) — opruimronde. **Structureel gat genoteerd: debiteur-reactie
+  vanaf onbekend adres valt stil** (alleen zichtbaar in ongesorteerde bak).
+- **IN100492 (Petri, buiten de 7)** — debiteur vraagt update op een AFGESLOTEN
+  dossier met €0 betaald (~€1.950 open). Vraag voor Lisanne.
+
+**2. Escalatie-taken op de werklijst (keuze Arsalan, LIVE + nageteld).** Elk open
+escalatie-advies krijgt een taak "Vervolg bepalen — {zaaknummer}" (source
+`followup_escalate`), knop "Beoordelen" → /followup. Sluit mee via supersede/
+afwijzen (skipped); de doorschuif-motor sluit bewust alléén verstuur-taken
+(brief ≠ escalatie-besluit); 'Uitvoeren' dedupet tegen de spiegel-taak.
+Prod: 14 taken = exact de 14 geldige pending escalate-adviezen (waarvan 4 échte
+'Voorstel dagvaarding'); IN100521 terecht overgeslagen (advies stale — zaak al op
+'Verzoekschrift faillissement'). Fable-review: GO; idempotentie live bewezen
+(2e scan → nog steeds 14/14), 0 onterechte sluitingen. Eén cosmetisch restje:
+logboekregel zegt "taak aangemaakt" ook als de spiegel al bestond.
+
+**3. Open-source-onderzoek (verzoek Arsalan, 10 videotools + GitHub-breed).**
+Uitkomst: architectuur gevalideerd — géén lijst "werk voor niks". Enige echte
+nu-klus: **Anthropic native structured outputs** vervangt de kwetsbare trefwoord-
+schema-detectie (`kimi_client._detect_schema`) → **hoofdtaak S238**. Besluiten
+Arsalan: (a) **agent-laag komt er t.z.t.** (als Luxis zo goed als klaar is), dan op
+pydantic-ai — tot die tijd alles agent-compatibel bouwen (service-laag-eerst, nu
+Working Agreement in CLAUDE.md); (b) toekomst-adopties met triggers in
+`docs/TOEKOMST-REPOS.md` (CAMT bij 2e bank, Langfuse self-host bij AI×10, Ollama
+bij klant-eis, pgvector bij RAG-heroverweging, Docling, mail-parser-reply) mét
+attendering-plicht; (c) afgewezen zonder nieuwe feiten: LiteLLM/Outlines/Chonkie/
+Crawl4AI/Qdrant/DSPy/Marker.
+
+### Gewijzigde bestanden
+Backend: `incasso/service.py` (close_followup_send_tasks → sources-parameter),
+`ai_agent/followup_service.py` (escalatie-spiegel + execute-dedupe). Frontend:
+`taken/page.tsx` (knop "Beoordelen"). Tests: `test_followup_send_tasks.py`
+(+5, 15 totaal). Docs: `docs/TOEKOMST-REPOS.md` (nieuw), `CLAUDE.md`
+(agent-compatibel-regel). Commits `ff21d81`, `2a05a6d`; backend+frontend via SSH
+`--force-recreate` (geen migratie). Prod-mutatie: 2 mails gekoppeld aan IN100592
+via de app-API (natelling 2/2).
+
+### Verificatie
+15 wachters groen; kruispunt-run followup/advance/workflow/arrangement 152 groen;
+ruff + tsc schoon; CI groen op ff21d81 (conclusion=success via API); containers
+healthy, login 200. Werklijst-natelling prod 14/14 met tweede scan (idempotent),
+0 onterechte taak-sluitingen. Onderzoek: web-bronnen in sessieverloop.
+
+### Bekende issues / bewust niet gedaan
+- **Gat: debiteur-reactie vanaf onbekend mailadres valt stil** (geen melding) —
+  kandidaat-verbetering, niet gebouwd (scope).
+- Opruimronde wacht op Arsalan+Lisanne: IN100607/IN100613/IN100521 stale adviezen,
+  6 oude nakijk-taken van 21-7, dubbel concept+taak IN100592, logboekregeltje
+  execute-escalate.
+- "Beoordelen"-knop niet visueel doorgeklikt (zelfde patroon als S236-knop; tsc schoon).
+- Verweer-concepten IN100592/IN100606 en IN100492-vraag liggen bij Lisanne.
+
+### Volgende sessie
+S238: native structured outputs-refactor (alle AI-aanroepen, eigen sessie, Opus +
+volle kruispunt-discipline). Zie `docs/sessions/PROMPT-S238.md`.

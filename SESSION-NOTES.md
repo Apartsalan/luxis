@@ -159,6 +159,28 @@ Arsalan gecorrigeerd, afgemaakt op Opus.
 - Meldingen over de nu gesloten test-taken blijven bestaan (onschadelijk).
 - CI van `062ac4b` + docs-commit liep nog bij afsluiten — natrekken bij S244.
 
+### Nagekomen (Fable-tegenlezing + herstel, parallel aan S244)
+Tegenlezing van het eigen S243-werk (read-only zolang S244 bouwde; herstel na
+GO Arsalan toen S244 klaar was):
+- **Bevestigd:** opruim-natellingen, 607-check, filter-code (routevolgorde,
+  tenant-scoping), heropening (0 mails, rente conform S207b-uitrol — IN100077
+  wettelijk want particulier), rooktest dossierpagina OK.
+- **Voorspelling bewezen:** scanner 16:14 → exact 11 adviezen 'escalate' + 11
+  taken "Vervolg bepalen". Bijvangst: 2 extra taken "Betalingsregeling
+  vastleggen" (IN100281, IN100537) — oude regelingsverzoek-mails (0.95) die nu
+  de zaak open is alsnog een bewakingstaak kregen; terecht gedrag, **inhoud voor
+  Lisanne** (IN100537-verzoek is van 22 juni!).
+- **Hersteld:** staphistorie-gat — 11 open historie-rijen toegevoegd (trigger
+  manual, notitie "Heropend uit BaseNet-fase", email_sent=false dus geen
+  scanner-effect); tijdlijn toont de stap nu (screenshot
+  `s243-herstel-tijdlijn-IN100487.png`). Zoekbalk-tekst noemt nu ook
+  factuurnummer + fase (mini-fix op Fable, gemeld).
+- **Werkwijze-les (gemaakt fout):** 2 draaiboek-checks (S195-notities,
+  rentetype) pas NÁ de heropening gedaan i.p.v. ervoor — uitkomst was schoon,
+  volgorde fout. Bij volgende fase-groepen: checks éérst.
+- **Signalering:** IN100592 (Zwartbol) mailde 23-7 opnieuw (13:21; derde
+  betwisting 16:29 zag S244 ook) — bij Lisanne.
+
 ### Volgende sessie
 S244 (Opus): mail-werkbank — zie `docs/sessions/PROMPT-S244.md`.
 

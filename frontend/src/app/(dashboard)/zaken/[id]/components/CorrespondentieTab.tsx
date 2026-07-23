@@ -643,6 +643,32 @@ function CorrespondentieTab({
                   (i) => i.type === "synced" && classificationMap.get(i.id)?.status === "pending"
                 );
                 const unread = thread.unreadCount > 0;
+                // S244-Fable-review: met een geopend gesprek is de lijst smal
+                // (2/5) — één regel drukte het onderwerp dan volledig weg.
+                // Smal = twee regels (afzender·datum / onderwerp), breed = één.
+                const narrow = !!selectedThread;
+                const naam = t.direction === "inbound" ? t.from : t.to;
+                const aantal = thread.items.length > 1 && (
+                  <span className="ml-1 text-xs text-muted-foreground font-normal">
+                    ({thread.items.length})
+                  </span>
+                );
+                const badges = (
+                  <>
+                    {pendingReview && (
+                      <span
+                        className="shrink-0 flex items-center gap-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600"
+                        title="Wacht op review"
+                      >
+                        <Bot className="h-2.5 w-2.5" />
+                        Review
+                      </span>
+                    )}
+                    {thread.hasAttachments && (
+                      <Paperclip className="h-3 w-3 shrink-0 text-muted-foreground" />
+                    )}
+                  </>
+                );
                 return (
                   <button
                     key={thread.key}
@@ -654,51 +680,71 @@ function CorrespondentieTab({
                         : ""
                     }`}
                   >
-                    {/* Compacte rij: pijl · afzender · onderwerp · datum */}
-                    <div className="flex items-center gap-2">
-                      {t.direction === "inbound" ? (
-                        <ArrowDownLeft className="h-3.5 w-3.5 shrink-0 text-blue-600" />
-                      ) : (
-                        <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                      )}
-                      {unread && (
-                        <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" aria-label="Ongelezen" />
-                      )}
-                      <span
-                        className={`shrink-0 max-w-[35%] truncate text-sm ${
-                          unread ? "font-semibold" : "font-medium"
-                        } text-foreground`}
-                      >
-                        {t.direction === "inbound" ? t.from : t.to}
-                      </span>
-                      <span
-                        className={`min-w-0 flex-1 truncate text-sm ${
-                          unread ? "font-semibold text-foreground" : "text-muted-foreground"
-                        }`}
-                      >
-                        {thread.subject}
-                        {thread.items.length > 1 && (
-                          <span className="ml-1 text-xs text-muted-foreground font-normal">
-                            ({thread.items.length})
+                    {narrow ? (
+                      <>
+                        <div className="flex items-center gap-2">
+                          {t.direction === "inbound" ? (
+                            <ArrowDownLeft className="h-3.5 w-3.5 shrink-0 text-blue-600" />
+                          ) : (
+                            <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                          )}
+                          {unread && (
+                            <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" aria-label="Ongelezen" />
+                          )}
+                          <span
+                            className={`min-w-0 flex-1 truncate text-sm ${
+                              unread ? "font-semibold" : "font-medium"
+                            } text-foreground`}
+                          >
+                            {naam}
                           </span>
+                          <span className="shrink-0 text-xs text-muted-foreground whitespace-nowrap">
+                            {formatDateTime(t.date, "short")}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 flex items-center gap-1.5 pl-[22px]">
+                          <span
+                            className={`min-w-0 flex-1 truncate text-sm ${
+                              unread ? "font-semibold text-foreground" : "text-muted-foreground"
+                            }`}
+                          >
+                            {thread.subject}
+                            {aantal}
+                          </span>
+                          {badges}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {t.direction === "inbound" ? (
+                          <ArrowDownLeft className="h-3.5 w-3.5 shrink-0 text-blue-600" />
+                        ) : (
+                          <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                         )}
-                      </span>
-                      {pendingReview && (
+                        {unread && (
+                          <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" aria-label="Ongelezen" />
+                        )}
                         <span
-                          className="shrink-0 flex items-center gap-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600"
-                          title="Wacht op review"
+                          className={`shrink-0 max-w-[35%] truncate text-sm ${
+                            unread ? "font-semibold" : "font-medium"
+                          } text-foreground`}
                         >
-                          <Bot className="h-2.5 w-2.5" />
-                          Review
+                          {naam}
                         </span>
-                      )}
-                      {thread.hasAttachments && (
-                        <Paperclip className="h-3 w-3 shrink-0 text-muted-foreground" />
-                      )}
-                      <span className="shrink-0 text-xs text-muted-foreground whitespace-nowrap">
-                        {formatDateTime(t.date, "short")}
-                      </span>
-                    </div>
+                        <span
+                          className={`min-w-0 flex-1 truncate text-sm ${
+                            unread ? "font-semibold text-foreground" : "text-muted-foreground"
+                          }`}
+                        >
+                          {thread.subject}
+                          {aantal}
+                        </span>
+                        {badges}
+                        <span className="shrink-0 text-xs text-muted-foreground whitespace-nowrap">
+                          {formatDateTime(t.date, "short")}
+                        </span>
+                      </div>
+                    )}
                   </button>
                 );
               })}

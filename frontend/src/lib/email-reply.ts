@@ -57,9 +57,14 @@ function quoteBlock(email: SyncedEmailDetail): string {
 /** Beantwoorden: naar de afzender, "Re:", geciteerd origineel, gekoppeld aan de keten. */
 export function buildReplyPrefill(email: SyncedEmailDetail): ReplyPrefill {
   const subject = stripPrefix(email.subject, ["re:"]);
+  // S244-review: antwoord op een eigen UITGAANDE mail moet naar de ontvanger
+  // (de debiteur), niet naar de afzender — dat zijn wij zelf. De gespreks-
+  // weergave zet nu op elk bericht een Beantwoorden-knop, dus deze route is
+  // makkelijk te raken.
+  const outbound = email.direction === "outbound";
   return {
-    to: email.from_email,
-    toName: email.from_name || "",
+    to: outbound ? email.to_emails[0] || "" : email.from_email,
+    toName: outbound ? "" : email.from_name || "",
     subject: subject.toLowerCase().startsWith("re:") ? subject : `Re: ${subject}`,
     bodyHtml: quoteBlock(email),
     replyToMessageId: email.provider_message_id ?? null,

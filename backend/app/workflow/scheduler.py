@@ -619,26 +619,32 @@ async def daily_deadline_notifications() -> None:
                     )
                 )
                 for task in overdue_tasks.scalars().all():
-                    target_user = task.assigned_to_id or (users[0].id if users else None)
-                    if not target_user:
-                        continue
+                    # S242 (S241 voorstel 3): eigenaarloze taak → melding bij
+                    # álle actieve gebruikers, consistent met de werklijst (die
+                    # eigenaarloze taken ook aan iedereen toont). Voorheen ging
+                    # de melding naar de toevallig 'eerste' gebruiker.
+                    if task.assigned_to_id:
+                        target_users = [task.assigned_to_id]
+                    else:
+                        target_users = [u.id for u in users]
                     # Dedup per (user, case, task) — and use a long window so
                     # an unresolved overdue task doesn't spawn a fresh notification
                     # every day. Once the task is closed it disappears from the
                     # overdue list, so the long window has no negative effect.
-                    created = await create_notification_if_not_exists(
-                        session, tenant.id, target_user,
-                        NotificationCreate(
-                            type="deadline_overdue",
-                            title=f"Taak te laat: {task.title}",
-                            message=f"Deadline was {task.due_date.strftime('%d-%m-%Y')}",
-                            case_id=task.case_id,
-                            task_id=task.id,
-                        ),
-                        dedup_hours=24 * 30,
-                    )
-                    if created:
-                        total_created += 1
+                    for target_user in target_users:
+                        created = await create_notification_if_not_exists(
+                            session, tenant.id, target_user,
+                            NotificationCreate(
+                                type="deadline_overdue",
+                                title=f"Taak te laat: {task.title}",
+                                message=f"Deadline was {task.due_date.strftime('%d-%m-%Y')}",
+                                case_id=task.case_id,
+                                task_id=task.id,
+                            ),
+                            dedup_hours=24 * 30,
+                        )
+                        if created:
+                            total_created += 1
 
             await session.commit()
             if total_created > 0:

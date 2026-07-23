@@ -14,6 +14,7 @@ import base64
 import logging
 import re
 import uuid
+from datetime import datetime
 from email.message import EmailMessage
 from email.utils import formataddr
 from pathlib import Path
@@ -159,6 +160,15 @@ class ComposeRequest(BaseModel):
     # doorschuiven én de draft-status. Zonder deze guard zou een AI-concept waar de
     # gebruiker alsnog een sjabloon bij koos via BEIDE routes doorschuiven (dubbel).
     skip_pipeline_advance: bool = False
+    # S246 — "Verstuur later". Leeg = nu versturen (ongewijzigd gedrag). Gevuld =
+    # de mail gaat de wachtrij in en wordt op dít moment verstuurd. Altijd UTC;
+    # de voorkant rekent de Nederlandse tijd om vóór verzenden.
+    scheduled_at: datetime | None = None
+    # S246 — AI-concept-nazorg (concept afvinken, review-taak sluiten, stap door).
+    # Bij een DIRECTE verzending regelt de voorkant dit zelf via advance-after-send
+    # en blijft dit veld leeg; bij een GEPLANDE mail geeft de voorkant het concept
+    # hier mee, zodat de nazorg pas draait als de mail écht weg is.
+    advance_draft_id: uuid.UUID | None = None
 
     @field_validator("to", "cc", "bcc")
     @classmethod
@@ -204,6 +214,11 @@ class ComposeResponse(BaseModel):
     # (voor de toast op de voorkant). Blijft False op alle niet-stap-routes.
     advanced: bool = False
     advanced_to_step: str | None = None
+    # S246 — ingepland i.p.v. verstuurd. De voorkant toont dan een andere toast en
+    # slaat de advance-after-send-aanroep over (de bezorger doet die nazorg later).
+    scheduled: bool = False
+    scheduled_email_id: uuid.UUID | None = None
+    scheduled_at: datetime | None = None
 
 
 class RenderTemplateRequest(BaseModel):
@@ -398,7 +413,37 @@ async def send_via_provider(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Send an email via the connected email provider (Outlook/BaseNet-IMAP)."""
+    """Send an email via the connected email provider (Outlook/BaseNet-IMAP).
+
+    S246 ('Verstuur later') — mét een gepland moment gaat de mail NIET nu weg maar
+    de wachtrij in; de minuut-bezorger draait op dat moment `perform_compose_send`,
+    exact de functie hieronder. Zonder gepland moment verandert er niets: direct
+    versturen, zelfde pad als altijd.
+    """
+    if data.scheduled_at is not None:
+        from app.email.scheduled_service import schedule_compose_email
+
+        return await schedule_compose_email(db, user, data)
+
+    return await perform_compose_send(data, user, db)
+
+
+async def perform_compose_send(
+    data: ComposeRequest,
+    user: User,
+    db: AsyncSession,
+) -> ComposeResponse:
+    """De verzendmachine achter compose/send — aanroepbaar zónder HTTP-request.
+
+    S246: afgesplitst van het endpoint zodat de wachtrij-bezorger van 'Verstuur
+    later' dezelfde machine kan bedienen. De inhoud is ongewijzigd overgenomen —
+    afzender-vangrail, bijlagen, renteoverzicht, huisstijl, drieluik-logging,
+    meldingen opruimen en doorschuiven gebeuren dus bij een geplande mail op het
+    VERZENDmoment, precies als bij een directe verzending.
+
+    `user` is de échte User (de bezorger laadt hem uit de wachtrij-regel), niet
+    een namaak-object — zodat afzender en vastlegging kloppen.
+    """
     # S205 — wettelijke waarborg art. 6:96 lid 6 BW op het AI-concept/losse verzendpad
     # (de derde deur naast batch en follow-up). Alleen voor een VERSE case-mail (geen
     # antwoord/doorsturen) op een BIK-claimende sommatie-stap bij een consument. Zonder

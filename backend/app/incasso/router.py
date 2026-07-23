@@ -369,74 +369,19 @@ async def advance_after_send(
     de `advance_to_step` rule uit (default timeout-rule op huidige stap),
     markeert de bijbehorende workflow_task als afgerond en zet de AIDraft
     status op `sent`.
+
+    S246 — de logica zelf staat in de service (`complete_ai_draft_after_send`),
+    zodat de wachtrij-bezorger van 'Verstuur later' exact dezelfde nazorg draait
+    zodra een ingeplande concept-mail écht verstuurd is.
     """
-    from datetime import UTC, datetime
+    from app.incasso.service import complete_ai_draft_after_send
 
-    from app.ai_agent.draft_service import DraftStatus, get_draft_by_id, update_draft_status
-    from app.workflow.models import WorkflowTask
-
-    draft = await get_draft_by_id(db, current_user.tenant_id, data.draft_id)
-    if not draft:
-        raise NotFoundError("Concept niet gevonden")
-    if str(draft.case_id) != str(case_id):
-        raise NotFoundError("Concept hoort niet bij dit dossier")
-
-    # Markeer draft als verzonden
-    await update_draft_status(
-        db, current_user.tenant_id, draft.id, DraftStatus.SENT, user_id=current_user.id
-    )
-
-    # S223 — alleen STAP-concepten schuiven het dossier door. Een antwoord op een
-    # mail van de wederpartij (reply_to_email) of een vrij opgesteld bericht
-    # (free_compose) is geen stap-brief: versturen daarvan mag de pijplijn niet
-    # bewegen en telt niet als stap-communicatie. Oude concepten (intent NULL,
-    # van vóór S221) waren allemaal stap-concepten → die houden het oude gedrag.
-    is_step_draft = draft.intent in (None, "next_step")
-
-    # Sluit gekoppelde workflow_task af (review_ai_draft task in /taken)
-    task_result = await db.execute(
-        select(WorkflowTask).where(
-            WorkflowTask.tenant_id == current_user.tenant_id,
-            WorkflowTask.case_id == case_id,
-            WorkflowTask.task_type == "review_ai_draft",
-            WorkflowTask.status.in_(["pending", "due", "overdue"]),
-        )
-    )
-    for task in task_result.scalars().all():
-        cfg = task.action_config or {}
-        if cfg.get("draft_id") == str(draft.id):
-            task.status = "completed"
-            task.completed_at = datetime.now(UTC)
-
-    # Geen stap-concept → klaar: verzonden gemarkeerd + taak afgesloten, maar de
-    # pijplijn blijft staan waar hij staat (S223).
-    if not is_step_draft:
-        await db.commit()
-        return {
-            "advanced": False,
-            "reason": "Antwoord/vrij bericht — dossier blijft op de huidige stap",
-        }
-
-    # Advance to next step volgens default timeout-rule — gedeelde helper (S232),
-    # dezelfde die de sjabloon-verzendknop (compose/send) gebruikt.
-    case = (await db.execute(
-        select(Case).where(
-            Case.tenant_id == current_user.tenant_id,
-            Case.id == case_id,
-        )
-    )).scalar_one_or_none()
-    if not case or not case.incasso_step_id:
-        await db.commit()
-        return {"advanced": False, "reason": "Dossier heeft geen actieve stap"}
-
-    from app.incasso.service import advance_after_step_send
-
-    result = await advance_after_step_send(
+    result = await complete_ai_draft_after_send(
         db,
         current_user.tenant_id,
-        case,
         current_user.id,
-        notes="Doorgeschoven na verzending concept",
+        case_id,
+        data.draft_id,
     )
     await db.commit()
     return result

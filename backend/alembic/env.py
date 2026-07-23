@@ -20,6 +20,7 @@ from app.database import Base
 from app.documents.models import DocumentTemplate, GeneratedDocument  # noqa: F401
 from app.email.attachment_models import EmailAttachment  # noqa: F401
 from app.email.oauth_models import EmailAccount  # noqa: F401
+from app.email.scheduled_models import ScheduledEmail  # noqa: F401
 from app.email.synced_email_models import SyncedEmail  # noqa: F401
 from app.ai_agent.followup_models import FollowupRecommendation  # noqa: F401
 from app.ai_agent.intake_models import IntakeRequest  # noqa: F401

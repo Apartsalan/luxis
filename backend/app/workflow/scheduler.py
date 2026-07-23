@@ -877,6 +877,17 @@ async def daily_pipeline_auto_drafts() -> None:
         logger.exception("Scheduler: pipeline auto-drafts faalde")
 
 
+async def scheduled_email_dispatch() -> None:
+    """Elke minuut: verstuur de geplande mails die rijp zijn (S246).
+
+    De logica staat in de service; deze wikkel houdt het scheduler-bestand dun en
+    zorgt dat een fout hier nooit de andere jobs raakt.
+    """
+    from app.email.scheduled_service import send_due_scheduled_emails
+
+    await send_due_scheduled_emails()
+
+
 def start_scheduler() -> None:
     """Start the APScheduler with daily + periodic jobs."""
     if scheduler.running:
@@ -961,6 +972,20 @@ def start_scheduler() -> None:
         id="email_auto_sync",
         name="Auto-sync email accounts",
         replace_existing=True,
+    )
+
+    # Elke minuut: geplande mails ('Verstuur later', S246). max_instances=1 +
+    # coalesce: een trage ronde laat de volgende wachten i.p.v. er dwars doorheen
+    # te lopen, en een gemiste minuut wordt niet ingehaald met een stapel runs.
+    # De echte vangrail tegen dubbel versturen is de claim-UPDATE in de service.
+    scheduler.add_job(
+        scheduled_email_dispatch,
+        IntervalTrigger(minutes=1),
+        id="scheduled_email_dispatch",
+        name="Verstuur geplande e-mails",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
     )
 
     # Every 6 minutes: AI email classification (only if API key configured)

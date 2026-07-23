@@ -28,6 +28,7 @@ from app.documents.router import router as documents_router
 from app.email.compose_router import router as email_compose_router
 from app.email.oauth_router import router as email_oauth_router
 from app.email.router import router as email_router
+from app.email.scheduled_router import router as email_scheduled_router
 from app.email.sync_router import router as email_sync_router
 from app.exact_online.router import router as exact_online_router
 from app.incasso.router import router as incasso_router
@@ -169,6 +170,7 @@ app.include_router(email_router)
 app.include_router(email_oauth_router)
 app.include_router(email_sync_router)
 app.include_router(email_compose_router)
+app.include_router(email_scheduled_router)
 app.include_router(search_router)
 app.include_router(incasso_router)
 app.include_router(ai_agent_router)

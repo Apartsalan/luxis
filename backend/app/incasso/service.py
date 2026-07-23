@@ -1945,3 +1945,84 @@ async def get_queue_counts(
         wik_expired=wik_expired,
         action_required=action_required,
     )
+
+
+async def complete_ai_draft_after_send(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID,
+    case_id: uuid.UUID,
+    draft_id: uuid.UUID,
+) -> dict:
+    """Nazorg ná een verstuurd AI-concept: concept op 'verzonden', review-taak dicht,
+    dossier één stap door.
+
+    S246 — gedeelde motor van TWEE routes: de knop in het scherm
+    (`advance-after-send`) en de wachtrij-bezorger van 'Verstuur later'. Bij een
+    geplande mail mag deze nazorg pas draaien als de mail ÉCHT weg is, niet al bij
+    het inplannen — anders staat het dossier een stap verder terwijl de mail nog in
+    de wachtrij zit (of gefaald is). Eén functie voor beide routes, zodat de regels
+    (alleen stap-concepten schuiven door, S223) niet uit elkaar kunnen lopen.
+
+    Commit doet de aanroeper — zo rolt bij de bezorger de nazorg mee terug met de
+    statusregel van de wachtrij.
+    """
+    from datetime import UTC, datetime
+
+    from app.ai_agent.draft_service import DraftStatus, get_draft_by_id, update_draft_status
+
+    draft = await get_draft_by_id(db, tenant_id, draft_id)
+    if not draft:
+        raise NotFoundError("Concept niet gevonden")
+    if str(draft.case_id) != str(case_id):
+        raise NotFoundError("Concept hoort niet bij dit dossier")
+
+    await update_draft_status(db, tenant_id, draft.id, DraftStatus.SENT, user_id=user_id)
+
+    # S223 — alleen STAP-concepten schuiven het dossier door. Een antwoord op een
+    # mail van de wederpartij (reply_to_email) of een vrij opgesteld bericht
+    # (free_compose) is geen stap-brief: versturen daarvan mag de pijplijn niet
+    # bewegen en telt niet als stap-communicatie. Oude concepten (intent NULL,
+    # van vóór S221) waren allemaal stap-concepten → die houden het oude gedrag.
+    is_step_draft = draft.intent in (None, "next_step")
+
+    # Sluit gekoppelde workflow_task af (review_ai_draft task in /taken)
+    task_result = await db.execute(
+        select(WorkflowTask).where(
+            WorkflowTask.tenant_id == tenant_id,
+            WorkflowTask.case_id == case_id,
+            WorkflowTask.task_type == "review_ai_draft",
+            WorkflowTask.status.in_(["pending", "due", "overdue"]),
+        )
+    )
+    for task in task_result.scalars().all():
+        cfg = task.action_config or {}
+        if cfg.get("draft_id") == str(draft.id):
+            task.status = "completed"
+            task.completed_at = datetime.now(UTC)
+
+    # Geen stap-concept → klaar: verzonden gemarkeerd + taak afgesloten, maar de
+    # pijplijn blijft staan waar hij staat (S223).
+    if not is_step_draft:
+        return {
+            "advanced": False,
+            "reason": "Antwoord/vrij bericht — dossier blijft op de huidige stap",
+        }
+
+    # Advance to next step volgens default timeout-rule — gedeelde helper (S232),
+    # dezelfde die de sjabloon-verzendknop (compose/send) gebruikt.
+    case = (
+        await db.execute(
+            select(Case).where(Case.tenant_id == tenant_id, Case.id == case_id)
+        )
+    ).scalar_one_or_none()
+    if not case or not case.incasso_step_id:
+        return {"advanced": False, "reason": "Dossier heeft geen actieve stap"}
+
+    return await advance_after_step_send(
+        db,
+        tenant_id,
+        case,
+        user_id,
+        notes="Doorgeschoven na verzending concept",
+    )

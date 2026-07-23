@@ -31,6 +31,7 @@ for _mod in [
     "app.email.attachment_models",
     "app.email.models",
     "app.email.oauth_models",
+    "app.email.scheduled_models",
     "app.email.synced_email_models",
     "app.exact_online.models",
     "app.incasso.models",

@@ -25,8 +25,10 @@ APP_DIR = Path(__file__).resolve().parents[1] / "app"
 
 # Aanroepers van provider.send_message buiten de provider-implementaties zelf.
 EXPECTED_PROVIDER_EXITS = {
-    # Logt via write_outbound_log (S220 N1) — zie test hieronder.
-    ("app/email/compose_router.py", "send_via_provider"),
+    # Logt via write_outbound_log (S220 N1) — zie test hieronder. S246: de
+    # verzendmachine is afgesplitst van het endpoint (send_via_provider) zodat de
+    # wachtrij-bezorger van 'Verstuur later' exact dezelfde functie draait.
+    ("app/email/compose_router.py", "perform_compose_send"),
     # HET gedeelde verzendkanaal; logt zelf via write_outbound_log.
     ("app/email/send_service.py", "send_with_attachment"),
 }
@@ -46,8 +48,9 @@ EXPECTED_SMTP_EXITS = {
 
 SUBJECT_ALLOWLIST = {
     # data.subject: vrije mail = gebruikers-onderwerp; concept-/sjabloonroutes
-    # krijgen het bouwer-onderwerp al server-side mee (S223).
-    ("app/email/compose_router.py", "send_via_provider"),
+    # krijgen het bouwer-onderwerp al server-side mee (S223). S246: functie
+    # hernoemd bij de afsplitsing van de verzendmachine (zie hierboven).
+    ("app/email/compose_router.py", "perform_compose_send"),
     # Doorgeefluik: subject is een parameter, de aanroepers bouwen hem.
     ("app/email/send_service.py", "send_with_attachment"),
     # DOCX-tak: bouwer-onderwerp via variabele email_subject (regel ~508).

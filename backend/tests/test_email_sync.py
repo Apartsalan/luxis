@@ -80,6 +80,7 @@ async def _create_synced_email(
     subject: str = "Test email",
     from_email: str = "sender@test.nl",
     is_dismissed: bool = False,
+    direction: str = "inbound",
 ) -> SyncedEmail:
     """Insert a SyncedEmail record directly (no provider sync needed)."""
     email = SyncedEmail(
@@ -96,7 +97,7 @@ async def _create_synced_email(
         snippet=subject[:80],
         body_text=f"Body of: {subject}",
         body_html=f"<p>Body of: {subject}</p>",
-        direction="inbound",
+        direction=direction,
         is_read=True,
         has_attachments=False,
         is_dismissed=is_dismissed,
@@ -230,6 +231,45 @@ async def test_get_all_emails_filter_and_search(
     found = resp.json()
     assert found["total"] == 1
     assert found["emails"][0]["subject"] == "Sommatie Jansen"
+
+
+@pytest.mark.asyncio
+async def test_get_all_emails_direction_filter(
+    client: AsyncClient,
+    auth_headers: dict,
+    db: AsyncSession,
+    test_tenant: Tenant,
+    test_user: User,
+):
+    """S244 — direction-filter voedt de Postvak IN/Verzonden-schakelaar."""
+    account = await _create_email_account(db, test_tenant.id, test_user.id)
+
+    await _create_synced_email(db, test_tenant.id, account.id, subject="Binnengekomen vraag")
+    await _create_synced_email(
+        db, test_tenant.id, account.id, subject="Verstuurde sommatie", direction="outbound"
+    )
+    await db.commit()
+
+    # inbound → alleen het binnengekomen bericht
+    resp = await client.get("/api/email/all?direction=inbound", headers=auth_headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 1
+    assert data["emails"][0]["subject"] == "Binnengekomen vraag"
+
+    # outbound → alleen het verstuurde bericht
+    resp = await client.get("/api/email/all?direction=outbound", headers=auth_headers)
+    data = resp.json()
+    assert data["total"] == 1
+    assert data["emails"][0]["subject"] == "Verstuurde sommatie"
+
+    # zonder direction → allebei
+    resp = await client.get("/api/email/all", headers=auth_headers)
+    assert resp.json()["total"] == 2
+
+    # ongeldige waarde → 422 (patroon-validatie)
+    resp = await client.get("/api/email/all?direction=zijwaarts", headers=auth_headers)
+    assert resp.status_code == 422
 
 
 # ── Link Email ───────────────────────────────────────────────────────────────

@@ -246,13 +246,20 @@ export default function CorrespondentiePage() {
     activeTab === "alle" && debouncedEmailFilter.trim()
       ? debouncedEmailFilter.trim()
       : undefined;
+  // S244 — Postvak IN / Verzonden binnen "Alle e-mails" (direction-filter
+  // op de server, dus zoeken + paginering werken er gewoon doorheen).
+  const [directionFilter, setDirectionFilter] = useState<"all" | "inbound" | "outbound">("all");
   const {
     data: allEmailsPages,
     isLoading: allLoading,
     fetchNextPage: allFetchNext,
     hasNextPage: allHasNext,
     isFetchingNextPage: allFetchingNext,
-  } = useAllEmails("all", serverSearch);
+  } = useAllEmails(
+    "all",
+    serverSearch,
+    directionFilter === "all" ? undefined : directionFilter
+  );
   const allEmailsFlat = useMemo(
     () => allEmailsPages?.pages.flatMap((p) => p.emails) ?? [],
     [allEmailsPages]
@@ -579,6 +586,25 @@ export default function CorrespondentiePage() {
       {activeTab === "alle" && (
         <div className="flex gap-4">
           <div className={selectedEmailId ? "hidden lg:block lg:w-2/5" : "w-full"}>
+            {/* S244 — Postvak IN / Verzonden */}
+            <div className="mb-3 flex gap-1 rounded-lg bg-muted/50 p-1 w-fit">
+              {([["all", "Alles"], ["inbound", "Postvak IN"], ["outbound", "Verzonden"]] as const).map(
+                ([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => { setDirectionFilter(key); setSelectedEmailId(null); }}
+                    className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                      directionFilter === key
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              )}
+            </div>
             <AllEmailsView
               emails={allEmailsFlat}
               total={allEmailsTotal}

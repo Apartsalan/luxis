@@ -308,19 +308,22 @@ async def get_all(
     offset: int = Query(default=0, ge=0),
     filter: str = Query(default="all", pattern="^(all|linked|unlinked)$"),
     search: str | None = Query(default=None),
+    direction: str | None = Query(default=None, pattern="^(inbound|outbound)$"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Get all synced emails, optioneel gefilterd op koppelstatus + zoekterm.
 
     Voedt het 'Alle e-mails'-tabblad (volledige mailbox) én het zoeken door
-    álle mail (subject/afzender/ontvanger/snippet/body).
+    álle mail (subject/afzender/ontvanger/snippet/body). S244: `direction`
+    voedt de Postvak IN/Verzonden-schakelaar.
     """
     emails, total = await get_all_emails(
         db,
         user.tenant_id,
         filter_linked=filter,
         search=search,
+        direction=direction,
         limit=limit,
         offset=offset,
     )

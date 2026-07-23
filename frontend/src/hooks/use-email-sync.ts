@@ -147,9 +147,13 @@ export const ALL_EMAILS_PAGE_SIZE = 200;
  * Alle gesynchte e-mails, gepagineerd met "meer laden" (offset). `total` is het
  * totaal aantal treffers; de flat-lijst groeit met elke geladen pagina.
  */
-export function useAllEmails(filter: "all" | "linked" | "unlinked" = "all", search?: string) {
+export function useAllEmails(
+  filter: "all" | "linked" | "unlinked" = "all",
+  search?: string,
+  direction?: "inbound" | "outbound",
+) {
   return useInfiniteQuery<CaseEmailsResponse>({
-    queryKey: ["all-emails", filter, search],
+    queryKey: ["all-emails", filter, search, direction],
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
       const params = new URLSearchParams({
@@ -158,6 +162,7 @@ export function useAllEmails(filter: "all" | "linked" | "unlinked" = "all", sear
         offset: String(pageParam ?? 0),
       });
       if (search) params.set("search", search);
+      if (direction) params.set("direction", direction);
       const res = await api(`/api/email/all?${params}`);
       if (!res.ok) throw new Error("Kon e-mails niet ophalen");
       return res.json();

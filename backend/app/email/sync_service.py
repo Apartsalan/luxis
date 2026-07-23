@@ -981,6 +981,7 @@ async def get_all_emails(
     *,
     filter_linked: str = "all",  # "all", "linked", "unlinked"
     search: str | None = None,
+    direction: str | None = None,  # None = alles, "inbound", "outbound"
     limit: int = 50,
     offset: int = 0,
 ) -> tuple[list[SyncedEmail], int]:
@@ -988,6 +989,7 @@ async def get_all_emails(
 
     filter_linked: 'all' = alles, 'linked' = met dossier, 'unlinked' = zonder dossier.
     search doorzoekt onderwerp, afzender, ontvangers, snippet én body-tekst.
+    direction: S244 — voedt de Postvak IN/Verzonden-schakelaar op de Mail-pagina.
     """
     base_where = [
         SyncedEmail.tenant_id == tenant_id,
@@ -998,6 +1000,9 @@ async def get_all_emails(
         base_where.append(SyncedEmail.case_id != None)  # noqa: E711
     elif filter_linked == "unlinked":
         base_where.append(SyncedEmail.case_id == None)  # noqa: E711
+
+    if direction in ("inbound", "outbound"):
+        base_where.append(SyncedEmail.direction == direction)
 
     if search:
         term = f"%{search}%"

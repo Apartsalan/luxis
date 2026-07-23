@@ -30,6 +30,7 @@ from app.notifications.service import (
     create_email_received_notification,
     create_notification,
     create_notification_if_not_exists,
+    mark_case_type_read,
     snooze_notification,
 )
 from app.relations.models import Contact
@@ -371,3 +372,51 @@ async def test_bell_hides_classification_but_keeps_email(
     # Ongelezen-teller telt de 2 zichtbare typen, niet de verborgen classificatie.
     unread = await get_unread_count(db, test_tenant.id, test_user.id)
     assert unread == 2
+
+
+@pytest.mark.asyncio
+async def test_mark_case_type_read_scopes_to_case_and_type(
+    db: AsyncSession, test_user: User, test_tenant: Tenant
+):
+    """Na een verstuurd antwoord: alleen de mail-meldingen van DAT dossier gaan
+    op gelezen. Wachters: andere dossiers en andere meldingstypen blijven
+    ongelezen."""
+    case_a = await _make_case(db, test_tenant.id, "2026-00201")
+    case_b = await _make_case(db, test_tenant.id, "2026-00202")
+
+    # 2× mail op A, 1× mail op B, 1× ander type (AI-concept) op A.
+    for _ in range(2):
+        await create_notification(
+            db, test_tenant.id, test_user.id,
+            NotificationCreate(type=NOTIF_EMAIL_RECEIVED, title="Nieuwe email",
+                               message="x", case_id=case_a.id, case_number=case_a.case_number),
+        )
+    await create_notification(
+        db, test_tenant.id, test_user.id,
+        NotificationCreate(type=NOTIF_EMAIL_RECEIVED, title="Nieuwe email",
+                           message="x", case_id=case_b.id, case_number=case_b.case_number),
+    )
+    await create_notification(
+        db, test_tenant.id, test_user.id,
+        NotificationCreate(type=NOTIF_AI_DRAFT_READY, title="AI-concept",
+                           message="x", case_id=case_a.id, case_number=case_a.case_number),
+    )
+    await db.flush()
+
+    marked = await mark_case_type_read(db, test_tenant.id, case_a.id, NOTIF_EMAIL_RECEIVED)
+    assert marked == 2  # beide mail-meldingen van dossier A
+
+    async def _unread(case_id, type_):
+        result = await db.execute(
+            select(Notification).where(
+                Notification.tenant_id == test_tenant.id,
+                Notification.case_id == case_id,
+                Notification.type == type_,
+                Notification.is_read == False,  # noqa: E712
+            )
+        )
+        return len(list(result.scalars().all()))
+
+    assert await _unread(case_a.id, NOTIF_EMAIL_RECEIVED) == 0   # dossier A mail: gelezen
+    assert await _unread(case_b.id, NOTIF_EMAIL_RECEIVED) == 1   # ander dossier: blijft
+    assert await _unread(case_a.id, NOTIF_AI_DRAFT_READY) == 1   # ander type: blijft

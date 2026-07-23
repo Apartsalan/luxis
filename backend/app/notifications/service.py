@@ -211,6 +211,33 @@ async def mark_type_read(
     return result.rowcount
 
 
+async def mark_case_type_read(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    notification_type: str,
+) -> int:
+    """Gerichte variant van mark_type_read: alle ongelezen meldingen van één
+    type op één dossier gelezen — tenant-breed (deze mail-meldingen worden ook
+    tenant-breed aangemaakt). Gebruikt na een verstuurd antwoord op dat dossier,
+    zodat de bel niet vol blijft staan met inmiddels-beantwoorde mail. Andere
+    typen en andere dossiers blijven ongemoeid. Returnt het aantal.
+    """
+    stmt = (
+        update(Notification)
+        .where(
+            Notification.tenant_id == tenant_id,
+            Notification.case_id == case_id,
+            Notification.type == notification_type,
+            Notification.is_read == False,  # noqa: E712
+        )
+        .values(is_read=True)
+    )
+    result = await db.execute(stmt)
+    await db.flush()
+    return result.rowcount
+
+
 async def get_unread_count(
     db: AsyncSession,
     tenant_id: uuid.UUID,

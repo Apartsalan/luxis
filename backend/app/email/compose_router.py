@@ -591,6 +591,21 @@ async def send_via_provider(
         effective_from=send_from_address,
     )
 
+    # S245 (besluit Arsalan S243): een verstuurd ANTWOORD op een dossier ruimt de
+    # ongelezen 'nieuwe mail'-meldingen van dát dossier op — de inbound is
+    # beantwoord, dus de bel hoeft er niet vol mee te blijven staan. Alleen op de
+    # reply-route (reply_to_message_id); verse mail/doorsturen/sjablonen raken de
+    # meldingen niet. Andere meldingstypen en andere dossiers blijven ongelezen.
+    if data.case_id and data.reply_to_message_id:
+        from app.notifications.service import (
+            NOTIF_EMAIL_RECEIVED,
+            mark_case_type_read,
+        )
+
+        await mark_case_type_read(
+            db, user.tenant_id, data.case_id, NOTIF_EMAIL_RECEIVED
+        )
+
     # S232 — doorschuiven na een verstuurde STAP-brief. Een verse dossier-mail aan de
     # debiteur met een EXPLICIET gekozen sjabloon dat bij de huidige pijplijnstap hoort,
     # schuift het dossier één stap door — dezelfde advance_to_step-regel als de AI-route.

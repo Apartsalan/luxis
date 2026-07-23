@@ -3,7 +3,7 @@
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
 **Laatst bijgewerkt:** 23 juli 2026 (S244 — mail-werkbank LIVE: draad-gegroepeerde correspondentie, draad overal, Verzonden-map, vrij bericht-shell).
-**Laatste feature/fix:** Mail-werkbank (5 commits t/m `206def8`, live + visueel bewezen desktop en mobiel); klikronde-vondst direct gefixt: draad-groepering op genormaliseerd onderwerp (prod-meting: thread-ids bijna waardeloos op dossier-mails).
+**Laatste feature/fix:** Mail-werkbank (5 bouw-commits) + Fable-eindreview met 4 gefixte vondsten t/m `d2aef7c` (encoding-schade, reply-aan-onszelf, onleesbare smalle rijen, mobiele herkansing) — alles live + visueel bewezen.
 **Openstaand:** demo-puntenreeks S245-S247 (taken+meldingen → uitgesteld versturen → AI-kennislaag, masterplan `docs/plans/PLAN-DEMO-PUNTEN-S243.md`); **nieuwe derde betwistingsmail IN100592 (23-7 16:29) + auto-concept wachten op Lisanne**; fase-heropening per groep (beslislijst `docs/plans/BASENET-STATUS-HERSTEL.md`); 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai bij Lisanne/Arsalan; IN100015-melding wegklikken; IN100127 beoordelen; 2 open mails (IN100128, IN100586) + verweer IN100592/IN100606 + IN100492 bij Lisanne; verweer-parkeerstap-voorstel; 193 ongelezen meldingen. Losse punten: BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
 **Volgende sessie:** S245 — taken + meldingen (Opus); zie `docs/sessions/PROMPT-S245.md`.
 
@@ -93,6 +93,37 @@ liepen nog bij schrijven — natrekken bij S245-start.
 - **Signalering (rolverdeling S240): derde betwistingsmail IN100592 binnengekomen
   23-7 16:29** + automatische concept-draft/nakijk-taak van 16:36 — inhoudelijk
   oppakken is aan Lisanne/Arsalan.
+
+### Nagekomen — Fable-eindreview (modelwissel door Arsalan, "grondig, ook visueel")
+Tegenlezing van alle S244-commits + de screenshots daadwerkelijk bekeken +
+verse klikronde op prod. **4 vondsten, alle 4 direct gefixt + gedeployd:**
+1. **Encoding-schade Mail-pagina (`d2aef7c`, de zwaarste):** op de Verzonden-
+   screenshot stond letterlijk "3393 e-mails â€" 200 getoond" — de PowerShell-
+   herschrijfstap van onderdeel 4 las het bestand als ANSI en schreef het als
+   UTF-8 terug; élk niet-ASCII-teken (em-dash, ë, ·) stond dubbel gecodeerd
+   op prod. Hersteld via omgekeerde cp1252-roundtrip; grep 0 restanten; live
+   nagemeten ("6534 e-mails — 200 getoond", 0 mojibake). **Les: bronbestanden
+   nooit met PowerShell Get/Set-Content herschrijven — Edit-tool gebruiken.**
+2. **Beantwoorden op eigen uitgaande mail vulde Aan = onszelf (`5b7d7e2`):**
+   reply pakt de afzender, en op een uitgaande mail zijn wij dat; de
+   gespreksweergave zet nu op élk bericht een Beantwoorden-knop, dus de val
+   was makkelijk te raken. Nu: uitgaand → ontvanger. Live bewezen (Aan =
+   ad@on-bevreesd.nl op de sommatie van 12:32).
+3. **Lijstrijen onleesbaar in smalle stand (`5b7d7e2` + `f612b54`):** met een
+   geopend gesprek (kolom 2/5) én op telefoonbreedte drukte de één-regel-rij
+   het onderwerp volledig weg. Smal = twee regels (afzender+datum /
+   onderwerp+badges); breed één regel. Beide live + visueel bewezen.
+4. **Eerlijkheidscorrectie op de eigen Opus-verificatie:** de 2 "mobiele"
+   screenshots van de eerste ronde toonden alleen de bovenkant van de pagina
+   (boven de vouw) — mobiel was gestructureerd gemeten maar niet écht gezien.
+   Overgedaan mét scroll: lijst, gesprek en Verzonden-map nu echt vastgelegd
+   (`s244-12` t/m `-16`).
+Verder gecheckt, géén fout: vrij-bericht in de dropdown (visueel), shell +
+citaat in de editor, logo-met-lege-src in de editor is vóórbestaand (zelfde
+bij het Herinnering-sjabloon; verzendpad plakt het logo er wél in — bewezen
+door de 7 sommaties van 22-7). CI van de 3 fix-commits liep nog bij
+schrijven — natrekken bij S245-start. Parallel kwam `9808e3f` binnen
+(S243-tegenlezing uit andere terminal, alleen docs).
 
 ### Volgende sessie
 S245 (Opus): taken + meldingen — zie `docs/sessions/PROMPT-S245.md`.

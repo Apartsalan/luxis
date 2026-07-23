@@ -42,10 +42,12 @@ import { tokenStore } from "@/lib/token-store";
 
 // ── Draad-groepering (S244) ─────────────────────────────────────────────────
 // Gmail/Outlook-model: de lijst toont gesprekken (draden), niet losse mails.
-// Sleutel = provider_thread_id; mails zonder thread-id (oude SMTP-logs, losse
-// berichten) vallen terug op het genormaliseerde onderwerp. Een onderwerp-groep
-// wordt samengevoegd met een thread-id-groep als er precies één draad met dat
-// onderwerp bestaat — anders blijft hij apart (nooit gokken tussen twee draden).
+// Sleutel = genormaliseerd onderwerp (Re:/Fwd: eraf). Prod-meting 23-7: maar
+// 7 van de 47 provider-threads op dossiers dragen meer dan één bericht (o.a.
+// BaseNet-import + antwoorden die een nieuw conversation-id krijgen), terwijl
+// 1472 onderwerp-groepen wél meerdere berichten hebben — binnen één dossier
+// is het onderwerp dus de sleutel die het echte gesprek bij elkaar brengt.
+// Leeg onderwerp: terugval op provider_thread_id, anders het eigen id.
 
 type TimelineItem = {
   id: string;
@@ -84,25 +86,14 @@ function normalizeSubject(subject: string): string {
 
 function buildThreads(items: TimelineItem[]): Thread[] {
   const byKey = new Map<string, TimelineItem[]>();
-  // norm-onderwerp → thread-keys die dat onderwerp dragen
-  const tidKeysBySubject = new Map<string, Set<string>>();
 
   for (const item of items) {
-    if (item.threadId) {
-      const key = `tid:${item.threadId}`;
-      if (!byKey.has(key)) byKey.set(key, []);
-      byKey.get(key)!.push(item);
-      const norm = normalizeSubject(item.subject);
-      if (!tidKeysBySubject.has(norm)) tidKeysBySubject.set(norm, new Set());
-      tidKeysBySubject.get(norm)!.add(key);
-    }
-  }
-  for (const item of items) {
-    if (item.threadId) continue;
     const norm = normalizeSubject(item.subject);
-    const tidKeys = tidKeysBySubject.get(norm);
-    // Precies één bestaande draad met dit onderwerp → daarin voegen
-    const key = tidKeys && tidKeys.size === 1 ? [...tidKeys][0] : `sub:${norm}`;
+    const key = norm
+      ? `sub:${norm}`
+      : item.threadId
+        ? `tid:${item.threadId}`
+        : `id:${item.id}`;
     if (!byKey.has(key)) byKey.set(key, []);
     byKey.get(key)!.push(item);
   }

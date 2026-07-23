@@ -115,15 +115,21 @@ export function MailThreadPanel({
   // met 50 vielen oudere draadmails stil weg (zelfde cap als CorrespondentieTab).
   const { data: caseEmails } = useCaseEmails(sourceEmail.case_id ?? undefined, 200);
 
-  // Eerdere mailtjes van dezelfde draad (zelfde provider_thread_id), zonder de
-  // bronmail zelf, nieuwste eerst. Zonder thread-id: geen geschiedenis tonen
-  // (we koppelen dan niet zomaar losse dossiermails aan elkaar).
+  // Eerdere mailtjes van dezelfde draad, nieuwste eerst. S244: sleutel =
+  // genormaliseerd onderwerp (Re:/Fwd: eraf) — prod-meting: antwoorden krijgen
+  // regelmatig een nieuw provider-conversation-id en BaseNet-import-mails
+  // hebben er geen, dus alleen thread-id liet de geschiedenis bijna altijd
+  // leeg. Zelfde thread-id telt óók mee (dekt lege onderwerpen).
+  const normalize = (s: string | null | undefined) =>
+    (s || "").trim().replace(/^((re|fwd|fw)\s*:\s*)+/i, "").toLowerCase();
+  const sourceNorm = normalize(sourceEmail.subject);
   const threadEmails = (caseEmails?.emails ?? [])
     .filter(
       (e) =>
         e.id !== sourceEmail.id &&
-        !!sourceEmail.provider_thread_id &&
-        e.provider_thread_id === sourceEmail.provider_thread_id
+        ((!!sourceNorm && normalize(e.subject) === sourceNorm) ||
+          (!!sourceEmail.provider_thread_id &&
+            e.provider_thread_id === sourceEmail.provider_thread_id))
     )
     .sort((a, b) => (a.email_date < b.email_date ? 1 : -1));
 

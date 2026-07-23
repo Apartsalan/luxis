@@ -825,7 +825,11 @@ export function EmailComposeDialog({
 
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="p-0 gap-0">
+      {/* S244 — met een draad ernaast wordt het paneel op grote schermen breder:
+          concept links, draad rechts. Onder lg blijft de draad gestapeld onderin. */}
+      <SheetContent className={cn("p-0 gap-0", replySourceEmail && "lg:max-w-5xl")}>
+        <div className="flex h-full min-h-0">
+        <div className="flex min-w-0 flex-1 flex-col">
         {/* Header */}
         <DialogHeader className="px-6 pt-5 pb-3 pr-12 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-base">
@@ -1349,11 +1353,11 @@ export function EmailComposeDialog({
             {errors.attachments && <p className="text-xs text-destructive">{errors.attachments}</p>}
           </div>
 
-          {/* ── Mailgeschiedenis (S233) ───────────────────────────── */}
-          {/* De mail waarop je antwoordt + eerdere mailtjes van de draad,
-              onderin het paneel zodat je kunt blijven lezen tijdens het schrijven. */}
+          {/* ── Mailgeschiedenis (S233/S244) ──────────────────────── */}
+          {/* Onder lg gestapeld onderin het paneel; op lg+ staat de draad in
+              de rechterkolom (hieronder) en verdwijnt deze strook. */}
           {replySourceEmail && (
-            <div className="border-t px-6 py-3 shrink-0 max-h-[38vh] overflow-auto">
+            <div className="lg:hidden border-t px-6 py-3 shrink-0 max-h-[38vh] overflow-auto">
               <MailThreadPanel sourceEmail={replySourceEmail} />
             </div>
           )}
@@ -1412,6 +1416,19 @@ export function EmailComposeDialog({
             </div>
           </div>
         </form>
+        </div>
+
+        {/* S244 — draad naast het concept (alleen lg+): Lisanne leest wat er
+            eerder is gezegd terwijl ze het concept beoordeelt. */}
+        {replySourceEmail && (
+          <aside className="hidden lg:block w-[380px] shrink-0 border-l overflow-auto px-4 py-4 bg-muted/10">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Gesprek
+            </p>
+            <MailThreadPanel sourceEmail={replySourceEmail} />
+          </aside>
+        )}
+        </div>
       </SheetContent>
     </Sheet>
   );

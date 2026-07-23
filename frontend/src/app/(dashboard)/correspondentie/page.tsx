@@ -51,6 +51,7 @@ import {
 } from "@/hooks/use-intake";
 import { useDebounce } from "@/hooks/use-debounce";
 import { EmailComposeDialog, type EmailComposeData } from "@/components/email-compose-dialog";
+import { MailThreadPanel } from "@/components/mail-thread-panel";
 import { api } from "@/lib/api";
 import { openAttachment } from "@/lib/attachments";
 import { toast } from "sonner";
@@ -1054,6 +1055,16 @@ function EmailDetailPanel({
             </pre>
           )}
         </div>
+
+        {/* S244 — eerdere mailtjes uit dezelfde draad onder de mail, zodat je
+            het hele gesprek kunt teruglezen zonder de lijst af te struinen.
+            Alleen voor dossier-gekoppelde mail (de draad wordt binnen het
+            dossier opgezocht); ongekoppelde mail toont hier niets. */}
+        {email.case_id && (
+          <div className="border-t border-border px-4 py-3">
+            <MailThreadPanel sourceEmail={email} hideSource />
+          </div>
+        )}
       </div>
 
       {/* Action panel: Link to case */}

@@ -101,7 +101,15 @@ function ThreadRow({ summary }: { summary: SyncedEmailSummary }) {
   );
 }
 
-export function MailThreadPanel({ sourceEmail }: { sourceEmail: SyncedEmailDetail }) {
+export function MailThreadPanel({
+  sourceEmail,
+  hideSource = false,
+}: {
+  sourceEmail: SyncedEmailDetail;
+  // S244 — in het Mail-leesvenster staat de bronmail al volledig in beeld;
+  // dan tonen we alleen de eerdere mailtjes van de draad eronder.
+  hideSource?: boolean;
+}) {
   const [openSource, setOpenSource] = useState(true);
   // S234-review: 200 i.p.v. de default 50 — het drukste dossier heeft ~83 mails,
   // met 50 vielen oudere draadmails stil weg (zelfde cap als CorrespondentieTab).
@@ -119,9 +127,12 @@ export function MailThreadPanel({ sourceEmail }: { sourceEmail: SyncedEmailDetai
     )
     .sort((a, b) => (a.email_date < b.email_date ? 1 : -1));
 
+  if (hideSource && threadEmails.length === 0) return null;
+
   return (
     <div className="space-y-2">
       {/* De mail waarop je antwoordt — uitklapbaar, standaard open. */}
+      {!hideSource && (
       <div className="rounded-md border border-border bg-muted/20">
         <button
           type="button"
@@ -159,6 +170,7 @@ export function MailThreadPanel({ sourceEmail }: { sourceEmail: SyncedEmailDetai
           </div>
         )}
       </div>
+      )}
 
       {/* Eerdere mailtjes van de draad. */}
       {threadEmails.length > 0 && (

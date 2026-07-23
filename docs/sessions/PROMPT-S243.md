@@ -29,8 +29,13 @@ van deze sessie is. Extra taak-context: geen (S242 was een afgeronde veegsessie)
   39 test-taken, 14 test-adviezen, 81 oude ongesorteerde mails, 16 oude
   aanvragen verdrinken het echte werk (26 taken + 7 adviezen). Claude kan de
   lijsten klaarzetten + na GO opruimen met dry-run + natelling.
+- **Verweer-parkeerstap-terugkeer (richting akkoord Arsalan, S242-demo):**
+  `docs/plans/VOORSTEL-verweer-parkeerstap-terugkeer.md` — na verstuurd
+  verweer-antwoord + stilte automatisch terug de sommatie-keten in. Lees de
+  3 controlepunten in het voorstel vóór de bouw.
 - Rest voorstel-lijst (S239): categorie 'onduidelijk', overbetaling-knop,
   cascade bij dossier-verwijderen, weekend-logica, kostenblokje.
+- Fable-tegenlezing van S242 (wens Arsalan tijdens de demo).
 - Iets anders dat Arsalan aandraagt.
 
 ## Verificatie (bij bouwwerk)

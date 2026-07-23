@@ -2,8 +2,8 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 23 juli 2026 (S242 afgerond — veegsessie voorstel-lijst: dubbelklik-betaling-slot + belofte×regeling + eigenaarloze-taken-melding, alle drie LIVE).
-**Laatste feature/fix:** Betaling kan nooit meer dubbel geboekt worden (zaak-slot + dedup-venster op het gedeelde servicepunt); belofte-taak en regeling bewaken niet langer dubbel; eigenaarloze te-laat-taak meldt bij iedereen. Detail: entry S242.
+**Laatst bijgewerkt:** 23 juli 2026 (S242 afgerond — veegsessie voorstel-lijst LIVE + demo-staart: stuiting-bevinding, verweer-parkeerstap-voorstel, afzender-weergave-fix LIVE).
+**Laatste feature/fix:** Afzender-weergave bij 'Verzenden als' gefixt (dossier toont nu incasso@); daarvoor: dubbelklik-betaling-slot, belofte×regeling-ontdubbeling, eigenaarloze-taken-melding. Detail: entry S242 (incl. 2 nagekomen secties).
 **Openstaand:** IN100015-verjaringsmelding is ONTERECHT (gestuit + dossier dicht — mag weg; Luxis kent geen stuiting, voorstel in entry S242); IN100127 beoordelen; 2 open mails (IN100128, IN100586) + verweer IN100592/IN100606 + IN100492 bij Lisanne; demo-ronde met nakijk-lijst (20 punten) + opruimronde mét Lisanne; Fable-tegenlezing S242; rest voorstel-lijst. Losse punten: BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
 **Volgende sessie:** S243 — Arsalan bepaalt de hoofdtaak bij start; zie `docs/sessions/PROMPT-S243.md`.
 
@@ -89,6 +89,31 @@ Zelfde kanttekening geldt voor de IN100127-waarschuwing (zelfde sommetje).
 teller verzet, evt. slimme herkenning van stuitings-/deurwaardermails.**
 Verder voor de demo een nakijk-lijst (20 punten) aan Arsalan gegeven; demo-ronde
 met Lisanne + Fable-tegenlezing van S242 volgen buiten deze sessie.
+
+### Nagekomen 2 (demo-staart, live met Arsalan)
+- **IN100592 uitgelegd (niets gewijzigd):** de twee betwistingsmails schoven de
+  keten NIET twee keer door — verzending eerste sommatie = 1 stap door, eerste
+  betwisting = parkeren op 'Verweer beantwoorden', tweede mail deed niets met de
+  stap. Er is geen sommatie overgeslagen (keten heeft 4 sommatiestappen; alleen
+  de eerste is ooit verstuurd). Wel gat: de parkeerstap heeft geen doorschuif-
+  regel én alle bewakers slaan hem over → na het verweer-antwoord bewaakt
+  niemand de reactietermijn (3-4 dagen) uit de brief.
+- **Voorstel vastgelegd (richting akkoord Arsalan, NIET gebouwd):**
+  `docs/plans/VOORSTEL-verweer-parkeerstap-terugkeer.md` — verstuurd antwoord +
+  X dagen stilte → dossier automatisch terug naar de sommatiestap van vóór het
+  verweer; follow-up-adviseur pakt het dan vanzelf op. Met 3 controlepunten
+  (openstaand-verweer-slot, generate-only-batch-randgeval, termijn nameten).
+- **Demo-vondst afzender-weergave, GEFIXT + LIVE (`7d0b831`, op Fable —
+  bewuste afwijking model-regel wegens lopende demo, gemeld):** bij 'Verzenden
+  als' kantooradres registreerde het dossier de vervoerende mailbox (seidony@)
+  als afzender i.p.v. wat er écht op de mail stond (incasso@). Alleen
+  wéérgave — de debiteur zag altijd al incasso@ (bezorging bewezen: 0 bounces,
+  antwoorden komen op incasso@ binnen). Rode test eerst + tegenproef, 134
+  send/compose-tests groen, gedeployd, login 200. De 9 oude registraties
+  (7 sommaties 22-7 + 2 antwoorden 23-7) blijven staan — keuze Arsalan
+  (cosmetisch). Structureel verdwijnt seidony@ als vervoerder pas bij de
+  geplande M365-verhuizing van Lisanne. CI van deze commit liep nog bij
+  afsluiten — natrekken bij S243-start.
 
 ### Volgende sessie
 S243: Arsalan bepaalt de hoofdtaak (opruimronde met Lisanne is de sterkste

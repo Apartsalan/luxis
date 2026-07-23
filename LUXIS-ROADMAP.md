@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 23 juli 2026 (S241 — testronde 3, Negeren-fix + meldingen-bundeling LIVE; logboek `docs/sessions/S241-SCENARIOS.md`; S240-entry volgt uit de parallelle terminal). Rapport: entry S241 in `SESSION-NOTES.md`. **Volgende = S242 (Opus): kleine veegsessie voorstel-lijst (dubbelklik-betaling-slot, belofte×regeling, eigenaarloze-taken-melding).**
+**Laatst bijgewerkt:** 23 juli 2026 (S242 — veegsessie voorstel-lijst LIVE: dubbelklik-betaling-slot, belofte×regeling-ontdubbeling, eigenaarloze-taken-melding naar iedereen). Rapport: entry S242 in `SESSION-NOTES.md`. **Volgende = S243: Arsalan bepaalt de hoofdtaak (sterkste kandidaat: opruimronde met Lisanne).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,29 +53,28 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 23 juli 2026, S241)
+## 🎯 Huidige prioriteit (bijgewerkt 23 juli 2026, S242)
 
-> ✅ **S240+S241 AFGEROND (LIVE).** S240 (parallelle terminal): bak-melding +
-> betaalbelofte-bewaking gebouwd + testronde 2 (logboek `docs/sessions/S240-SCENARIOS.md`;
-> SESSION-NOTES-entry volgt daar nog). S241: testronde 3 (10 scenario's, 3 verse brillen)
-> → fix "Negeren wint van elke sync" (6 wachters); daarna op GO Arsalan de
-> **meldingen-bundeling** gebouwd (3+ ongelezen zelfde type = één bundel-rij, klik =
-> overzicht + stapel gelezen; 7 wachters). Live nageteld; 2 verjaringsmeldingen
-> (IN100015 VERJAARD, IN100127) werden er direct zichtbaar door. Logboek:
-> `docs/sessions/S241-SCENARIOS.md`; entry S241 in SESSION-NOTES.
+> ✅ **S242 AFGEROND (LIVE).** Veegsessie voorstel-lijst, 3 fixes elk met rode test
+> eerst + wachters: (1) dubbelklik/2 tabs kan een betaling nooit meer dubbel boeken
+> (zaak-slot + 10s-dedup-venster op het gedeelde servicepunt; bron-record-routes
+> uitgezonderd); (2) belofte-taak en betalingsregeling bewaken niet langer dubbel
+> (beide volgordes); (3) te-late taak zonder eigenaar meldt bij álle actieve
+> gebruikers i.p.v. de toevallig 'eerste'. 11 nieuwe wachters, 231+82 tests groen,
+> backend gedeployd, login 200. Rapport: entry S242 in SESSION-NOTES.
 >
-> 🎯 **VOLGENDE (S242, op Opus): kleine veegsessie voorstel-lijst.** (1) Dubbelklik/2
-> tabs kan een deelbetaling dubbel boeken (S240 vondst 2) — idempotentie-slot; (2)
-> belofte-taak naast actieve regeling = dubbel bewakingswerk (S241 voorstel 2) — kies +
-> onderbouw; (3) eigenaarloze te-laat-taken melden bij "willekeurig eerste" gebruiker
-> (S241 voorstel 3). **Signaleren bij start: 2 verjaringsmeldingen (IN100015/IN100127)
-> voor Lisanne/Arsalan.** Daarnaast blijven staan: 2 open mails (IN100128, IN100586),
-> Lisanne-antwoorden (IN100592/IN100606/IN100492), opruimronde mét GO, rest
-> S239-voorstel-lijst (categorie 'onduidelijk', overbetaling-knop, cascade,
-> weekend-logica), BaseNet-delisting, kostenblokje, fysieke-telefoon-check,
-> opmaak-restpunt S227, S221b-rest, DMARC, testdata opruimen, 4 cosmetische restjes
-> S235, sharp-CVE's. KvK: niet naar vragen. Derde AI-testronde: afgevoerd (S241) —
-> pas weer bij wijzigingen aan prompts/schema's/antwoord-logica.
+> 🎯 **VOLGENDE (S243): Arsalan bepaalt de hoofdtaak bij start.** Sterkste kandidaat
+> volgens de S241-werklastmeting: **opruimronde mét Lisanne** (39 test-taken, 14
+> test-adviezen, 81 oude ongesorteerde mails, 16 oude aanvragen) — geen nieuwe bouw
+> nodig. Verder blijven staan: **IN100015-verjaringsmelding is onterecht (gestuit;
+> Luxis kent geen stuiting — voorstel in entry S242) en mag weg; IN100127 beoordelen**,
+> demo-ronde met nakijk-lijst + Fable-tegenlezing S242, 2 open mails (IN100128,
+> IN100586), Lisanne-antwoorden
+> (IN100592/IN100606/IN100492), rest voorstel-lijst (categorie 'onduidelijk',
+> overbetaling-knop, cascade, weekend-logica), BaseNet-delisting, kostenblokje,
+> fysieke-telefoon-check, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische
+> restjes S235, sharp-CVE's. KvK: niet naar vragen. Derde AI-testronde: pas weer
+> bij wijzigingen aan prompts/schema's/antwoord-logica.
 
 ## Projectdocumenten
 

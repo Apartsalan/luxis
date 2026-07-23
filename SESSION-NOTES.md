@@ -2,10 +2,98 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 23 juli 2026 (S242-start: S240-entry alsnog geschreven uit logboek + git log; S241 was al afgerond — testronde 3 + Negeren-fix + meldingen-bundeling LIVE).
-**Laatste feature/fix:** Meldingen-bundeling in de bel (3+ ongelezen van zelfde type = één rij; klik = overzichtspagina + stapel gelezen) + fix "Negeren wint van elke sync". Detail: entry S241 + `docs/sessions/S241-SCENARIOS.md`.
-**Openstaand:** voorstel-lijst (S242-kandidaten: dubbelklik-betaling-slot, belofte×regeling dubbel werk, eigenaarloze-taken-melding; rest S239-lijst onaangeraakt); 2 echte mails (IN100128, IN100586) + verweer IN100592/IN100606 + IN100492 bij Lisanne; opruimronde mét Lisanne; **2 verjaringsmeldingen (IN100015 VERJAARD, IN100127) nu zichtbaar door de bundeling — aandacht Lisanne/Arsalan**. Losse punten: BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, testdata, 4 cosmetische restjes S235, sharp-CVE's; derde AI-testronde bewust afgevoerd (S241).
-**Volgende sessie:** S242 (Opus) — zie `docs/sessions/PROMPT-S242.md`.
+**Laatst bijgewerkt:** 23 juli 2026 (S242 afgerond — veegsessie voorstel-lijst: dubbelklik-betaling-slot + belofte×regeling + eigenaarloze-taken-melding, alle drie LIVE).
+**Laatste feature/fix:** Betaling kan nooit meer dubbel geboekt worden (zaak-slot + dedup-venster op het gedeelde servicepunt); belofte-taak en regeling bewaken niet langer dubbel; eigenaarloze te-laat-taak meldt bij iedereen. Detail: entry S242.
+**Openstaand:** IN100015-verjaringsmelding is ONTERECHT (gestuit + dossier dicht — mag weg; Luxis kent geen stuiting, voorstel in entry S242); IN100127 beoordelen; 2 open mails (IN100128, IN100586) + verweer IN100592/IN100606 + IN100492 bij Lisanne; demo-ronde met nakijk-lijst (20 punten) + opruimronde mét Lisanne; Fable-tegenlezing S242; rest voorstel-lijst. Losse punten: BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
+**Volgende sessie:** S243 — Arsalan bepaalt de hoofdtaak bij start; zie `docs/sessions/PROMPT-S243.md`.
+
+## Sessie 242 (23 juli 2026, Opus-bouw — veegsessie voorstel-lijst: 3 kleine verbeteringen, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S242, op Opus (klopt met de prompt — bouwwerk). Bij start de
+administratie afgewerkt: S240-entry alsnog geschreven (parallelle terminal had
+hem niet meer geschreven; S232+S233 naar het archief, PROMPT-S241 gearchiveerd),
+CI van S241 nagetrokken (alle runs groen) en de 2 verjaringsmeldingen + 2 open
+mails aan Arsalan gesignaleerd (niet zelf opgepakt — rolverdeling S240).
+
+**1. Dubbelklik-betaling-slot (S240 vondst 2, `cd4c70a`).** Twee gelijktijdige
+identieke deelbetalingen werden allebei geboekt (beide 201, live bewezen S240).
+Poort op het gedeelde punt van álle boekroutes (service-laag, agent-laag-afspraak
+S237): (a) rij-slot op de zaak (zelfde patroon als derdengelden audit #70)
+serialiseert gelijktijdige boekingen — maakt ook de volbetaald-/overbetaal-poort
+race-vrij; (b) dedup-venster 10s weigert een identieke betaling (bedrag/datum/
+wijze/omschrijving) direct na de vorige, met duidelijke NL-melding. Bron-record-
+routes (bankimport, BaseNet-import, S195-script) slaan de dedup-poort expliciet
+over (twee identieke échte overboekingen op één dag zijn daar legitiem; het slot
+geldt wél). Rode tests eerst, sequentieel én echt gelijktijdig — beide rood
+bewezen tegen de oude code. Bekende grens (bewust, in commit): dubbelklik ÉN
+overbetaling tegelijk op de derdengelden-route glipt langs het venster
+(afgekapt bedrag ≠ ingediend bedrag); upgrade-pad = uniek indienings-id.
+
+**2. Belofte-taak × actieve regeling (S241 voorstel 2, `024eb6b`).** Gekozen
+gedrag, beide volgordes van hetzelfde dubbel-werk: belofte-mail op zaak met
+lopende regeling → géén belofte-taak (de termijn-bewaking bewaakt die betaling
+al; zelfde poort als de regeling-verzoek-taak S235); én regeling vastgelegd
+terwijl er al een belofte-taak open staat (de gewone gang van zaken) → open
+belofte-taak wordt 'skipped' via de bestaande sluit-helper (S236-conventie).
+Tegenproeven: belofte zonder regeling geeft gewoon een taak; geannuleerde
+regeling onderdrukt niets meer.
+
+**3. Eigenaarloze te-laat-taken-melding (S241 voorstel 3, `ec10221`).** De
+dagelijkse job stuurde de melding voor een taak zonder eigenaar naar de
+toevallig 'eerste' gebruiker. Nu: melding bij álle actieve gebruikers,
+consistent met de werklijst; taken mét eigenaar blijven bij die eigenaar;
+30-dagen-dedup blijft gelden. Eenmalig effect: de andere gebruiker krijgt de
+al-gemelde eigenaarloze taken bij de eerstvolgende ochtendrun alsnog — als
+bundel-rij (S241-bundeling), geen storm.
+
+### Gewijzigde bestanden
+Backend: `collections/service.py` (slot + dedup + regeling-poorten),
+`workflow/scheduler.py` (melding-doelen), `ai_agent/payment_matching_service.py`
++ 2 importscripts (skip-vlag). Tests: `test_payment_double_submit.py` (nieuw, 5),
+`test_payment_promise_task.py` (+3), `test_deadline_notification_targets.py`
+(nieuw, 3). Geen frontend, geen migratie. Commits `cd4c70a`, `024eb6b`,
+`ec10221` + 3 docs-commits (administratie).
+
+### Verificatie
+Elke fix eerst rood bewezen (het gelijktijdigheids-scenario apart tegen de oude
+code via git stash). 11 nieuwe wachters; brede run payment/promise/notification/
+scheduler 231 groen + trust/matching 82 groen; ruff schoon (frontend onaangeraakt,
+geen tsc nodig). Backend gedeployd via SSH `--force-recreate`, container healthy,
+login 200, prod-logs 0 fouten. CI groen op alle drie de fix-commits (success
+nagetrokken via gh) + Deploy-runs groen.
+
+### Bekende issues / bewust niet gedaan
+- Derdengelden-randgeval van punt 1 (zie boven) — voorstel: uniek indienings-id
+  per formulier als het ooit speelt.
+- Rest van de voorstel-lijst bewust niet aangeraakt (scope-hek S242): categorie
+  'onduidelijk', overbetaling-knop, cascade bij dossier-verwijderen,
+  weekend-logica, kostenblokje.
+- Inhoudelijk werk blijft bij Lisanne/Arsalan: verjaringsmelding IN100127
+  beoordelen, 2 open mails (IN100128, IN100586), verweer-concepten, opruimronde.
+
+### Nagekomen (vraag Arsalan): kent Luxis stuiting? Nee — gemeten op IN100015
+Arsalan: "IN100015 is niet verjaard, Lisanne stuit altijd; de deurwaarder heeft
+een verzoekschrift betekend — ziet Luxis dat?" Onderzocht (alleen-lezen, niets
+gebouwd): **nee.** De verjaringsbewaking is een kaal rekensommetje (oudste
+vordering opeisbaar + 5 jaar; hier 15-10-2020 → "VERJAARD" per 15-10-2025) en
+kijkt nérgens naar mails, sommaties, deurwaarder of betekening; een
+stuitingsveld bestaat niet. Ironie: Luxis' eigen sommatiebrieven bevatten een
+stuitingsclausule (art. 3:317 BW) — het systeem schrijft stuitingen maar telt
+ze niet. Het bewijs zit wél in het dossier: 15 mails, waarvan 8 over
+deurwaarder/betekening/verzoekschrift (apr-mei 2025) en 2 letterlijk over
+stuiting. De melding (4-7) is bovendien dubbel achterhaald: dossier is 13-7
+afgesloten (afgesloten dossiers worden niet meer gecheckt) — mag weggeklikt.
+Zelfde kanttekening geldt voor de IN100127-waarschuwing (zelfde sommetje).
+**Voorstel (niet gebouwd, scope-hek): stuitingsdatum op het dossier die de
+teller verzet, evt. slimme herkenning van stuitings-/deurwaardermails.**
+Verder voor de demo een nakijk-lijst (20 punten) aan Arsalan gegeven; demo-ronde
+met Lisanne + Fable-tegenlezing van S242 volgen buiten deze sessie.
+
+### Volgende sessie
+S243: Arsalan bepaalt de hoofdtaak (opruimronde met Lisanne is de sterkste
+kandidaat volgens de S241-werklastmeting — geen nieuwe bouw nodig). Zie
+`docs/sessions/PROMPT-S243.md`.
 
 ## Sessie 241 (23 juli 2026, Fable-testronde → Opus-bouw → Fable-tegenlezing — testronde 3 + Negeren-fix + meldingen-bundeling, LIVE)
 
@@ -656,82 +744,3 @@ Live-bewijzen op prod: draad 0→2, factuurwaarschuwing zichtbaar, reply-call 40
 S234: incassostappen kritisch herzien — situatie-stappen i.p.v. platte lijst; brief
 koppelen aan derde/laatste sommatie; batch/follow-up op de gedeelde doorschuif-logica.
 Zie `docs/sessions/PROMPT-S234.md`.
-
-## Sessie 233 (21 juli 2026, Opus-bouw → Fable-review — AI-antwoord-zijpaneel + mailgeschiedenis + "facturen erbij", LIVE)
-
-### Samenvatting
-Autonome nachtsessie (Arsalan sliep, opdracht: "doe je ding, sluit af als vol").
-Startpunt PROMPT-S233. Alles hieronder is live, getest en op prod nageteld.
-
-**Taak 1 — AI-antwoord/compose is nu een zijpaneel (LIVE + live bewezen).** Het
-compose-/reviewvenster was een gecentreerde bijna-schermvullende dialoog; bij een
-AI-antwoord op de Mail-pagina werd je bovendien naar de dóssierpagina genavigeerd
-(`router.push(?draft=)`) → de mail waarop je antwoordde was weg. Nu:
-- Nieuwe `components/ui/sheet.tsx` — rechts-verankerd, NIET-modaal (geen
-  verduisterende overlay, geen buiten-klik-sluiten) → links blijven de mails
-  leesbaar én aanklikbaar tijdens het schrijven. `email-compose-dialog` rendert
-  hierin (geldt meteen op alle drie de plekken: Mail-pagina, dossier-Correspondentie,
-  documenten-tab). **Live bewezen op prod:** compose opent als rechterpaneel; een mail
-  links aanklikken terwijl het paneel open staat opent diens detail en het paneel
-  blijft staan.
-- Nieuwe `components/mail-thread-panel.tsx` — onderin het paneel de mail waarop je
-  antwoordt (uitklapbaar, standaard open) + de eerdere mailtjes van dezelfde draad
-  (`provider_thread_id`), lazy per mail. Vergde `provider_thread_id` op de
-  case-emails-summary (`sync_router`), anders bleef de draad-filter altijd leeg.
-- Mail-pagina opent het concept nu IN-PLACE (`openAiDraft` → zijpaneel met de
-  bronmail), verzendt via `compose/send` (`already_branded`, `skip_pipeline_advance`)
-  + `advance-after-send` (markeert concept verzonden, sluit reviewtaak). Een antwoord
-  schuift de pijplijn NOOIT door (P1 — advance-after-send weet dat via reply-intent).
-  Dossierpagina + Correspondentie-tab geven de bronmail nu door aan `openDraftDialog`.
-
-**Taak 2 — AI luistert naar "doe de facturen erbij" (LIVE).** Nieuwe kolom
-`ai_drafts.attach_invoices` (migratie s233, additief, default false). De reply-prompt
-laat de AI dit signaal zetten als de behandelaar-instructie erom vraagt; parsing zet
-`draft.attach_invoices`. Nieuw endpoint `GET /email/compose/cases/{id}/invoice-files`
-(factuur-CaseFiles route-onafhankelijk). Het concept opent dan met die PDF's al
-aangevinkt (echte bijlagen; gebruiker kan weghalen). **Kruispunt-guard:** de vlag zit
-op `intent == REPLY_TO_EMAIL`, niet op de AI → de dagelijkse auto-conceptbatch
-(next_step, geen instructie) vlagt NOOIT facturen, ook niet als het model het per
-ongeluk teruggeeft. Wachter-test dekt precies dit.
-
-### Gewijzigde bestanden
-Backend: `ai_agent/models.py` (attach_invoices), `unified_draft_service.py`
-(prompt + parsing), `router.py` + `schemas.py` (response), `email/compose_router.py`
-(invoice-files endpoint), `email/sync_router.py` (provider_thread_id op summary),
-`alembic/versions/s233_ai_draft_attach_invoices.py`. Tests:
-`test_unified_draft_service.py` (+4: reply zet/next_step nooit + prompt-wachter),
-`test_invoice_files_endpoint.py` (nieuw). Frontend: `components/ui/sheet.tsx` (nieuw),
-`components/mail-thread-panel.tsx` (nieuw), `email-compose-dialog.tsx` (Sheet +
-geschiedenis + factuur-voorselectie), `correspondentie/page.tsx` (in-place),
-`zaken/[id]/page.tsx` + `CorrespondentieTab.tsx` (bronmail doorgeven),
-`hooks/use-email-sync.ts` (provider_thread_id-type). 1 commit (`d8da982`),
-backend+frontend gedeployd via SSH met `--force-recreate`, migratie op prod gedraaid
-(s230b → s233, kolom geverifieerd default false).
-
-### Verificatie
-- Backend: 45 tests groen (unified_draft_service 36 incl. 4 nieuwe wachters; drift-guard,
-  email-sync, compose-attachments, invoice-files 9). Ruff schoon. Frontend tsc schoon.
-- Migratie op prod toegepast; `attach_invoices boolean default false` bevestigd; alembic
-  head = s233; alle 5 containers healthy.
-- **Live op prod (Chrome-extensie):** compose = rechterpaneel, mails links zichtbaar;
-  mail links aanklikken tijdens open paneel opent detail, paneel blijft → non-modaal
-  bewezen. Ingelogd als Lisanne met kesting@kestinglegal.nl (S232-wijziging leeft).
-
-### Bekende issues / bewust niet gedaan
-- **AI-generatie → in-place paneel + draad + factuur-voorselectie NIET met browser
-  doorgeklikt** — het aanklikken van een specifieke inbound-mail haperde door
-  renderer-freezes in de automation, en een verse generatie kost een AI-call (bewust
-  vermeden i.v.m. kostenpunt). De onderliggende logica is tsc-schoon + backend-getest;
-  het riskantste stuk (zijpaneel-layout + non-modaal) is wél live bewezen. Arsalan kan
-  dit met één klik op zijn telefoon natrekken op een inbound-mail van 2026-00006.
-- **Playwright-MCP-profiel zat vast** (extern lock) → verificatie via de Chrome-extensie
-  gedaan i.p.v. Playwright.
-- "Open in Outlook" op een AI-concept op de Mail-pagina verzendt direct (onSend=sendAiDraft)
-  i.p.v. een .eml te maken — randgeval, primaire knop is Versturen; niet gebruikt in de
-  beschreven flow.
-
-### Volgende sessie
-S234: incassostappen kritisch herzien — situatie-stappen i.p.v. platte lijst; een brief
-koppelen aan derde/laatste sommatie (dan schuiven die ook door); batch- en follow-up-route
-op dezelfde "volgende stap"-logica als compose/send + AI-route trekken. Zie
-`docs/sessions/PROMPT-S234.md`.

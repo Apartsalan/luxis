@@ -38,7 +38,10 @@ S240-afronding in een andere terminal: geen sessie-einde-administratie hier,
 | C10 | Wat ziet Lisanne morgenochtend (21 adviezen + 16 aanvragen + 61 taken) | Meting op prod (read-only): aantallen + hoeveel daarvan morgen kleurt. Oordeel werkbaarheid — meting, geen fix. | ⚠️ Meting (geen fix, opruimronde is van Arsalan+Lisanne): 65 open taken (64 al 'te laat', 1 wordt morgen 'due'), waarvan 39 op testdossiers en 26 op echte zaken; 21 open adviezen (14 test / 7 echt); 16 aanvragen ter beoordeling (14 al van 15-7); 93 ongelezen meldingen op haar account; 81 ongesorteerde oude mails. Oordeel: de echte werklast (26 taken + 7 adviezen + enkele aanvragen) is op zich werkbaar, maar die verdrinkt visueel in de test-restanten — de geplande opruimronde is de sleutel, niet nieuwe bouw. |
 
 ## Optioneel blok D — derde AI-antwoordronde
-ALLEEN met expliciete GO van Arsalan in deze sessie. Niet gestart.
+Bewust overgeslagen (besluit Arsalan + advies Claude, 23-7): de AI-antwoordlaag is
+bij S238 vers doorgetest (46 antwoorden, 0 storingen) en de wijzigingen van
+S240/S241 raken taken en mail-sortering, niet het antwoordpad. Volgende ronde hoort
+bij de eerstvolgende sessie die prompts/schema's/antwoord-logica wijzigt.
 
 ## Vondsten
 
@@ -56,3 +59,44 @@ ALLEEN met expliciete GO van Arsalan in deze sessie. Niet gestart.
 | Wegwerp-medewerker s241-medewerker@test.local | lokale dev-omgeving | gewist incl. tokens, natelling 0 |
 | Nieuwe wachters `backend/tests/test_s241_sync_kruispunten.py` | repo | blijvend (bewust — wachters bij vondst 1 + A5-kruispunten) |
 | Fix her-koppelpad | `backend/app/email/sync_service.py` | blijvend (vondst 1) |
+
+## Eindstand
+
+Bril A: 6/6 gedraaid — 4 ✅, 1 🅰 (vondst 1, gefixt + live gedeployd), 1 🅲 (voorstel 2).
+Bril B: 2/2 gedraaid — beide ✅ (werklijst-verschil is bewust ontwerp; rollen-matrix klopt
+droog én live op de lokale omgeving).
+Bril C: 2/2 gedraaid — morgenochtend voegt vrijwel niets toe (1 taak kleurt, 0 nieuwe
+meldingen); werklast-meting zegt: opruimronde is de sleutel, niet nieuwe bouw (voorstel 3
+als klein randgeval genoteerd).
+Blok D (derde AI-antwoordronde): niet gestart — wacht op expliciete GO van Arsalan.
+
+Fix live: commit `da81429`, backend gedeployd via SSH met verse container, containers
+healthy, login 200, prod-logs 0 fouten sinds deploy. Email/sync-suite lokaal 1002 groen;
+ruff schoon. CI: liep nog bij schrijven — natrekken vóór sessie-einde.
+Testsporen: alles teruggedraaid (natellingen 0, zie tabel); alleen de bedoelde
+blijvende sporen (fix + wachters + dit logboek) staan in git.
+Sessie-einde-administratie (SESSION-NOTES, roadmap, tag): bewust NIET hier gedaan —
+parallel-afspraak met de S240-terminal.
+
+## Nagekomen (zelfde sessie, GO Arsalan): meldingen-bundeling GEBOUWD + LIVE
+
+Na de testronde gaf Arsalan GO voor het sterkste voorstel uit S239 (bundeling,
+voorstel 3) — gebouwd op Opus na modelwissel. Commit `275d9f4`, backend +
+frontend gedeployd.
+
+**Wat het doet:** typen met 3+ ongelezen meldingen worden in de bel één
+bundel-rij ("63 taken of deadlines te laat", teller-badge, ondertitel toont de
+nieuwste). Klik → overzichtspagina van dat type (taken/mail/facturen/dashboard)
++ de hele stapel wordt in één keer gelezen gemarkeerd (nieuwe route, alleen
+eigen gebruiker + eigen type — wachter bewaakt scoping). Bundels staan altijd
+bovenaan (vallen nooit uit de lijst door de 15-rijen-kap). Losse en al-gelezen
+meldingen onveranderd; de platte lijst (dossier-actiefeed) expliciet
+ongewijzigd — wachter bewaakt dat.
+
+**Bewijs:** 7 nieuwe wachters (33 meldingen-tests groen), tsc + ruff schoon;
+live op prod: seidony's bel ging van 15 rijen ruis naar 5 bundels + losse
+belangrijke rijen — de 2 verjaringswaarschuwingen ("VERJAARD! Direct actie
+vereist") die eerst verdronken zijn nu direct zichtbaar. Klik-flow live
+bewezen met 3 wegwerp-meldingen (email_unsorted, type had 0 echte ongelezen):
+navigatie klopte, precies die 3 werden gelezen, 0 andere geraakt; wegwerp-rijen
+daarna gewist (natelling 0). CI: liep nog bij schrijven.

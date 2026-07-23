@@ -4,7 +4,7 @@
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
 **Laatst bijgewerkt:** 23 juli 2026 (S244 — mail-werkbank LIVE: draad-gegroepeerde correspondentie, draad overal, Verzonden-map, vrij bericht-shell).
 **Laatste feature/fix:** Mail-werkbank (5 bouw-commits) + Fable-eindreview met 4 gefixte vondsten t/m `d2aef7c` (encoding-schade, reply-aan-onszelf, onleesbare smalle rijen, mobiele herkansing) — alles live + visueel bewezen.
-**Openstaand:** demo-puntenreeks S245-S247 (taken+meldingen → uitgesteld versturen → AI-kennislaag, masterplan `docs/plans/PLAN-DEMO-PUNTEN-S243.md`); **nieuwe derde betwistingsmail IN100592 (23-7 16:29) + auto-concept wachten op Lisanne**; fase-heropening per groep (beslislijst `docs/plans/BASENET-STATUS-HERSTEL.md`); 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai bij Lisanne/Arsalan; IN100015-melding wegklikken; IN100127 beoordelen; 2 open mails (IN100128, IN100586) + verweer IN100592/IN100606 + IN100492 bij Lisanne; verweer-parkeerstap-voorstel; 193 ongelezen meldingen. Losse punten: BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
+**Openstaand:** demo-puntenreeks S245-S247 (taken+meldingen → uitgesteld versturen → AI-kennislaag, masterplan `docs/plans/PLAN-DEMO-PUNTEN-S243.md`); **derde betwistingsmail IN100592 (23-7 16:29) + auto-concept én 2 regeling-taken IN100281/IN100537 (oude verzoeken, S243-tegenlezing) wachten op Lisanne**; fase-heropening per groep (beslislijst `docs/plans/BASENET-STATUS-HERSTEL.md`); 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai bij Lisanne/Arsalan; IN100015-melding wegklikken; IN100127 beoordelen; 2 open mails (IN100128, IN100586) + verweer IN100592/IN100606 + IN100492 bij Lisanne; verweer-parkeerstap-voorstel; 193 ongelezen meldingen. Losse punten: BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
 **Volgende sessie:** S245 — taken + meldingen (Opus); zie `docs/sessions/PROMPT-S245.md`.
 
 ## Sessie 244 (23 juli 2026, Opus-bouw — mail-werkbank: 4 demo-punten blok 1, LIVE)
@@ -121,9 +121,14 @@ verse klikronde op prod. **4 vondsten, alle 4 direct gefixt + gedeployd:**
 Verder gecheckt, géén fout: vrij-bericht in de dropdown (visueel), shell +
 citaat in de editor, logo-met-lege-src in de editor is vóórbestaand (zelfde
 bij het Herinnering-sjabloon; verzendpad plakt het logo er wél in — bewezen
-door de 7 sommaties van 22-7). CI van de 3 fix-commits liep nog bij
-schrijven — natrekken bij S245-start. Parallel kwam `9808e3f` binnen
-(S243-tegenlezing uit andere terminal, alleen docs).
+door de 7 sommaties van 22-7). **CI eindstand: álle S244-runs groen** (5
+bouw-commits + 3 review-fixes + docs); de ene rode Deploy-run (15:17) was de
+bekende race met de handmatige SSH-deploy — latere Deploys groen, prod
+nagemeten op de laatste commit, containers healthy, login 200. Parallel kwam
+`9808e3f` binnen (S243-tegenlezing andere terminal): natellingen bevestigd,
+11 tijdlijn-rijen op prod hersteld, zoekbalk-tekstfix (met deze deploys mee
+live), en 2 nieuwe signaleringen — regeling-taken IN100281/IN100537 uit oude
+verzoek-mails (inhoud voor Lisanne; die van IN100537 dateert van 22 juni).
 
 ### Volgende sessie
 S245 (Opus): taken + meldingen — zie `docs/sessions/PROMPT-S245.md`.

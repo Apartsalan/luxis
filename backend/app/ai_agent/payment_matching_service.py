@@ -765,6 +765,9 @@ async def execute_match(
         user_id,
         trust_description=trust_description,
         reference=txn.payment_reference or txn.sequence_number,
+        # S242: bron-record-route — twee identieke échte overboekingen op één
+        # dag zijn legitiem; ontdubbeling gebeurt op het bankrecord zelf.
+        _skip_duplicate_guard=True,
     )
     match.trust_transaction_id = trust_tx.id
     match.payment_id = payment.id

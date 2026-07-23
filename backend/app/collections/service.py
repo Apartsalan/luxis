@@ -408,6 +408,7 @@ async def create_payment(
     nakosten_type: str | None = None,
     _skip_installment_link: bool = False,
     _skip_workflow_hook: bool = False,
+    _skip_duplicate_guard: bool = False,
     cap_to_outstanding: bool = False,
 ) -> Payment:
     """Register a payment for a case.
@@ -418,6 +419,49 @@ async def create_payment(
     After creating the payment, triggers the workflow payment hook
     to check if the case is fully paid and should auto-transition to 'betaald'.
     """
+    # ── S242 (S240 vondst 2): dubbelklik/2 tabs mag nooit dubbel boeken ──
+    # Rij-slot op de zaak (zelfde patroon als derdengelden audit #70): een
+    # tweede gelijktijdige boeking wacht tot de eerste commit en leest dan de
+    # echte stand — dat maakt ook de volbetaald-/overbetaal-poort hieronder
+    # race-vrij. Dit is het gedeelde punt van álle boekroutes (handmatige UI,
+    # termijn-registratie, AI-agent, derdengelden, bankimport).
+    await db.execute(
+        select(Case.id)
+        .where(Case.id == case_id, Case.tenant_id == tenant_id)
+        .with_for_update()
+    )
+    # Dedup-venster: identieke betaling (bedrag/datum/wijze/omschrijving)
+    # binnen enkele seconden = dezelfde indiening. Bron-record-routes
+    # (bankimport, BaseNet-import) slaan dit over — twee identieke échte
+    # overboekingen op één dag zijn daar legitiem; die ontdubbelen op het
+    # bron-record zelf (S195-les).
+    # ponytail: vast venster van 10s — een uniek indienings-id per formulier
+    # is de upgrade als dit ooit te grof blijkt.
+    if not _skip_duplicate_guard:
+        duplicate = (
+            await db.execute(
+                select(Payment.id)
+                .where(
+                    Payment.tenant_id == tenant_id,
+                    Payment.case_id == case_id,
+                    Payment.is_active.is_(True),
+                    Payment.amount == data.amount,
+                    Payment.payment_date == data.payment_date,
+                    Payment.payment_method.is_not_distinct_from(data.payment_method),
+                    Payment.description.is_not_distinct_from(data.description),
+                    Payment.created_at >= func.now() - timedelta(seconds=10),
+                )
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if duplicate is not None:
+            raise BadRequestError(
+                f"Deze betaling van €{data.amount} is zojuist al geboekt "
+                "(zelfde bedrag, datum en omschrijving). Ververs de pagina om "
+                "haar te zien; wacht even en boek opnieuw als het echt een "
+                "tweede betaling is."
+            )
+
     # ── Calculate outstanding amounts as of payment date ──────────────
     claims = await list_claims(db, tenant_id, case_id)
     total_principal = sum((c.principal_amount for c in claims), Decimal("0"))
@@ -576,6 +620,7 @@ async def create_payment_for_case(
     *,
     _skip_installment_link: bool = False,
     _skip_workflow_hook: bool = False,
+    _skip_duplicate_guard: bool = False,
     cap_to_outstanding: bool = False,
 ) -> Payment:
     """Load the case (+ client) and register a payment using its own settings.
@@ -596,6 +641,7 @@ async def create_payment_for_case(
         user_id,
         _skip_installment_link=_skip_installment_link,
         _skip_workflow_hook=_skip_workflow_hook,
+        _skip_duplicate_guard=_skip_duplicate_guard,
         cap_to_outstanding=cap_to_outstanding,
         **case_payment_kwargs(case),
     )
@@ -610,6 +656,7 @@ async def record_trust_debtor_payment(
     *,
     trust_description: str | None = None,
     reference: str | None = None,
+    _skip_duplicate_guard: bool = False,
 ) -> "tuple[TrustTransaction, Payment, Decimal]":
     """Record a debtor payment received on the trust (derdengelden) account.
 
@@ -657,7 +704,8 @@ async def record_trust_debtor_payment(
         ),
     )
     payment = await create_payment_for_case(
-        db, tenant_id, case_id, data, user_id, cap_to_outstanding=True
+        db, tenant_id, case_id, data, user_id,
+        cap_to_outstanding=True, _skip_duplicate_guard=_skip_duplicate_guard,
     )
     surplus = data.amount - payment.amount
     return trust_tx, payment, surplus

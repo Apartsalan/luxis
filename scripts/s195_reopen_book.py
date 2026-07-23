@@ -159,6 +159,8 @@ async def run(mode: str) -> None:
                     None,
                     _skip_installment_link=True,
                     _skip_workflow_hook=True,
+                    # S242: bankafschrift = bron-record, dedup-poort n.v.t.
+                    _skip_duplicate_guard=True,
                     cap_to_outstanding=True,
                 )
                 booked += 1

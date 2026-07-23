@@ -444,6 +444,9 @@ async def _write_payments(db, tenant_id, importable: list[dict]) -> tuple[int, l
                 user_id=None,
                 _skip_installment_link=True,
                 _skip_workflow_hook=True,
+                # S242: historische bron-records — identieke betalingen op
+                # één dag zijn hier legitiem, dedup-poort niet van toepassing.
+                _skip_duplicate_guard=True,
                 cap_to_outstanding=True,
             )
             if payment.amount < p["amount"]:

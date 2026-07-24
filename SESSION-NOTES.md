@@ -2,10 +2,96 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 24 juli 2026 (S247 — nachtdiff-review: 4 fixes live; placeholder-bug IN100606 aan echte oorzaak gefixt (HTML-only verweer); kennisregels alleen ONTWORPEN, niet gebouwd).
-**Laatste feature/fix:** verweer-tekst van HTML-only mails bereikt nu de AI (`0d5c227`, echte oorzaak IN100606) + placeholder-mal-guard (`ba7a388`) + stap-anker follow-up-uitvoering + zichtbaar "Verstuur later"-menu (`4ffa184`/`45e2ca1`); live bewezen met verse AI-generatie op het echte IN100606-verweer.
-**Openstaand:** kennisregels-ONTWERP wacht op akkoord Arsalan + inhoud Lisanne (`docs/plans/ONTWERP-juridische-kennisregels-S247.md`); oud IN100606-concept (kapotte placeholder) = weggooien + opnieuw genereren (Lisanne); IN100592 3e betwisting + regeling-taken IN100281/IN100537 (Lisanne); fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`); 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai. Losse punten: afgeronde taak toont nog "X dagen te laat"; melding mislukte geplande mail alleen naar inplanner; BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
-**Volgende sessie:** S248 — Arsalan bepaalt hoofdtaak; kennisregels bouwen kan zodra ontwerp akkoord is (Fable-ontwerp + eerste regels van Lisanne). Zie `docs/sessions/PROMPT-S248.md`.
+**Laatst bijgewerkt:** 24 juli 2026 (S248 — juridische kennisregels GEBOUWD + LIVE; harde poort live bewezen op prod + door alle 3 de draft-routes een echte AI-brief; wacht nu op inhoud van Lisanne).
+**Laatste feature/fix:** juridische kennisregels — aparte tabel `legal_knowledge_rules` (+ RLS), harde `applies_to`-poort vs `Case.debtor_type`, injectie in alle 3 de draft-paden, dashboard-sectie in "Slim leren" (`350f8c7` + reviewfixes `6f8d399`); 8 wachters + live end-to-end bewezen ($0,09), prod schoon (0 regels), nul gedragsverandering tot goedkeuring.
+**Openstaand:** **kennisregels wachten op INHOUD Lisanne** (eerste regels intikken, ijkpunt IN100458; §7 van `docs/plans/ONTWERP-juridische-kennisregels-S247.md`). Verder Lisanne-werk: oud IN100606-concept opnieuw genereren, IN100592 3e betwisting, regeling-taken IN100281/IN100537, 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai. Losse punten: afgeronde taak "X dagen te laat"; melding mislukte geplande mail alleen naar inplanner; fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`); BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
+**Volgende sessie:** S249 — Arsalan bepaalt hoofdtaak. START met: aan Arsalan in gewone taal uitleggen wat Lisanne precies moet doen om de kennisregels in te vullen (zie PROMPT-S249). Zie `docs/sessions/PROMPT-S249.md`.
+
+## Sessie 248 (24 juli 2026, Fable-ontwerp → Opus-bouw → Fable-review + live end-to-end — juridische kennisregels GEBOUWD + LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S248. Model-cyclus netjes gevolgd: ontwerp-verfijning op Fable,
+bouw op Opus, verse-ogen-review + live-proef op Fable. Arsalan koos kandidaat 1
+(juridische kennisregels, restant S247) en gaf GO om te bouwen.
+
+**Ontwerp verfijnd op Fable (gemeten in bron + prod).** Twee harde keuzes tegen het
+S247-voorstel in: (1) trigger = het bestaande 13-type verweer-vocabulaire
+(`defense_types.py`), géén eigen trefwoord-machinerie — op prod gevalideerd dat de
+IN100458-betwisting exact als `av_toepasselijkheid` is geclassificeerd. (2) De
+toepasbaarheids-poort loopt op `Case.debtor_type` (b2b/b2c), NIET op `legal_form` —
+dat veld is op het ijkgeval leeg gemeten (KvK-verrijking uit). Doc bijgewerkt naar
+GEBOUWD + LIVE (`docs/plans/ONTWERP-juridische-kennisregels-S247.md`).
+
+**Gebouwd (`350f8c7`).** Aparte tabel `legal_knowledge_rules` (TenantBase, RLS in
+dezelfde migratie s247). Service `ai_agent/knowledge_rules.py` met de harde poort
+`rule_applies` (alle/zakelijk/consument vs debtor_type, fail-closed op onbekend) +
+`build_knowledge_rules_text` (één gedeelde functie voor álle 3 de draft-paden:
+automation_service verweer-stap, draft_service, unified_draft_service). Endpoints
+`/api/ai-agent/learning/rules*` (CRUD + goedkeuren/uitzetten/verwijderen). Dashboard-
+sectie `knowledge-rules-section.tsx` in "Slim leren" (aanmaken/bewerken/goedkeuren),
+met een oranje waarschuwing zodra 'alleen consument' wordt gekozen. Framing in de
+prompt is conditioneel ("pas ALLEEN toe als de debiteur deze stelling voert"), géén
+toon-voorbeeld zoals de geleerde antwoorden. **Nul gedragsverandering tot een regel
+is goedgekeurd** (lege string bij 0 regels).
+
+**Kruispunt-poort (het scherpste risico, ontwerp §4).** Een zakelijke regel (art.
+6:235 BW, "de B.V. kan de AV niet vernietigen") mag NOOIT op een consument — die mág
+de AV juist wél vernietigen. De poort zit hard in de gedeelde functie; alle 3 de
+routes erven hem. 5 wachters (zakelijk niet op consument, type-match, kandidaat-gate,
+consument-scope, validatie).
+
+**Fable-review — 3 vondsten, alle gefixt (`6f8d399`, +3 wachters, rood-eerst):**
+1. Een weerlegging langer dan het promptbudget gaf alléén de aankondigingskop zonder
+   één regel (prompt-ruis) en bereikte de AI stil nooit → injectie dan leeg + warning.
+2. Type 'overig' kon via de API een stil-dode regel opleveren (matcher slaat 'overig'
+   bewust over) → validatie weigert met duidelijke melding.
+3. Geen wachter op "kennisregels alléén in de verweer-stap-prompt" → toegevoegd.
+
+**Live end-to-end bewezen op prod (GO-scope, wegwerp-testdossier 2026-00006).** Op een
+tijdelijk nagebouwd verweer-scenario (zakelijke debiteur "wij vernietigen de AV") met
+een goedgekeurde test-kennisregel door álle 3 de draft-routes een échte AI-brief laten
+genereren: (A) verweer-knop → concept weerlegt letterlijk met art. 6:235; (C) AI-
+antwoord-op-mail → idem; (B) automatische route → kennis zat aantoonbaar in de prompt,
+maar de AI gebruikte hem niet omdat de vernietigings-claim in díe route alleen als
+korte mailsamenvatting meekomt en die in de testopzet de claim niet bevatte (correct
+gedrag: "alleen toepassen als de debiteur het echt voert" — bij een echte mail staat
+de claim wél in de samenvatting). 3 AI-calls, samen **$0,09** nageteld. Alles exact
+teruggedraaid: testdossier terug op Tweede sommatie, classificatie/mailtekst hersteld,
+testregel + testconcepten + testtaak verwijderd, prod weer **0 kennisregels**.
+
+### Gewijzigde bestanden
+Backend: `ai_agent/models.py` (LegalKnowledgeRule), migratie
+`s247_legal_knowledge_rules.py`, `ai_agent/knowledge_rules.py` (nieuw),
+`ai_agent/router.py` (rules-endpoints), `incasso/automation_service.py`,
+`ai_agent/draft_service.py`, `ai_agent/unified_draft_service.py`,
+`ai_agent/incasso_email_prompts.py` (injectie). Frontend:
+`instellingen/knowledge-rules-section.tsx` (nieuw), `instellingen/ai-leren-tab.tsx`
+(sectie + labels geëxporteerd). Tests: `test_knowledge_rules.py` (8 wachters).
+Commits `350f8c7` (feature) + `6f8d399` (reviewfixes); doc `48b7505`/`350f8c7`.
+
+### Verificatie
+8 wachters groen + RLS-drift-guard (nieuwe tabel) + 59 pipeline-tests groen; ruff +
+tsc schoon; CI van beide commits volledig groen (alleen de al bestaande, niet-
+blokkerende sharp-CVE-dependency-audit rood — stond al rood op de docs-only commit
+ervoor). Prod: migratie gedraaid (RLS FORCE + policy geverifieerd), login 200,
+endpoint `[]`. Live poortproef op prod (b2b injecteert/6:235, b2c leeg, ander type
+leeg). Visueel bekeken (desktop + mobiel 390×844): sectie + formulier + consument-
+waarschuwing + create/delete-flow.
+
+### Bekende issues / bewust niet gedaan
+- **Wacht op INHOUD Lisanne:** er staat nog géén enkele echte regel. Tot Lisanne
+  regels intikt + goedkeurt verandert er niets aan de AI-output. Vragenlijst per
+  regel staat in §7 van het ontwerp-doc; ijkpunt = IN100458 (Studio Hartzema B.V.).
+- Route B (automatische conceptgeneratie) neemt de debiteur-claim alleen mee via de
+  mailsamenvatting — dat is by design, niet live per-pad met een echte AI-brief
+  bevestigd behalve via de prompt-inhoud.
+- Endpoints niet rol-beperkt (spiegelt learned_answers; 2 vertrouwde gebruikers +
+  tenant-isolatie) — kan later naar advocaat/admin.
+
+### Volgende sessie
+S249 — Arsalan bepaalt de hoofdtaak. **START met de uitleg-opdracht van Arsalan:**
+in gewone taal precies vertellen wat Lisanne moet doen om de kennisregels in te
+vullen. Zie `docs/sessions/PROMPT-S249.md`.
 
 ## Sessie 247 (24 juli 2026, Fable-review → Opus-bouw → Fable-eindreview — nachtdiff-review + placeholder-bug + kennisregels-ontwerp, LIVE)
 
@@ -748,59 +834,3 @@ S241/S242).
 ### Volgende sessie
 S241 draaide parallel (zie entry hierboven); S242 = veegsessie voorstel-lijst.
 
-## Sessie 239 (22/23 juli 2026, nacht — Fable autonoom: scenario-nachtronde + fixloop, LIVE)
-
-### Samenvatting
-Arsalans opdracht (avond 22-7): bedenk 20-30+ scenario's waar Lisanne in haar
-dagelijkse advocatenwerk tegenaan kan lopen, test ze, en los alles op — fouten +
-kleine ergernissen direct fixen, ontbrekende functies als voorstel; echte
-AI-aanroepen mochten; niets naar echte debiteuren; Arsalan sliep. Methode vooraf
-onderbouwd (persona-/scenario-testen + "soap opera testing") en aangescherpt met:
-verwacht-resultaat vóóraf per scenario, driedeling van vondsten, veilig testterrein
-met terugdraai-plicht, wachter per foutsoort, einde-criterium.
-**Let op: hele nacht op Fable gewerkt (ook de fixes) — Arsalan was er niet om naar
-Opus te wisselen; expliciet gemeld.**
-
-**32 scenario's in 5 groepen** (werkdag, rare debiteur, cliënt-kant, tijd/termijnen,
-rand/systeem), volledig logboek in `docs/sessions/S239-SCENARIOS.md`. Geld-scenario's
-live op een wegwerpdossier (2026-00020, exact teruggedraaid incl. vorderingen);
-mail/AI-scenario's met 2 geïnjecteerde testmails + echte AI-calls op 2026-00006
-(teruggedraaid); de rest gemeten op prod (read-only) of droog via code + bestaande
-wachters.
-
-**13 vondsten → 5 gefixt (commit `6f15a13`, 10 nieuwe wachters, LIVE):**
-1. Betaling op volbetaalde zaak werd stil geboekt → totaal openstaand −100 (live
-   gereproduceerd); poort gold alleen bij openstaand > 0. Derdengelden houdt
-   surplus-gedrag.
-2. Samengesteld kenmerk (`D102733_I71828409`) nooit herkend (underscore-woordgrens);
-   na de fix koppelde de sync direct 2 échte mails die 9 dagen resp. 5 weken
-   ongesorteerd lagen.
-3. Concept weggooien liet de nakijk-taak eeuwig open (8 spooktaken op prod);
-   gedeelde sluit-helper op alle 3 vervall-routes (P3-uitbreiding), live bewezen.
-4. Regeling nagekomen maar zaak niet vol betaald → bleef stil op pauzestap; nu taak
-   "Regeling afgerond — vervolg bepalen" (S235-recept, met tegenproef).
-5. Dossier onvindbaar op factuurnummer van de vordering; nu in beide zoekpaden.
-
-**Goed bevonden (o.a.):** alle geld-rekenwerk op de cent (rente, BIK-staffel,
-6:44-verdeling, herrekening na extra vordering — onafhankelijk nagerekend);
-rentetabel actueel (handelsrente 10,40% per 1-7-2026, extern geverifieerd);
-autosluiting + factureer-melding + heropening-vangnet; mail-koppeling kiest nooit
-stil een verkeerd dossier; ontdubbeling 0 dubbelen; verjaring-monitor bestaat.
-
-**Voorstel-lijst (7, niet gebouwd — scope-hek):** melding ongesorteerde bak
-(S237-gat, sterkste kandidaat), betaalbelofte-bewaking (datum+bedrag worden al
-herkend, live bewezen 0.95), meldingen-bundeling (145 ongelezen), categorie
-'onduidelijk', overbetaling-knop, cascade bij dossier-verwijderen, weekend-logica.
-
-### Verificatie
-351 tests groen (alle geraakte kruispunten), ruff schoon, backend deployd via SSH
-`--force-recreate`, containers healthy, login 200, prod-logs 0 fouten sinds deploy,
-live natellingen per fix (zie logboek). CI: liep nog bij schrijven — natrekken.
-Testsporen: wegwerpdossier volledig gewist; blijvend: ai_usage-rijen (bedoeld),
-1 spooktaak dicht (2026-00012), 2 echte mails gekoppeld (gewenst effect).
-
-### Vervolg (besloten ochtend 23-7)
-Arsalan: GO voor voorstel 1+2 (bak-melding + belofte-bewaking) en testronde 2 met
-brillen "slordige gebruiker" + "klik-ronde als Lisanne" — in een VERSE sessie op Opus
-(S240, prompt klaargezet). CI beide S239-commits groen (success via gh nagetrokken).
-De 2 gevonden mails wachten nog op antwoord — eerste vraag van S240.

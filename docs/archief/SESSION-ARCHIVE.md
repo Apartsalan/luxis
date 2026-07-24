@@ -11296,3 +11296,60 @@ S239: **Arsalan legt de hoofdtaak bij start zelf uit** (aangekondigd bij dit
 sessie-einde). Achtergrond-punten die er nog liggen (Lisanne-antwoorden,
 opruimronde, onbekend-afzender-gat) staan als context in
 `docs/sessions/PROMPT-S239.md`.
+
+## Sessie 239 (22/23 juli 2026, nacht — Fable autonoom: scenario-nachtronde + fixloop, LIVE)
+
+### Samenvatting
+Arsalans opdracht (avond 22-7): bedenk 20-30+ scenario's waar Lisanne in haar
+dagelijkse advocatenwerk tegenaan kan lopen, test ze, en los alles op — fouten +
+kleine ergernissen direct fixen, ontbrekende functies als voorstel; echte
+AI-aanroepen mochten; niets naar echte debiteuren; Arsalan sliep. Methode vooraf
+onderbouwd (persona-/scenario-testen + "soap opera testing") en aangescherpt met:
+verwacht-resultaat vóóraf per scenario, driedeling van vondsten, veilig testterrein
+met terugdraai-plicht, wachter per foutsoort, einde-criterium.
+**Let op: hele nacht op Fable gewerkt (ook de fixes) — Arsalan was er niet om naar
+Opus te wisselen; expliciet gemeld.**
+
+**32 scenario's in 5 groepen** (werkdag, rare debiteur, cliënt-kant, tijd/termijnen,
+rand/systeem), volledig logboek in `docs/sessions/S239-SCENARIOS.md`. Geld-scenario's
+live op een wegwerpdossier (2026-00020, exact teruggedraaid incl. vorderingen);
+mail/AI-scenario's met 2 geïnjecteerde testmails + echte AI-calls op 2026-00006
+(teruggedraaid); de rest gemeten op prod (read-only) of droog via code + bestaande
+wachters.
+
+**13 vondsten → 5 gefixt (commit `6f15a13`, 10 nieuwe wachters, LIVE):**
+1. Betaling op volbetaalde zaak werd stil geboekt → totaal openstaand −100 (live
+   gereproduceerd); poort gold alleen bij openstaand > 0. Derdengelden houdt
+   surplus-gedrag.
+2. Samengesteld kenmerk (`D102733_I71828409`) nooit herkend (underscore-woordgrens);
+   na de fix koppelde de sync direct 2 échte mails die 9 dagen resp. 5 weken
+   ongesorteerd lagen.
+3. Concept weggooien liet de nakijk-taak eeuwig open (8 spooktaken op prod);
+   gedeelde sluit-helper op alle 3 vervall-routes (P3-uitbreiding), live bewezen.
+4. Regeling nagekomen maar zaak niet vol betaald → bleef stil op pauzestap; nu taak
+   "Regeling afgerond — vervolg bepalen" (S235-recept, met tegenproef).
+5. Dossier onvindbaar op factuurnummer van de vordering; nu in beide zoekpaden.
+
+**Goed bevonden (o.a.):** alle geld-rekenwerk op de cent (rente, BIK-staffel,
+6:44-verdeling, herrekening na extra vordering — onafhankelijk nagerekend);
+rentetabel actueel (handelsrente 10,40% per 1-7-2026, extern geverifieerd);
+autosluiting + factureer-melding + heropening-vangnet; mail-koppeling kiest nooit
+stil een verkeerd dossier; ontdubbeling 0 dubbelen; verjaring-monitor bestaat.
+
+**Voorstel-lijst (7, niet gebouwd — scope-hek):** melding ongesorteerde bak
+(S237-gat, sterkste kandidaat), betaalbelofte-bewaking (datum+bedrag worden al
+herkend, live bewezen 0.95), meldingen-bundeling (145 ongelezen), categorie
+'onduidelijk', overbetaling-knop, cascade bij dossier-verwijderen, weekend-logica.
+
+### Verificatie
+351 tests groen (alle geraakte kruispunten), ruff schoon, backend deployd via SSH
+`--force-recreate`, containers healthy, login 200, prod-logs 0 fouten sinds deploy,
+live natellingen per fix (zie logboek). CI: liep nog bij schrijven — natrekken.
+Testsporen: wegwerpdossier volledig gewist; blijvend: ai_usage-rijen (bedoeld),
+1 spooktaak dicht (2026-00012), 2 echte mails gekoppeld (gewenst effect).
+
+### Vervolg (besloten ochtend 23-7)
+Arsalan: GO voor voorstel 1+2 (bak-melding + belofte-bewaking) en testronde 2 met
+brillen "slordige gebruiker" + "klik-ronde als Lisanne" — in een VERSE sessie op Opus
+(S240, prompt klaargezet). CI beide S239-commits groen (success via gh nagetrokken).
+De 2 gevonden mails wachten nog op antwoord — eerste vraag van S240.

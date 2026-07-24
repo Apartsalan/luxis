@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 24 juli 2026 (S247 — nachtdiff-review: 4 fixes live; placeholder-bug IN100606 aan de echte oorzaak gefixt (HTML-only verweer bereikte de AI niet); juridische kennisregels ONTWORPEN, niet gebouwd). Rapport: entry S247 in `SESSION-NOTES.md`. **Volgende = S248: Arsalan bepaalt hoofdtaak; kennisregels bouwen zodra ontwerp akkoord (`docs/sessions/PROMPT-S248.md`).**
+**Laatst bijgewerkt:** 24 juli 2026 (S248 — juridische kennisregels GEBOUWD + LIVE; harde poort op prod bewezen + door alle 3 de draft-routes een echte AI-brief; wacht nu op de inhoud van Lisanne). Rapport: entry S248 in `SESSION-NOTES.md`. **Volgende = S249: Arsalan bepaalt hoofdtaak; START met uitleg wat Lisanne moet doen (`docs/sessions/PROMPT-S249.md`).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,32 +53,28 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 24 juli 2026, S247)
+## 🎯 Huidige prioriteit (bijgewerkt 24 juli 2026, S248)
 
-> ✅ **S247 AFGEROND — nachtdiff-review + placeholder-bug + kennisregels-ontwerp.**
-> **(A) Verse-ogen-review van de nachtdiff** (`90aa57f`+`8ef2d88`) → 4 fixes live:
-> een goedgekeurde follow-up kon na een stapwissel de VERKEERDE brief versturen
-> (stap-anker in de uitvoerfunctie); het "Verstuur later"-menu viel achter het
-> batch-venster weg (z-index); een stille batch-nazorg-fout krijgt nu een melding;
-> een faalmelding nodigde uit tot dubbel versturen. **(B) Placeholder-bug IN100606:**
-> de AI kopieerde een interne invul-aanwijzing letterlijk in het concept. Opus fixte
-> de prompt + bouwde een controle-poort; **Fable vond de echte oorzaak** — de
-> betwisting-mail was HTML-only, dus de verweer-tekst bereikte de AI helemaal niet
-> (leeg verweer → onvulbare invulregel). Beide plekken lezen nu de HTML. Live
-> bewezen met een verse AI-generatie op het echte verweer: nette weerlegging, geen
-> mal (2 AI-calls, $0,33). **(C) Juridische kennisregels: ONTWORPEN, niet gebouwd**
-> — nieuwe feature die eerst akkoord + juridische inhoud van Lisanne vraagt. Doc:
-> `docs/plans/ONTWERP-juridische-kennisregels-S247.md`. Bron-correctie: de "132
-> kandidaten wachten op Lisanne" klopt niet meer (103 goedgekeurd, 28 afgewezen, 1
-> kandidaat). Rapport: entry S247 in SESSION-NOTES.
+> ✅ **S248 AFGEROND — juridische kennisregels GEBOUWD + LIVE.** Nieuwe feature naast
+> "Slim leren": Lisanne kan zelf juridische standaardkennis vastleggen ("als een
+> debiteur *dit* beweert, is dat onjuist, en *dit* is de weerlegging — art. X BW").
+> De AI gebruikt een regel alleen ná goedkeuring, en alleen als het verweer echt
+> gevoerd wordt én de voorwaarde klopt. **Het scherpste risico is hard afgevangen:**
+> een regel die alleen voor bedrijven geldt (art. 6:235 BW) kan nooit op een consument
+> worden losgelaten — op prod bewezen (bij een zakelijk dossier wél, bij een consument
+> leeg). Door alle 3 de conceptroutes een échte AI-brief gehaald ($0,09), alles
+> teruggedraaid, prod schoon (0 regels). 8 wachters, CI groen. Doc bijgewerkt naar
+> GEBOUWD + LIVE: `docs/plans/ONTWERP-juridische-kennisregels-S247.md`. Rapport: entry
+> S248 in SESSION-NOTES.
 >
-> 🎯 **VOLGENDE (S248): Arsalan bepaalt de hoofdtaak.** Kennisregels bouwen kan
-> zodra het ontwerp akkoord is (Fable-ontwerp verfijnen + eerste regels van Lisanne).
-> Voor Lisanne (inhoudelijk): oud IN100606-concept weggooien + opnieuw genereren;
-> IN100592 3e betwisting; regeling-taken IN100281/IN100537; IN100127; 2 open mails
-> (IN100128/IN100586); IN100492-vraag. Parallel beslispunt: fase-heropening per groep
-> (`docs/plans/BASENET-STATUS-HERSTEL.md`, 406 dossiers, GO per groep). Verder blijven
-> staan: 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai,
+> 🎯 **VOLGENDE (S249): Arsalan bepaalt de hoofdtaak.** **Eerst de uitleg-opdracht:**
+> in gewone taal precies vertellen wat Lisanne moet doen om de kennisregels in te
+> vullen (machine is af, alleen de inhoud ontbreekt nog — §7 van het ontwerp-doc,
+> ijkpunt IN100458). Voor Lisanne (inhoudelijk): oud IN100606-concept opnieuw
+> genereren; IN100592 3e betwisting; regeling-taken IN100281/IN100537; IN100127; 2
+> open mails (IN100128/IN100586); IN100492-vraag. Parallel beslispunt: fase-heropening
+> per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`, 406 dossiers, GO per groep). Verder
+> blijven staan: 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai,
 > verweer-parkeerstap-voorstel, rest voorstel-lijst, BaseNet-delisting, kostenblokje,
 > opmaak-restpunt S227, S221b-rest, DMARC, cosmetisch (afgeronde taak toont "X dagen
 > te laat", melding mislukte geplande mail alleen naar inplanner, 4 restjes S235),

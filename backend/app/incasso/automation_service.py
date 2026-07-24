@@ -300,6 +300,19 @@ def _draft_fidelity_issues(
     return issues
 
 
+def _defense_text(email) -> str:
+    """Verweer-tekst van een inkomende mail voor de conceptprompt.
+
+    S247-review (echte oorzaak IN100606): veel mails zijn HTML-only — body_text
+    én snippet leeg. De oude `body_text or snippet` gaf dan een LEEG verweer aan
+    de AI, die daardoor niets te weerleggen had en de placeholder-mal letterlijk
+    kopieerde. Zelfde HTML-strip-helper als de bibliotheek-backfill.
+    """
+    from app.ai_agent.learned_answers import _email_body_text
+
+    return _email_body_text(email)[:8000]
+
+
 def _capitalize_name(name: str) -> str:
     """Capitalize eerste letter als naam helemaal lowercase ingevoerd is.
 
@@ -651,9 +664,7 @@ async def generate_draft_for_step(
             ).order_by(SyncedEmail.email_date.desc()).limit(1)
         )).scalar_one_or_none()
         if last_inbound:
-            context["incoming_defense"] = (
-                last_inbound.body_text or last_inbound.snippet or ""
-            )[:8000]
+            context["incoming_defense"] = _defense_text(last_inbound)
             logger.info(
                 "Case %s: incoming_defense auto-geladen uit SyncedEmail %s (%d chars)",
                 case_id, last_inbound.id, len(context["incoming_defense"]),
@@ -971,8 +982,8 @@ async def trigger_defense_response_for_email(
             case.case_number, current_step.name, synced_email_id,
         )
 
-    # Genereer draft met incoming verweer-tekst
-    defense_text = (synced.body_text or synced.snippet or "")[:8000]
+    # Genereer draft met incoming verweer-tekst (HTML-only mails: tekst uit HTML).
+    defense_text = _defense_text(synced)
     draft = await generate_draft_for_step(
         db,
         tenant_id=tenant_id,

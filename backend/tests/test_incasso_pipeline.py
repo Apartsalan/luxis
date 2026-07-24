@@ -1376,6 +1376,85 @@ async def test_verweer_switch_routes_through_move_case_to_step(
     assert len(activities) >= 1
 
 
+def test_defense_text_extractie_dekt_html_only_mail():
+    """S247-review (echte oorzaak IN100606): de betwisting-mail was HTML-only
+    (body_text én snippet leeg) → de AI kreeg een LEEG verweer en kopieerde de
+    placeholder-mal letterlijk. De verweer-tekst-extractie moet op HTML
+    terugvallen (zelfde helper als de bibliotheek-backfill al gebruikt)."""
+    from app.email.synced_email_models import SyncedEmail
+    from app.incasso.automation_service import _defense_text
+
+    mail = SyncedEmail(
+        id=uuid.uuid4(), tenant_id=uuid.uuid4(),
+        provider_message_id="x", direction="inbound",
+        body_text="", snippet="",
+        body_html="<div><p>Bij deze weiger ik het te betalen.</p>"
+                  "<p>De afspraken zijn niet nagekomen.</p></div>",
+    )
+    tekst = _defense_text(mail)
+    assert "weiger ik het te betalen" in tekst
+    assert "afspraken zijn niet nagekomen" in tekst
+    assert "<" not in tekst  # geen rauwe HTML de prompt in
+
+
+async def test_verweer_trigger_geeft_html_only_verweer_door(
+    db, test_tenant, test_user, test_company
+):
+    """S247-review — de exacte IN100606-route: een HTML-only betwisting-mail
+    triggert de verweer-flow; de conceptgenerator moet dan de ECHTE
+    verweer-tekst (uit de HTML) meekrijgen, geen lege string."""
+    from datetime import UTC, datetime
+    from unittest.mock import AsyncMock, patch
+
+    from app.email.oauth_models import EmailAccount
+    from app.email.synced_email_models import SyncedEmail
+    from app.incasso.automation_service import trigger_defense_response_for_email
+
+    eerste = IncassoPipelineStep(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, name="Eerste sommatie",
+        sort_order=1, min_wait_days=0, max_wait_days=4,
+    )
+    verweer = IncassoPipelineStep(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, name="Verweer beantwoorden",
+        sort_order=10, min_wait_days=0, max_wait_days=0, is_hold_step=True,
+    )
+    db.add_all([eerste, verweer])
+    await db.flush()
+
+    case = await create_incasso_case(
+        db, test_tenant.id, test_company, None, test_user,
+        step=eerste, case_number="2026-09101", days_in_step=3,
+    )
+    account = EmailAccount(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, user_id=test_user.id,
+        provider="gmail", email_address="kantoor@test.nl",
+        access_token_enc=b"x", refresh_token_enc=b"y",
+    )
+    db.add(account)
+    await db.flush()
+    email = SyncedEmail(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, email_account_id=account.id,
+        case_id=case.id, provider_message_id="defense-html-only",
+        from_email="debiteur@example.nl", direction="inbound",
+        body_text="", snippet="",  # HTML-only mail — het IN100606-geval
+        body_html="<p>Bij deze weiger ik het te betalen. "
+                  "De afspraken zijn niet nagekomen.</p>",
+        email_date=datetime.now(UTC),
+    )
+    db.add(email)
+    await db.flush()
+
+    gen = AsyncMock(return_value=None)
+    with patch("app.incasso.automation_service.generate_draft_for_step", new=gen):
+        await trigger_defense_response_for_email(
+            db, test_tenant.id, email.id, "betwisting"
+        )
+
+    gen.assert_called_once()
+    doorgegeven = gen.call_args.kwargs.get("incoming_defense") or ""
+    assert "weiger ik het te betalen" in doorgegeven  # KERN: niet leeg
+
+
 async def test_verweer_email_does_not_reopen_paid_case(
     db, test_tenant, test_user, test_company
 ):

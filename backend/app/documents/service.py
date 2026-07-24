@@ -12,7 +12,8 @@ import uuid
 from datetime import date
 from decimal import Decimal
 
-from jinja2 import BaseLoader, Environment, StrictUndefined
+from jinja2 import BaseLoader, StrictUndefined
+from jinja2.sandbox import SandboxedEnvironment
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,8 +33,11 @@ from app.documents.schemas import (
 from app.relations.models import Contact
 from app.shared.exceptions import BadRequestError, NotFoundError
 
-# Jinja2 environment for template rendering
-jinja_env = Environment(
+# Jinja2 environment for template rendering.
+# SEC-25: SandboxedEnvironment i.p.v. Environment — dit (verouderde) HTML-pad
+# rendert opgeslagen sjabloon-inhoud; zonder sandbox is dat SSTI → RCE. autoescape
+# blijft aan (HTML-XSS), de sandbox blokkeert daarnaast dunder-toegang/onveilige calls.
+jinja_env = SandboxedEnvironment(
     loader=BaseLoader(),
     undefined=StrictUndefined,
     autoescape=True,

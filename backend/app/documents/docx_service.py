@@ -14,6 +14,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from docxtpl import DocxTemplate
+from jinja2.sandbox import SandboxedEnvironment
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -29,6 +30,15 @@ from app.collections.service import (
 from app.collections.wik import calculate_bik
 from app.relations.models import Contact
 from app.shared.exceptions import BadRequestError, NotFoundError
+
+# Sandbox-omgeving voor Jinja-rendering van (mogelijk door gebruiker geüploade)
+# DOCX-sjablonen. SEC-25: docxtpl gebruikt standaard een NIET-sandboxed Jinja2-
+# Environment; een sjabloon met `{{ ...__class__...__globals__... }}` zou dan code
+# op de server uitvoeren (SSTI → RCE). Kritiek in multi-tenant: één kantoor breekt
+# de gedeelde host. De SandboxedEnvironment blokkeert toegang tot dunder-attributen
+# en onveilige calls; legitieme merge-velden ({{ kantoor.naam }}, {% for %}) werken
+# ongewijzigd. Eén gedeelde instantie — de env is stateless voor onze sjablonen.
+_SANDBOX_ENV = SandboxedEnvironment()
 
 # Templates directory: project_root/templates/
 # In Docker (dev): mounted at /app/templates via docker-compose.dev.yml
@@ -616,9 +626,11 @@ async def render_docx(
     # Remove internal keys (prefixed with _)
     render_context = {k: v for k, v in context.items() if not k.startswith("_")}
 
-    # Render
+    # Render — SEC-25: via de sandbox-omgeving, zodat een kwaadaardig sjabloon
+    # geen servercode kan uitvoeren (SSTI/RCE). jinja2.sandbox.SecurityError wordt
+    # hier als render-fout afgevangen (geen 500, wel een nette 400).
     try:
-        tpl.render(render_context)
+        tpl.render(render_context, jinja_env=_SANDBOX_ENV)
     except Exception as e:
         raise BadRequestError(f"Fout bij renderen sjabloon: {e}")
 

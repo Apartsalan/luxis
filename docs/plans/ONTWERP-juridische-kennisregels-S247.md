@@ -1,8 +1,15 @@
 # Ontwerp — Juridische kennisregels ("standaard-onzin herkennen")
 
-**Status:** VOORSTEL, verfijnd op Fable (S248, 24 juli) — nog niet gebouwd.
-Wacht op: (a) GO van Arsalan op dit ontwerp, (b) eerste regels van Lisanne (§7).
-Nieuwe feature → vereist goedkeuring (4-stappen-werkwijze) + inhoud van Lisanne.
+**Status:** GEBOUWD + LIVE (S248, 24 juli) — GO Arsalan gegeven, machinerie
+gebouwd op Opus en gedeployd. De harde poort is live op prod bewezen (zakelijke
+regel injecteert wél op b2b, NIET op b2c). **Wacht nog op de inhoud: de eerste
+echte regels van Lisanne (§7)** — tot die er zijn en zijn goedgekeurd verandert er
+niets aan de AI-output (0 regels → lege injectie).
+
+Gebouwd: tabel `legal_knowledge_rules` (+ RLS-migratie s247), service
+`ai_agent/knowledge_rules.py` (poort + CRUD + `build_knowledge_rules_text`),
+endpoints `/api/ai-agent/learning/rules*`, injectie in alle 3 de draft-paden,
+dashboard-sectie in "Slim leren". 5 wachters + live poortproef.
 
 **Aanleiding (demo-wens IN100458):** Studio Hartzema **B.V.** wil "de algemene
 voorwaarden vernietigen". Voor zo'n partij staat dat doorgaans zwak — maar let

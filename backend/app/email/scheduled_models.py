@@ -73,8 +73,9 @@ class ScheduledEmail(TenantBase):
     # Alleen voor 'batch_step': de pijplijnstap waarop het dossier stond bij het
     # INPLANNEN. Staat het dossier op het verzendmoment op een ándere stap, dan
     # wordt er NIET verstuurd (er zou de verkeerde brief uitgaan) → mislukt +
-    # melding. Follow-up heeft dit niet nodig: daar dekt de eigen status
-    # ('superseded' bij een stapwissel buitenom) hetzelfde gat.
+    # melding. Follow-up heeft geen eigen anker nodig: het advies dráágt zijn
+    # stap (incasso_step_id) en execute_recommendation blokkeert zelf bij een
+    # stap-mismatch (S247-review; de superseded-status dekt alleen PENDING).
     step_id_at_schedule: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
 
     # De volledige verzendopdracht als JSON — de bezorger bouwt hem hieruit terug.

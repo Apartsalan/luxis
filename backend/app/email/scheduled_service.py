@@ -270,8 +270,10 @@ async def schedule_followup_execute(
 
     Het GOEDKEUREN gebeurt nú (dat is Lisannes besluit van vanavond); alleen de
     uitvoering — brief maken, versturen, doorschuiven — wacht tot het gekozen
-    moment. Verandert de stap intussen buitenom, dan zet de bestaande scanner de
-    aanbeveling op 'verouderd' en voert de bezorger niets uit (mislukt + melding).
+    moment. Verandert de stap intussen buitenom, dan blokkeert
+    execute_recommendation op de stap-mismatch (S247-review; de
+    superseded-opruiming raakt alleen PENDING-adviezen, en dit advies staat na
+    het goedkeuren op APPROVED) en meldt de bezorger het als mislukt.
     """
     from app.ai_agent.followup_models import FollowupRecommendation, RecommendationStatus
     from app.ai_agent.followup_service import approve_recommendation
@@ -413,12 +415,19 @@ async def _notify_failure(
     reason: str,
     *,
     mail_sent: bool = False,
+    blocked: bool = False,
 ) -> None:
     """Meld aan wie de mail inplande dat er iets misging.
 
-    `mail_sent` bepaalt de staartzin: bij een nazorg-fout ná een geslaagde
-    verzending mag er niet "verstuur hem zelf" staan (S246-review-vondst —
-    dat zou tot een dúbbele mail aan de debiteur uitnodigen).
+    De staartzin hangt af van wat we zéker weten (S246/S247-review — een
+    verkeerde staartzin nodigt uit tot een dúbbele mail aan de debiteur):
+
+    * `mail_sent` — de mail is aantoonbaar weg; alleen de nazorg faalde.
+    * `blocked` — een guard blokkeerde VÓÓR er iets naar de provider ging;
+      er is met zekerheid niets verstuurd.
+    * anders — de verzending zelf klapte; of de provider de mail nog heeft
+      meegenomen is dan NIET zeker (time-out ná acceptatie bestaat), dus
+      eerst de map Verzonden controleren vóór iemand hem zelf opnieuw stuurt.
     """
     from app.notifications.schemas import NotificationCreate
     from app.notifications.service import create_notification
@@ -426,9 +435,15 @@ async def _notify_failure(
     if mail_sent:
         titel = f"Geplande e-mail: nazorg mislukt — {row.subject or '(geen onderwerp)'}"
         staart = "De mail zelf IS verstuurd — NIET opnieuw versturen."
+    elif blocked:
+        titel = f"Geplande e-mail niet verstuurd: {row.subject or '(geen onderwerp)'}"
+        staart = "Er is niets verstuurd; er wordt niet automatisch opnieuw geprobeerd."
     else:
         titel = f"Geplande e-mail niet verstuurd: {row.subject or '(geen onderwerp)'}"
-        staart = "De mail is NIET opnieuw geprobeerd — controleer en verstuur hem zelf."
+        staart = (
+            "Er wordt niet automatisch opnieuw geprobeerd. Controleer eerst de "
+            "map Verzonden vóórdat u de mail zelf opnieuw verstuurt."
+        )
 
     await create_notification(
         db,
@@ -545,7 +560,7 @@ async def _send_one(session: AsyncSession, row_id: uuid.UUID, tenant_id: uuid.UU
     if blokkade is not None:
         row.status = STATUS_FAILED
         row.last_error = blokkade
-        await _notify_failure(session, row, blokkade)
+        await _notify_failure(session, row, blokkade, blocked=True)
         await session.commit()
         return "mislukt (blokkade)"
 
@@ -637,6 +652,16 @@ async def _run_batch_step(session: AsyncSession, row: ScheduledEmail) -> None:
         raise BadRequestError(
             "; ".join(result.errors) or "Verzending is niet gelukt (geen reden gemeld)."
         )
+    if result.errors:
+        # S247-review: de mail is wél weg, maar een deel van de nazorg
+        # (doorschuiven, taken afronden) faalde — de directe route toont dat in
+        # de toast, de wachtrij is blind. Niet stil laten verdwijnen.
+        await _notify_failure(
+            session,
+            row,
+            "Nazorg deels mislukt: " + "; ".join(result.errors) + ".",
+            mail_sent=True,
+        )
 
 
 async def _run_followup(session: AsyncSession, row: ScheduledEmail) -> None:
@@ -687,7 +712,7 @@ async def _fail_stuck_claims(session: AsyncSession) -> int:
             session,
             row,
             "De verzending brak halverwege af en het is ONZEKER of de mail toch "
-            "is verstuurd. Controleer eerst de map Verzonden.",
+            "is verstuurd.",
         )
     if rows:
         await session.commit()

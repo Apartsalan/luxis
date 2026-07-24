@@ -789,6 +789,117 @@ async def test_followup_verouderd_of_uitgevoerd_blokkeert(
     assert "intussen" in (row.last_error or "")
 
 
+@pytest.mark.asyncio
+async def test_followup_stap_gewisseld_blokkeert_uitvoering(
+    db: AsyncSession, session_factory, test_tenant: Tenant, test_user: User
+):
+    """Kruispunt (S247-review): 'goedkeuren nu, uitvoeren later' maakt APPROVED
+    een lánglevende status, maar de stapwissel-opruiming raakt alleen PENDING.
+    Wisselt de stap ná het inplannen buitenom (bv. verweer parkeert het dossier),
+    dan zou de brief van de OUDE stap uitgaan — de uitvoerfunctie moet blokkeren."""
+    stap_oud = await _step(db, test_tenant.id, "Eerste sommatie", "sommatie", 1)
+    stap_nieuw = await _step(db, test_tenant.id, "Tweede sommatie", "tweede_sommatie", 2)
+    case = await _case_met_stap_en_debiteur(db, test_tenant.id, stap_oud)
+    rec = await _aanbeveling(db, test_tenant.id, case, stap_oud, status="approved")
+    await _account(db, test_tenant.id, test_user.id)
+
+    row = ScheduledEmail(
+        tenant_id=test_tenant.id, created_by_id=test_user.id, case_id=case.id,
+        scheduled_at=datetime.now(UTC) - timedelta(minutes=1), status=STATUS_PENDING,
+        kind="followup", payload={"rec_id": str(rec.id)},
+        subject="Follow-up", recipients="debiteur@example.nl",
+    )
+    db.add(row)
+    case.incasso_step_id = stap_nieuw.id  # stap wisselt buitenom ná het inplannen
+    await db.commit()
+
+    provider = _mock_provider()
+    p1, p2, p3 = _send_patches(provider)
+    with p1, p2, p3:
+        await _dispatch(session_factory)
+
+    provider.send_message.assert_not_called()
+    await db.refresh(row)
+    assert row.status == STATUS_FAILED
+    assert "andere stap" in (row.last_error or "")
+    await db.refresh(rec)
+    assert rec.status == "approved"  # NIET op 'executed' — er is niets gebeurd
+
+
+@pytest.mark.asyncio
+async def test_batch_nazorg_fout_meldt_dat_mail_wel_weg_is(
+    db: AsyncSession, session_factory, test_tenant: Tenant, test_user: User
+):
+    """Kruispunt (S247-review): de batchfunctie verstuurde de mail wél, maar de
+    nazorg (doorschuiven/taken) faalde deels. De rij mag dan 'verstuurd' zijn,
+    maar de fouten mogen niet stil verdwijnen — melding mét 'IS verstuurd'."""
+    from app.incasso.schemas import BatchActionResult
+
+    step = await _step(db, test_tenant.id)
+    case = await _case_met_stap_en_debiteur(db, test_tenant.id, step)
+    await db.commit()
+
+    row = ScheduledEmail(
+        tenant_id=test_tenant.id, created_by_id=test_user.id, case_id=case.id,
+        scheduled_at=datetime.now(UTC) - timedelta(minutes=1), status=STATUS_PENDING,
+        kind="batch_step", step_id_at_schedule=step.id,
+        payload={"auto_assign_step": False},
+        subject="Stap-brief", recipients="debiteur@example.nl",
+    )
+    db.add(row)
+    await db.commit()
+
+    deels = BatchActionResult(
+        action="generate_document", processed=1, skipped=0,
+        errors=["2026-95001: fout bij genereren — doorschuiven mislukt"],
+        emails_sent=1,
+    )
+    with patch("app.incasso.service.batch_execute", new_callable=AsyncMock,
+               return_value=deels):
+        await _dispatch(session_factory)
+
+    await db.refresh(row)
+    assert row.status == STATUS_SENT  # de mail is echt weg
+    notifs = list((await db.execute(
+        select(Notification).where(
+            Notification.tenant_id == test_tenant.id,
+            Notification.type == "scheduled_email_failed",
+        )
+    )).scalars().all())
+    assert len(notifs) == 1
+    assert "IS verstuurd" in notifs[0].message
+    assert "doorschuiven mislukt" in notifs[0].message
+
+
+@pytest.mark.asyncio
+async def test_bezorgfout_melding_wijst_eerst_naar_verzonden_map(
+    db: AsyncSession, session_factory, test_tenant: Tenant, test_user: User
+):
+    """S247-review: klapt de verzending zelf (provider-fout), dan weten we niet
+    zeker of de mail al weg was — de melding moet eerst naar de map Verzonden
+    wijzen i.p.v. uit te nodigen tot direct opnieuw versturen (dubbel-risico)."""
+    case = await _case(db, test_tenant.id)
+    await _account(db, test_tenant.id, test_user.id)
+    await db.commit()
+    row = await _queue_row(db, test_tenant.id, test_user.id, case.id,
+                           when=datetime.now(UTC) - timedelta(minutes=1))
+
+    provider = _mock_provider(boom=True)
+    p1, p2, p3 = _send_patches(provider)
+    with p1, p2, p3:
+        await _dispatch(session_factory)
+
+    await db.refresh(row)
+    assert row.status == STATUS_FAILED
+    notif = (await db.execute(
+        select(Notification).where(
+            Notification.tenant_id == test_tenant.id,
+            Notification.type == "scheduled_email_failed",
+        )
+    )).scalars().one()
+    assert "map Verzonden" in notif.message  # eerst controleren, dan pas zelf sturen
+
+
 # ── Afscherming ──────────────────────────────────────────────────────────────
 
 

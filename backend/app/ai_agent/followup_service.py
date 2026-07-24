@@ -567,6 +567,19 @@ async def execute_recommendation(
         and step.template_type
     )
     if is_generate:
+        # S247-review — stap-anker, zelfde gat als de batch-guard dicht: sinds
+        # 'Verstuur later' (S246-nacht) kan een goedgekeurd advies úren wachten
+        # op uitvoering, en de stapwissel-opruiming (supersede_open_
+        # recommendations) raakt bewust alleen PENDING-adviezen. Wisselt de stap
+        # intussen buitenom (bv. een verweer parkeert het dossier), dan zou hier
+        # blind de brief van de OUDE stap uitgaan. Geldt ook voor de directe
+        # 'Uitvoeren'-knop — daar is dezelfde volgorde denkbaar.
+        if case.incasso_step_id != rec.incasso_step_id:
+            raise BadRequestError(
+                f"{case.case_number}: het dossier staat intussen op een andere "
+                "stap dan waar dit advies bij hoort — er is niets verstuurd."
+            )
+
         # S205 — wettelijke waarborg art. 6:96 lid 6 BW, óók op dit verzendpad.
         # De "Uitvoeren"-knop rendert en verstuurt exact dezelfde stap-sommaties als
         # de batch; zonder deze gate was dit de tweede open zijdeur (S204-review).

@@ -167,8 +167,8 @@ async def schedule_execute_followup(
 
     Goedkeuren gebeurt NU (Lisannes besluit van vanavond); alleen de uitvoering
     (brief maken, versturen, doorschuiven) wacht tot het gekozen moment via de
-    verzend-wachtrij. Stap gewisseld intussen → aanbeveling wordt 'verouderd'
-    en de bezorger voert niets uit.
+    verzend-wachtrij. Stap gewisseld intussen → de uitvoerfunctie blokkeert op
+    de stap-mismatch en de bezorger meldt het als mislukt (S247-review).
     """
     from app.email.scheduled_service import schedule_followup_execute
 

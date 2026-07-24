@@ -324,7 +324,9 @@ async def _gather_case_context(
     # aan de cliënt en zouden anders ook use_count onterecht ophogen.
     if audience == "client":
         context["learned_examples_text"] = ""
+        context["knowledge_rules_text"] = ""
     else:
+        from app.ai_agent.knowledge_rules import build_knowledge_rules_text
         from app.ai_agent.learned_answers import build_learned_examples_text
 
         context["learned_examples_text"] = await build_learned_examples_text(
@@ -332,6 +334,10 @@ async def _gather_case_context(
             tenant_id,
             context.get("last_classification_category"),
             defense_type=last_defense_type,
+        )
+        # Curated kennisregels (S248) — harde poort tegen debtor_type in de service.
+        context["knowledge_rules_text"] = await build_knowledge_rules_text(
+            db, tenant_id, last_defense_type, context.get("debtor_type"),
         )
 
     return context
@@ -429,6 +435,12 @@ def _build_draft_prompt(
     learned_text = context.get("learned_examples_text")
     if learned_text:
         parts.append(f"\n{learned_text}")
+
+    # Curated juridische kennisregels (S248) — al gefilterd op verweer-type + debtor_type
+    # in _gather_case_context (leeg bij audience="client" of geen toepasbare regel).
+    knowledge_rules_text = context.get("knowledge_rules_text")
+    if knowledge_rules_text:
+        parts.append(f"\n{knowledge_rules_text}")
 
     # User instruction
     if instruction:

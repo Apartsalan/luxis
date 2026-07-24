@@ -691,11 +691,17 @@ async def generate_draft_for_step(
     # Pop vóór de **context-spread naar build_user_prompt (dat deze sleutel niet kent).
     amounts_fallback = context.pop("_amounts_fallback", False)
     if target_step.name == "Verweer beantwoorden":
+        from app.ai_agent.knowledge_rules import build_knowledge_rules_text
         from app.ai_agent.learned_answers import build_learned_examples_text
 
         context["learned_examples_text"] = await build_learned_examples_text(
             db, tenant_id, last_cls_category,
             defense_type=last_cls_defense_type, max_chars=4000,
+        )
+        # Curated kennisregels (S248) — harde poort tegen debtor_type in de service.
+        context["knowledge_rules_text"] = await build_knowledge_rules_text(
+            db, tenant_id, last_cls_defense_type,
+            context.get("case_data", {}).get("debtor_type"),
         )
 
     # Bouw prompt

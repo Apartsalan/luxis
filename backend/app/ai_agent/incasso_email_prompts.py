@@ -116,6 +116,7 @@ def build_user_prompt(
     prior_correspondence: list[dict[str, Any]] | None = None,
     template_body_html: str | None = None,
     learned_examples_text: str | None = None,
+    knowledge_rules_text: str | None = None,
 ) -> str:
     """Construeer de user-prompt voor een incasso-stap.
 
@@ -223,6 +224,11 @@ def build_user_prompt(
     # stappen dus bewust weglaten, ook als er goedgekeurde voorbeelden klaarstaan.
     if learned_examples_text and step_name == "Verweer beantwoorden":
         sections.extend(["", learned_examples_text])
+
+    # Curated juridische kennisregels (S248) — alleen bij de verweer-stap, net als de
+    # geleerde voorbeelden. De service filtert al op verweer-type + debtor_type-poort.
+    if knowledge_rules_text and step_name == "Verweer beantwoorden":
+        sections.extend(["", knowledge_rules_text])
 
     if prior_correspondence:
         sections.extend([

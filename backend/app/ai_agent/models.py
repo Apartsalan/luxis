@@ -341,3 +341,52 @@ class LearnedAnswer(TenantBase):
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default="true"
     )
+
+
+class LegalKnowledgeRule(TenantBase):
+    """Juridische kennisregel (S248) — proactieve kennis: 'déze standaard-stelling is
+    onjuist, dít is de weerlegging (art. X BW)'.
+
+    Fundamenteel anders dan `LearnedAnswer`: dat is EMPIRISCH (geknipt uit Lisanne's echte
+    verstuurde mail, met bronzaak, toon-voorbeeld). Een kennisregel is CURATED juridische
+    kennis die Lisanne (of Arsalan namens haar) intikt — geen bronmail, wél een harde
+    toepasbaarheids-voorwaarde. Deelt alleen de goedkeur-flow met `LearnedAnswer`
+    (kandidaat → goedgekeurd/afgewezen), niet de backfill-machinerie.
+
+    Matching op de bestaande 13-type verweer-woordenschat (`defense_types.py`): een regel
+    voedt de verweer-prompt alléén als de laatste inkomende mail als dat type is
+    geclassificeerd ÉN de `applies_to`-poort tegen `Case.debtor_type` klopt. Die poort is
+    HARD in code (niet alleen in de tekst): zo kan een zakelijke regel (bv. art. 6:235 BW,
+    'de B.V. kan de AV niet vernietigen') nooit op een consument worden losgelaten — een
+    consument mág de AV juist wél vernietigen (het scherpste doemscenario, ontwerp §4).
+    """
+
+    __tablename__ = "legal_knowledge_rules"
+
+    # Matchsleutel: één van de 13 verweer-types (of 'overig'). Spiegelt de classificatie
+    # van de inkomende mail (EmailClassification.defense_type).
+    defense_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    # Harde toepasbaarheids-poort tegen Case.debtor_type: 'alle' | 'zakelijk' | 'consument'.
+    applies_to: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="alle", server_default="alle"
+    )
+    # Korte naam voor het dashboard (bv. "AV-vernietiging door B.V.").
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    # Waaraan herken je de stelling (context voor de AI + het dashboard).
+    claim_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # De standaard-weerlegging (wat de AI mag gebruiken).
+    rebuttal_body: Mapped[str] = mapped_column(Text, nullable=False)
+    # Wetsartikel(en), bv. "art. 6:235 lid 1 BW".
+    legal_basis: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    language: Mapped[str] = mapped_column(String(5), nullable=False, default="nl")
+
+    # Review-status: 'kandidaat' (wacht op beoordeling) → 'goedgekeurd' (voedt de AI) of
+    # 'afgewezen'. Alleen 'goedgekeurd' + is_active gaat ooit naar een prompt.
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="kandidaat",
+        server_default="kandidaat", index=True,
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

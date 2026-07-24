@@ -469,6 +469,14 @@ async def _build_verweer_knowledge(
     )
     if learned_text:
         parts.append(learned_text)
+    # Curated kennisregels (S248) — harde poort tegen case.debtor_type in de service.
+    from app.ai_agent.knowledge_rules import build_knowledge_rules_text
+
+    rules_text = await build_knowledge_rules_text(
+        db, tenant_id, defense_type, case.debtor_type
+    )
+    if rules_text:
+        parts.append(rules_text)
     return "\n\n".join(parts)
 
 

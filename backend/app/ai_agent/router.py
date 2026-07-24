@@ -602,3 +602,159 @@ async def learning_approve_candidates_bulk(
     approved = await approve_candidates_bulk(db, current_user.tenant_id, payload.ids)
     await db.commit()
     return {"approved": approved}
+
+
+# ── Juridische kennisregels (S248) — curated kennis met harde toepasbaarheids-poort ──
+
+
+class KnowledgeRuleRequest(BaseModel):
+    """Een juridische kennisregel (aanmaken of bewerken)."""
+
+    defense_type: str
+    applies_to: str
+    title: str
+    rebuttal_body: str
+    claim_description: str | None = None
+    legal_basis: str | None = None
+
+
+def _serialize_rule(r) -> dict:
+    return {
+        "id": str(r.id),
+        "defense_type": r.defense_type,
+        "applies_to": r.applies_to,
+        "title": r.title,
+        "claim_description": r.claim_description,
+        "rebuttal_body": r.rebuttal_body,
+        "legal_basis": r.legal_basis,
+        "status": r.status,
+        "is_active": r.is_active,
+        "reviewed_at": r.reviewed_at.isoformat() if r.reviewed_at else None,
+        "created_at": r.created_at.isoformat() if r.created_at else None,
+    }
+
+
+@router.get("/learning/rules")
+async def learning_rules(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Alle juridische kennisregels (kandidaat + goedgekeurd + afgewezen)."""
+    from app.ai_agent.knowledge_rules import list_rules
+
+    rows = await list_rules(db, current_user.tenant_id)
+    return [_serialize_rule(r) for r in rows]
+
+
+@router.post("/learning/rules")
+async def learning_create_rule(
+    payload: KnowledgeRuleRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Maak een nieuwe kennisregel aan (als kandidaat — voedt de AI pas na goedkeuring)."""
+    from app.ai_agent.knowledge_rules import create_rule, validate_rule_fields
+
+    err = validate_rule_fields(
+        defense_type=payload.defense_type,
+        applies_to=payload.applies_to,
+        title=payload.title,
+        rebuttal_body=payload.rebuttal_body,
+    )
+    if err:
+        raise HTTPException(status_code=422, detail=err)
+    row = await create_rule(
+        db,
+        current_user.tenant_id,
+        defense_type=payload.defense_type,
+        applies_to=payload.applies_to,
+        title=payload.title,
+        rebuttal_body=payload.rebuttal_body,
+        claim_description=payload.claim_description,
+        legal_basis=payload.legal_basis,
+    )
+    await db.commit()
+    return _serialize_rule(row)
+
+
+@router.put("/learning/rules/{rule_id}")
+async def learning_update_rule(
+    rule_id: uuid.UUID,
+    payload: KnowledgeRuleRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Bewerk de inhoud van een kennisregel (raakt de goedkeur-status niet)."""
+    from app.ai_agent.knowledge_rules import update_rule, validate_rule_fields
+
+    err = validate_rule_fields(
+        defense_type=payload.defense_type,
+        applies_to=payload.applies_to,
+        title=payload.title,
+        rebuttal_body=payload.rebuttal_body,
+    )
+    if err:
+        raise HTTPException(status_code=422, detail=err)
+    row = await update_rule(
+        db,
+        current_user.tenant_id,
+        rule_id,
+        defense_type=payload.defense_type,
+        applies_to=payload.applies_to,
+        title=payload.title,
+        rebuttal_body=payload.rebuttal_body,
+        claim_description=payload.claim_description,
+        legal_basis=payload.legal_basis,
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Kennisregel niet gevonden")
+    await db.commit()
+    return _serialize_rule(row)
+
+
+@router.post("/learning/rules/{rule_id}/approve")
+async def learning_approve_rule(
+    rule_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Keur een kennisregel goed — pas hierna gebruikt de AI hem."""
+    from app.ai_agent.knowledge_rules import approve_rule
+
+    row = await approve_rule(db, current_user.tenant_id, rule_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Kennisregel niet gevonden")
+    await db.commit()
+    return {"id": str(row.id), "status": row.status}
+
+
+@router.post("/learning/rules/{rule_id}/reject")
+async def learning_reject_rule(
+    rule_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Wijs een kennisregel af / trek een goedkeuring in — voedt de AI nooit meer."""
+    from app.ai_agent.knowledge_rules import reject_rule
+
+    ok = await reject_rule(db, current_user.tenant_id, rule_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Kennisregel niet gevonden")
+    await db.commit()
+    return {"ok": True}
+
+
+@router.delete("/learning/rules/{rule_id}")
+async def learning_delete_rule(
+    rule_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Verwijder een kennisregel definitief."""
+    from app.ai_agent.knowledge_rules import delete_rule
+
+    ok = await delete_rule(db, current_user.tenant_id, rule_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Kennisregel niet gevonden")
+    await db.commit()
+    return {"ok": True}

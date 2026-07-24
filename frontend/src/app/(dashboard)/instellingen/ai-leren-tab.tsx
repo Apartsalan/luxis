@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { KnowledgeRulesSection } from "./knowledge-rules-section";
 
 // ── Types ────────────────────────────────────────────────────────────────
 interface LearningStats {
@@ -63,7 +64,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 // Verweer-type (13 types, S174) — bepaalt waarop de AI dit voorbeeld matcht. Gespiegeld
 // aan backend `app/ai_agent/defense_types.py` (DEFENSE_TYPE_LABELS) — houd beide gelijk.
-const DEFENSE_TYPE_LABELS: Record<string, string> = {
+export const DEFENSE_TYPE_LABELS: Record<string, string> = {
   afwikkeling_intrekking: "Afwikkeling / intrekking opdracht (art. 9.3 / 20.4)",
   verlenging_opzegging: "Stilzwijgende verlenging / opzegging",
   betwisting_ongemotiveerd: "Ongemotiveerde betwisting",
@@ -90,7 +91,7 @@ const LEGACY_TYPE_ALIASES: Record<string, string> = {
   english_renewal_9_3: "afwikkeling_intrekking",
 };
 // Keuzelijst bij goedkeuren: alleen de 13 actuele types + overig (geen oude aliassen).
-const DEFENSE_TYPE_KEYS = [
+export const DEFENSE_TYPE_KEYS = [
   "afwikkeling_intrekking",
   "verlenging_opzegging",
   "betwisting_ongemotiveerd",
@@ -410,6 +411,9 @@ export function AILerenTab() {
           zonder jouw akkoord.
         </p>
       </div>
+
+      {/* Juridische kennisregels (S248) — curated kennis, aparte machinerie */}
+      <KnowledgeRulesSection />
 
       {/* Kandidaten om te beoordelen */}
       <div className="rounded-xl border border-border bg-card p-5">

@@ -6,9 +6,10 @@ from collections.abc import Callable
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import PyJWTError as JWTError
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.models import User
+from app.auth.models import Tenant, User
 from app.auth.service import decode_token, get_user_by_id
 from app.database import get_db
 from app.middleware.tenant import set_tenant_context
@@ -63,6 +64,19 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token tenant mismatch",
+        )
+
+    # SEC-27: een geschorst/gedeactiveerd kantoor mag geen toegang meer houden.
+    # get_current_user checkte alleen user.is_active; zonder deze check bleven de
+    # gebruikers van een uitgeschreven kantoor volledig ingelogd. Aparte lichte
+    # query (tenants heeft geen RLS; PK-lookup). NULL/False → geweigerd.
+    tenant_active = (
+        await db.execute(select(Tenant.is_active).where(Tenant.id == user.tenant_id))
+    ).scalar_one_or_none()
+    if not tenant_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Kantoor is niet actief",
         )
 
     return user

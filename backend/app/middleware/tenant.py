@@ -78,11 +78,19 @@ async def set_tenant_context(db: AsyncSession, tenant_id: str) -> None:
         _rls_role_available = result.scalar() is not None
         _rls_role_checked = True
         if not _rls_role_available:
-            app_env = os.environ.get("APP_ENV", "development")
-            if app_env == "production":
+            # SEC-28: default-secure — álles wat niet expliciet een dev/test-omgeving
+            # is (ook een typefout als "prod", een lege of misspelde APP_ENV) telt als
+            # productie en MOET dan hard falen als de RLS-rol ontbreekt. Dit sluit het
+            # fail-open-gat: de oude check (`== "production"`) liet een verkeerd gezette
+            # APP_ENV de RLS-afdwinging stil uitzetten. Dezelfde omgevingslijst als de
+            # SECRET_KEY-grendel (config.SECRET_KEY_DEV_ENVS) — één bron.
+            from app.config import SECRET_KEY_DEV_ENVS
+
+            app_env = os.environ.get("APP_ENV", "development").lower().strip()
+            if app_env not in SECRET_KEY_DEV_ENVS:
                 raise RuntimeError(
-                    "CRITICAL: luxis_app role not found in production — "
-                    "RLS cannot be enforced. Run migrations first."
+                    "CRITICAL: luxis_app role not found — RLS cannot be enforced. "
+                    "Run migrations first (of zet APP_ENV op een dev/test-waarde)."
                 )
             logger.warning(
                 "luxis_app role not found — RLS role switching disabled (non-production)"

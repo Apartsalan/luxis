@@ -77,7 +77,10 @@ export function VerstuurLaterMenu({
           <ChevronDown className="h-3 w-3 opacity-60" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      {/* S247-review: boven élke dialoog waar deze knop in staat — het batch-
+          venster tilt zichzelf naar z-[60] (boven de selectie-toolbar) en de
+          standaard z-50 van het menu verdween daarachter (presets onzichtbaar). */}
+      <DropdownMenuContent align="end" className="z-[70]">
         <DropdownMenuItem onClick={() => preset(1, 9)}>Morgen 09:00</DropdownMenuItem>
         <DropdownMenuItem onClick={() => preset(1, 15)}>Morgen 15:00</DropdownMenuItem>
         <DropdownMenuItem onClick={() => setShowCustom(true)}>Eigen tijdstip…</DropdownMenuItem>

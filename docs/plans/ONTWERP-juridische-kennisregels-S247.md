@@ -5,10 +5,15 @@
 (sessieprompt S247: "Ontwerp op Fable").
 
 **Aanleiding (demo-wens IN100458):** Studio Hartzema **B.V.** wil "de algemene
-voorwaarden vernietigen". Voor een B.V. is dat juridisch kansloos — art. 6:235
-BW sluit grotere partijen uit van de vernietigingsgrond die consumenten wél
-hebben. Luxis herkent zulke standaard-onjuiste stellingen nu niet en zou er geen
-gerichte weerlegging voor aandragen.
+voorwaarden vernietigen". Voor zo'n partij staat dat doorgaans zwak — maar let
+op de precisie (S247-Fable-review): art. 6:235 lid 1 BW sluit niet élke B.V.
+uit, alleen (a) rechtspersonen die hun laatste jaarrekening openbaar hebben
+gemaakt en (b) partijen met ≥50 werknemers; lid 3 raakt daarnaast wie
+(vrijwel) dezelfde AV in eigen contracten gebruikt. "B.V. ⇒ kansloos" mag dus
+nooit als kale regel in het systeem — de voorwaarde hoort bij de regel. Dit is
+precies waarom §4 de toepasbaarheids-conditie hard maakt en Lisanne de
+formulering per regel vaststelt. Luxis herkent zulke standaard-zwakke
+stellingen nu überhaupt niet en draagt geen gerichte weerlegging aan.
 
 ---
 

@@ -64,6 +64,10 @@ def validate_rule_fields(
     """Geef een NL-foutmelding als een veld ongeldig is, anders None."""
     if normalize_defense_type(defense_type) != defense_type or defense_type not in DEFENSE_TYPE_KEYS:
         return f"Onbekend verweer-type: {defense_type!r}"
+    # Reviewvondst S248: 'overig' zou een stil-dode regel opleveren — de matcher slaat
+    # 'overig' bewust over (anders vuurt de regel op elk onbekend verweer).
+    if defense_type == "overig":
+        return "Kies een specifiek verweer-type — een regel op 'overig' wordt nooit gebruikt"
     if applies_to not in APPLIES_TO_VALUES:
         return f"Ongeldige toepasbaarheid: {applies_to!r} (kies alle/zakelijk/consument)"
     if not (title or "").strip():
@@ -146,6 +150,15 @@ def format_rules_for_prompt(rules: list[LegalKnowledgeRule], max_chars: int = 25
             break
         parts.append(block)
         chars += len(block)
+    # Reviewvondst S248: past er geen enkele regel binnen het budget, stuur dan óók de
+    # kop niet mee — een bungelende aankondiging zonder regels is prompt-ruis, en de te
+    # lange regel zou stil nooit aankomen. Fail closed + luid loggen.
+    if len(parts) == 1:
+        logger.warning(
+            "Kennisregel(s) passen niet binnen het promptbudget (%d tekens) — "
+            "injectie overgeslagen; kort de weerlegging in via het dashboard", max_chars,
+        )
+        return ""
     return "\n".join(parts)
 
 

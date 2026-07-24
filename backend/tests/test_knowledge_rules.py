@@ -95,6 +95,50 @@ async def test_consumer_and_all_scopes(db, test_tenant):
 
 
 @pytest.mark.asyncio
+async def test_long_rule_never_yields_dangling_header(db, test_tenant):
+    """Reviewvondst S248: een weerlegging langer dan het tekstbudget mag niet resulteren
+    in alléén de kop ('hier komen kennisregels') zonder één regel erachter. Past er geen
+    enkele regel, dan hoort de injectie leeg te zijn (fail closed, geen prompt-ruis)."""
+    await _approved_rule(
+        db, test_tenant.id,
+        defense_type="av_toepasselijkheid", applies_to="zakelijk",
+        body="Zeer lange weerlegging. " + ("x" * 5000),
+    )
+    text = await kr.build_knowledge_rules_text(db, test_tenant.id, "av_toepasselijkheid", "b2b")
+    # Óf de regel zit erin (dan mag de kop er staan), óf ALLES is leeg — nooit kop-zonder-regel.
+    if "Kennisregel 1" not in text:
+        assert text == ""
+
+
+def test_prompt_gating_only_verweer_step():
+    """Reviewvondst S248: kennisregels horen alléén in de verweer-stap-prompt, nooit in een
+    gewone sommatie (zelfde S164-les als de geleerde voorbeelden)."""
+    from decimal import Decimal
+
+    from app.ai_agent.incasso_email_prompts import build_user_prompt
+
+    kwargs = dict(
+        template_subject="s", template_body="b",
+        case_data={}, debtor_data={}, client_data={}, invoices=[],
+        amounts={"total": Decimal("1.00")},
+        knowledge_rules_text="--- Juridische kennisregels MARKER ---",
+    )
+    verweer = build_user_prompt(step_name="Verweer beantwoorden", **kwargs)
+    sommatie = build_user_prompt(step_name="Eerste sommatie", **kwargs)
+    assert "MARKER" in verweer
+    assert "MARKER" not in sommatie
+
+
+@pytest.mark.asyncio
+async def test_validation_rejects_overig(db, test_tenant):
+    """Reviewvondst S248: type 'overig' maken kan nooit vuren (de matcher slaat 'overig'
+    bewust over) — zo'n stil-dode regel moet bij aanmaak geweigerd worden."""
+    assert kr.validate_rule_fields(
+        defense_type="overig", applies_to="alle", title="t", rebuttal_body="x" * 25,
+    ) is not None
+
+
+@pytest.mark.asyncio
 async def test_validation_rejects_bad_fields(db, test_tenant):
     """Een onbekend type of te korte weerlegging wordt geweigerd (endpoint-poort)."""
     assert kr.validate_rule_fields(

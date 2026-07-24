@@ -11223,3 +11223,76 @@ healthy, login 200. Werklijst-natelling prod 14/14 met tweede scan (idempotent),
 ### Volgende sessie
 S238: native structured outputs-refactor (alle AI-aanroepen, eigen sessie, Opus +
 volle kruispunt-discipline). Zie `docs/sessions/PROMPT-S238.md`.
+
+## Sessie 238 (22 juli 2026, Opus-bouw → Fable-eindreview — expliciete schema-koppeling + native structured outputs, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S238. Model-cyclus expliciet gevolgd (wissel zelf gesignaleerd
+vóór start — les S237): bouw op Opus, eindreview op Fable.
+
+**Hoofdtaak — de kwetsbaarste laag van het AI-fundament vervangen.**
+`kimi_client` raadde welk JSON-schema bij een aanroep hoorde via een Nederlands
+trefwoord in de prompttekst (`_detect_schema`); een gewijzigde promptzin liet zo'n
+aanroep stil terugvallen op tekst-parsen. Nu geeft **elke aanroeper zijn schema en
+purpose expliciet mee** (verplichte keyword-args, geen defaults): classificatie,
+intake, factuur (tekst + PDF), stap-concepten (`call_draft_ai`), dossier-concepten
+(`draft_service`), compose/antwoord (`unified_draft_service`) en het testronde-
+script. `_detect_schema`, `_PROMPT_SCHEMA_MAP`, `_parse_json`, `_call_haiku` en
+`_call_sonnet` zijn weg. Model-routing ongewijzigd (Haiku extractie, Sonnet
+concepten); `ai_usage`-registratie blijft per aanroep werken.
+
+**Native structured outputs + drie live gevonden API-grenzen.** Tekst-routes
+draaien op `output_config.format` (GA voor Sonnet 4.6/Haiku 4.5; API garandeert
+schema-geldige JSON); de PDF-route houdt forced tool_use (docs garanderen de
+combinatie met document-input niet), waar mogelijk met `strict`. De prod-natelling
+ving drie niet-gedocumenteerde grammar-grenzen: (1) max 24 optionele velden
+(factuurschema: 54 → alle velden verplicht gemaakt, nullable), (2) max 16
+nullable/union-velden (factuurschema: 27 → statische poort `_grammar_fits` kiest
+dan forced tool_use), (3) **"Grammar compilation timed out" op het intake-schema
+dat binnen de limieten past** (Fable-reviewvondst) → runtime-vangnet: elke 400 op
+het structured-pad krijgt één herkansing via niet-strict forced tool_use — het
+oude bewezen gedrag, maar mét expliciet schema. Nooit meer een harde AI-uitval
+door een schemagrens.
+
+**Schema's kloppend gemaakt met hun prompts.** De classificatie vroeg `sentiment`
+en `defense_type` die het oude schema niet kende; het factuurschema miste 13 van
+de 28 promptvelden (o.a. contactpersonen, crediteur-postadres) — met
+`additionalProperties=false` zouden die stil zijn weggefilterd. Nieuwe schema's
+naast hun prompt: `CASE_DRAFT_SCHEMA`, `UNIFIED_DRAFT_SCHEMA`, `_CORRECTOR_SCHEMA`.
+
+### Gewijzigde bestanden
+Backend: `ai_agent/kimi_client.py` (herschreven), `ai_agent/{service,intake_service,
+invoice_parser,draft_service,unified_draft_service}.py`, `incasso/automation_service.py`,
+`scripts/ai/antwoord_testronde.py`. Tests: `test_kimi_client_structured.py` (nieuw, 20
+wachters: verplichte keyword-args, schema-geldigheid, prompt↔schema-sync per route,
+grammar-poort, runtime-terugval), `test_unified_draft_service.py` (mock-signaturen).
+Commits `e278a51`, `6cf04a8`, `0687306`, `80786f1`; backend 4× via SSH
+`--force-recreate` (geen migratie, geen frontend).
+
+### Verificatie
+20 nieuwe wachters groen; brede AI-run 239 groen (kimi/unified_draft/ai_agent/
+intake/invoice) + followup/draft-suites 193 en incasso_pipeline 55 groen; ruff
+schoon; CI groen op alle 4 commits (conclusion=success via API nagetrokken).
+**Live natelling op prod: alle 7 routes** (classificatie, intake, factuur-tekst,
+compose/antwoord, dossier-concept, stap-concept, PDF) — elk 1 echte AI-call, resultaat
+schema-conform, 7 rijen in `ai_usage` met kosten. Prod-logs sinds deploy: 0 AI-fouten;
+containers healthy, login-API 200. **Extra op verzoek Arsalan: antwoord-testronde met
+46 verse AI-antwoorden** (18 scenario's + 28 goud-gevallen, corrector aan, niets
+verstuurd) — 0 storingen, 0 echte fouten; de 2 corrector-markeringen beide handmatig
+weerlegd als controleur-missers (rapport: `docs/sessions/S238-antwoord-testronde.md`).
+
+### Bekende issues / bewust niet gedaan
+- **Intake-route loopt structureel via het tool_use-vangnet** ("Grammar compilation
+  timed out" reproduceerde 2×) — functioneel identiek resultaat; als Anthropic de
+  grammar-compilatie verbetert gaat de route vanzelf native. Geen actie nodig.
+- De verweer-PDF-route (`call_draft_ai` mét AV-PDF) is niet apart live afgevuurd —
+  zelfde codepad als de wel-geteste PDF-route (enige verschil: het schema, en
+  INCASSO_DRAFT_SCHEMA is live bewezen op de tekst-route).
+- Lopende zaken onaangeraakt (bij Lisanne): verweer-concepten IN100592/IN100606,
+  IN100492-vraag, opruimronde.
+
+### Volgende sessie
+S239: **Arsalan legt de hoofdtaak bij start zelf uit** (aangekondigd bij dit
+sessie-einde). Achtergrond-punten die er nog liggen (Lisanne-antwoorden,
+opruimronde, onbekend-afzender-gat) staan als context in
+`docs/sessions/PROMPT-S239.md`.

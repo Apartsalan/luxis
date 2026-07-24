@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 24 juli 2026, nacht (S246-nacht — eindreview + 4 reviewfixes live; "Verstuur later" nu óók op batch en follow-up, beide live bewezen op testdossiers en teruggezet). Rapport: entry S246-nacht in `SESSION-NOTES.md`. **Volgende = S247: verse-ogen-review nachtdiff + AI-kennislaag (`docs/sessions/PROMPT-S247.md`).**
+**Laatst bijgewerkt:** 24 juli 2026 (S247 — nachtdiff-review: 4 fixes live; placeholder-bug IN100606 aan de echte oorzaak gefixt (HTML-only verweer bereikte de AI niet); juridische kennisregels ONTWORPEN, niet gebouwd). Rapport: entry S247 in `SESSION-NOTES.md`. **Volgende = S248: Arsalan bepaalt hoofdtaak; kennisregels bouwen zodra ontwerp akkoord (`docs/sessions/PROMPT-S248.md`).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,43 +53,35 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 23 juli 2026, S246)
+## 🎯 Huidige prioriteit (bijgewerkt 24 juli 2026, S247)
 
-> ✅ **S246 AFGEROND — uitgesteld versturen LIVE (demo-punten blok 3).** Naast
-> "Versturen" staat nu **"Verstuur later"** met presets (Morgen 09:00 / Morgen
-> 15:00 / eigen tijdstip), op álle mails die je zelf opstelt: antwoord,
-> AI-concept, gewone mail, sjabloon en mail vanuit een dossier — die lopen
-> allemaal via dezelfde compose-deur. Nieuwe tabel `scheduled_emails` (RLS in
-> dezelfde migratie), minuut-bezorger die op het geplande moment **exact dezelfde
-> verzendfunctie** draait (zelfde afzender incasso@, opmaak, bijlagen,
-> vastlegging, doorschuiven). Geplande mails zichtbaar op dossier + Mail-pagina
-> en annuleerbaar. Nooit dubbel: de rij wordt geclaimd én vastgelegd vóór de
-> verzending; geen automatische herhaling bij fouten (status mislukt + melding).
-> **Live bewezen:** ingeplande mail vertrok automatisch om 23:25:12 en kwam aan.
-> Twee echte bugs onderweg gevangen (claim-terugdraai = dubbelverzendrisico;
-> ontbrekende DB-default liet inplannen op prod crashen — nu met wachter die de
-> hele foutsoort dekt). Rapport: entry S246 in SESSION-NOTES.
-> **S246-nacht (GO Arsalan):** eindreview gedraaid → 4 vondsten gefixt (betaald
-> dossier / al-verstuurd concept blokkeren de geplande mail; mislukte rijen
-> opruimbaar; meldingstekst). Lopende band alsnog gebouwd: batch + follow-up
-> uitstelbaar; bij inplannen gebeurt NIETS, op het verzendmoment draait exact de
-> knop-functie (brief met rentestand van dat moment, doorschuiven pas dan);
-> stap-anker-guard tegen de verkeerde brief. Beide ketens live bewezen op
-> testdossiers (00:14:22 en 00:19:22), dossiers teruggezet.
+> ✅ **S247 AFGEROND — nachtdiff-review + placeholder-bug + kennisregels-ontwerp.**
+> **(A) Verse-ogen-review van de nachtdiff** (`90aa57f`+`8ef2d88`) → 4 fixes live:
+> een goedgekeurde follow-up kon na een stapwissel de VERKEERDE brief versturen
+> (stap-anker in de uitvoerfunctie); het "Verstuur later"-menu viel achter het
+> batch-venster weg (z-index); een stille batch-nazorg-fout krijgt nu een melding;
+> een faalmelding nodigde uit tot dubbel versturen. **(B) Placeholder-bug IN100606:**
+> de AI kopieerde een interne invul-aanwijzing letterlijk in het concept. Opus fixte
+> de prompt + bouwde een controle-poort; **Fable vond de echte oorzaak** — de
+> betwisting-mail was HTML-only, dus de verweer-tekst bereikte de AI helemaal niet
+> (leeg verweer → onvulbare invulregel). Beide plekken lezen nu de HTML. Live
+> bewezen met een verse AI-generatie op het echte verweer: nette weerlegging, geen
+> mal (2 AI-calls, $0,33). **(C) Juridische kennisregels: ONTWORPEN, niet gebouwd**
+> — nieuwe feature die eerst akkoord + juridische inhoud van Lisanne vraagt. Doc:
+> `docs/plans/ONTWERP-juridische-kennisregels-S247.md`. Bron-correctie: de "132
+> kandidaten wachten op Lisanne" klopt niet meer (103 goedgekeurd, 28 afgewezen, 1
+> kandidaat). Rapport: entry S247 in SESSION-NOTES.
 >
-> 🎯 **VOLGENDE: (1) verse-ogen-review van de nachtdiff** (`90aa57f`+`8ef2d88`
-> — gebouwd én getest door dezelfde instantie). (2) **S247 AI-kennislaag** — masterplan
-> `docs/plans/PLAN-DEMO-PUNTEN-S243.md`: placeholder-bug in de prompt fixen +
-> wachter, juridische kennisregels via de bestaande goedkeur-flow (élke regel
-> langs Lisanne; 132 learned_answers wachten al), en na prompt-wijzigingen een
-> derde AI-testronde. Harde eis: visueel testen met Playwright + screenshots.
-> Parallel beslispunt: fase-heropening per groep
-> (`docs/plans/BASENET-STATUS-HERSTEL.md`, 406 dossiers, GO per groep). Verder
-> blijven staan: IN100127 beoordelen, 2 open mails (IN100128/IN100586),
-> Lisanne-antwoorden (IN100592/IN100606/IN100492) + regeling-taken
-> IN100281/IN100537, verweer-parkeerstap-voorstel, rest voorstel-lijst,
-> BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC,
-> cosmetisch (afgeronde taak toont "X dagen te laat", 4 restjes S235),
+> 🎯 **VOLGENDE (S248): Arsalan bepaalt de hoofdtaak.** Kennisregels bouwen kan
+> zodra het ontwerp akkoord is (Fable-ontwerp verfijnen + eerste regels van Lisanne).
+> Voor Lisanne (inhoudelijk): oud IN100606-concept weggooien + opnieuw genereren;
+> IN100592 3e betwisting; regeling-taken IN100281/IN100537; IN100127; 2 open mails
+> (IN100128/IN100586); IN100492-vraag. Parallel beslispunt: fase-heropening per groep
+> (`docs/plans/BASENET-STATUS-HERSTEL.md`, 406 dossiers, GO per groep). Verder blijven
+> staan: 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai,
+> verweer-parkeerstap-voorstel, rest voorstel-lijst, BaseNet-delisting, kostenblokje,
+> opmaak-restpunt S227, S221b-rest, DMARC, cosmetisch (afgeronde taak toont "X dagen
+> te laat", melding mislukte geplande mail alleen naar inplanner, 4 restjes S235),
 > sharp-CVE's. KvK: niet naar vragen.
 
 ## Projectdocumenten

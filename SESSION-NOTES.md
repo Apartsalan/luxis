@@ -2,10 +2,82 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 24 juli 2026, nacht (S246-nacht — Fable-eindreview gedraaid + 4 reviewfixes live + "Verstuur later" óók op batch/follow-up, beide live bewezen op testdossiers).
-**Laatste feature/fix:** blinde-wachtrij-guards (betaald dossier / al-verstuurd concept blokkeren) + lopende band uitstelbaar met stap-anker-guard (commits `90aa57f` + `8ef2d88`); beide soorten vertrokken automatisch en dossiers zijn teruggezet.
-**Openstaand:** S247 AI-kennislaag (masterplan `docs/plans/PLAN-DEMO-PUNTEN-S243.md`); verse-ogen-review van de NACHT-commits (gebouwd én getest door dezelfde Fable-instantie); **IN100592 3e betwisting + 2 regeling-taken IN100281/IN100537 wachten op Lisanne**; fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`); 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai. Losse punten: afgeronde taak toont nog "X dagen te laat"; melding bij mislukte geplande mail gaat alleen naar de inplanner (onzichtbaar als die inactief wordt); BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
-**Volgende sessie:** S247 — verse-ogen-review nachtdiff + AI-kennislaag; zie `docs/sessions/PROMPT-S247.md`.
+**Laatst bijgewerkt:** 24 juli 2026 (S247 — nachtdiff-review: 4 fixes live; placeholder-bug IN100606 aan echte oorzaak gefixt (HTML-only verweer); kennisregels alleen ONTWORPEN, niet gebouwd).
+**Laatste feature/fix:** verweer-tekst van HTML-only mails bereikt nu de AI (`0d5c227`, echte oorzaak IN100606) + placeholder-mal-guard (`ba7a388`) + stap-anker follow-up-uitvoering + zichtbaar "Verstuur later"-menu (`4ffa184`/`45e2ca1`); live bewezen met verse AI-generatie op het echte IN100606-verweer.
+**Openstaand:** kennisregels-ONTWERP wacht op akkoord Arsalan + inhoud Lisanne (`docs/plans/ONTWERP-juridische-kennisregels-S247.md`); oud IN100606-concept (kapotte placeholder) = weggooien + opnieuw genereren (Lisanne); IN100592 3e betwisting + regeling-taken IN100281/IN100537 (Lisanne); fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`); 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai. Losse punten: afgeronde taak toont nog "X dagen te laat"; melding mislukte geplande mail alleen naar inplanner; BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
+**Volgende sessie:** S248 — Arsalan bepaalt hoofdtaak; kennisregels bouwen kan zodra ontwerp akkoord is (Fable-ontwerp + eerste regels van Lisanne). Zie `docs/sessions/PROMPT-S248.md`.
+
+## Sessie 247 (24 juli 2026, Fable-review → Opus-bouw → Fable-eindreview — nachtdiff-review + placeholder-bug + kennisregels-ontwerp, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S247. Model-cyclus gevolgd: deel A (verse-ogen-review nachtdiff)
+op Fable, deel B onderdeel 1 (placeholder-fix) op Opus, daarna Fable-eindreview.
+
+**Deel A — verse tegenlezing van de nachtdiff (`90aa57f`+`8ef2d88`, gebouwd én
+getest door dezelfde Fable-instantie). 4 vondsten, alle gefixt (`4ffa184` backend,
+`45e2ca1` voorkant):**
+1. **Verkeerde brief kon blind vertrekken (zwaarste).** Follow-up "goedkeuren nu,
+   uitvoeren later" maakt APPROVED langlevend, maar de stapwissel-opruiming
+   (`supersede_open_recommendations`) raakt alleen PENDING. Wisselde de stap tussen
+   inplannen en uitvoeren buitenom, dan verstuurde de bezorger de brief van de OUDE
+   stap. Rood bewezen; stap-anker in `execute_recommendation` zelf (dekt ook de
+   directe "Uitvoeren"-knop). De onjuiste "statusmachine dekt dit"-toelichting op 3
+   plekken rechtgezet.
+2. **Menu onzichtbaar op prod (visueel gezien).** Batch-venster tilt zich naar
+   z-[60]; het "Verstuur later"-menu bleef op z-50 → presets verdwenen erachter.
+   → `z-[70]` in het gedeelde component.
+3. **Batch-nazorg-fout verdween stil** (mail weg, doorschuiven faalde) → melding
+   "de mail IS verstuurd" + echte redenen.
+4. **Faalmelding zei "verstuur zelf" ook bij onzekere verzending** (dubbel-risico)
+   → wijst eerst naar de map Verzonden; alleen bewuste pre-send-blokkades houden
+   hun stellige "niets verstuurd". 3 nieuwe wachters, alle rood-eerst.
+
+**Deel B onderdeel 1 — placeholder-bug IN100606 (Opus, `ba7a388`; echte oorzaak
+Fable, `0d5c227`).** De verweer-conceptprompt STAP 4 is een bewust vangnet
+(onbekend verweer → invulregel voor Lisanne, geen verzonnen argument). De AI
+kopieerde de invul-aanwijzing `<kernverweer letterlijk uit incoming_defense>`
+letterlijk. Opus: prompt-instructie verduidelijkt + getrouwheids-poort vangt de
+meta-mal (regenereren/markeren). **Fable groef dieper en vond de ECHTE oorzaak:**
+de betwisting-mail was HTML-only (body_text én snippet leeg, in de bron gemeten) →
+de AI kreeg een LEEG verweer en kón de invulregel niet vullen. Fix op het gedeelde
+punt: `_defense_text()` hergebruikt de HTML-strip van de bibliotheek-backfill,
+gebruikt door beide routes. **Live bewezen:** verse AI-generatie op het echte
+IN100606-verweer (4263 tekens binnen) → inhoudelijke weerlegging, geen mal, poort
+schoon; niets opgeslagen (2 AI-calls, $0,33).
+
+**Deel B onderdeel 2 — juridische kennisregels: alleen ONTWORPEN, niet gebouwd.**
+Nieuwe feature → vereist goedkeuring + inhoud van Lisanne; ontwerp hoort op Fable.
+Voorstel: aparte tabel `legal_knowledge_rules` die de goedkeur-flow van
+`learned_answers` hergebruikt (niet de empirische backfill), met een harde
+toepasbaarheids-conditie. Scherpste risico: art. 6:235 BW omgekeerd toepassen op
+een consument. Doc: `docs/plans/ONTWERP-juridische-kennisregels-S247.md`.
+**Bron-correctie:** de "132 kandidaten wachten op Lisanne" is achterhaald — 103
+goedgekeurd, 28 afgewezen, 1 kandidaat (memory bijgewerkt).
+
+### Gewijzigde bestanden
+Backend: `ai_agent/followup_service.py` (stap-anker), `ai_agent/followup_router.py`,
+`email/scheduled_service.py`+`scheduled_models.py` (meldingen), `incasso/automation_service.py`
+(`_defense_text` + guard), `ai_agent/incasso_email_prompts.py` (STAP 4).
+Frontend: `components/verstuur-later-menu.tsx` (z-[70]). Tests: `test_scheduled_emails.py`
+(+3), `test_incasso_pipeline.py` (+4). Docs: `ONTWERP-juridische-kennisregels-S247.md`.
+Commits `4ffa184`, `45e2ca1`, `ba7a388`, `c93c629`, `0d5c227`, `5459672`. Alle CI groen;
+4× backend + 1× frontend via SSH; login 200.
+
+### Verificatie
+23 wachtrij-tests + 59 pipeline-tests + 20 kimi-structured-tests groen; ruff + tsc schoon.
+Guard bewezen tegen ECHTE IN100606-body (issue vuurt). Visueel op prod: batch- +
+follow-up "Verstuur later"-presets zichtbaar, "Weghalen" op mislukte rij (wegwerp-rij
+op 2026-00006, daarna gewist), IN100606-concept bekeken (toont nog de kapotte placeholder).
+
+### Bekende issues / bewust niet gedaan
+- **Oud IN100606-concept** toont nog de kapotte placeholder → weggooien + opnieuw
+  genereren levert nu een echte weerlegging (Lisanne — inhoudelijk).
+- **Kennisregels niet gebouwd** — wacht op akkoord ontwerp + regels van Lisanne.
+- Melding mislukte geplande mail nog steeds alleen naar de inplanner (klein, 2 gebruikers).
+
+### Volgende sessie
+S248 — Arsalan bepaalt de hoofdtaak. Kennisregels bouwen kan zodra het ontwerp
+akkoord is. Zie `docs/sessions/PROMPT-S248.md`.
 
 ## Sessie 246-nacht (24 juli 2026, Fable solo op GO Arsalan — eindreview + reviewfixes + lopende band, LIVE)
 
@@ -732,76 +804,3 @@ Arsalan: GO voor voorstel 1+2 (bak-melding + belofte-bewaking) en testronde 2 me
 brillen "slordige gebruiker" + "klik-ronde als Lisanne" — in een VERSE sessie op Opus
 (S240, prompt klaargezet). CI beide S239-commits groen (success via gh nagetrokken).
 De 2 gevonden mails wachten nog op antwoord — eerste vraag van S240.
-
-## Sessie 238 (22 juli 2026, Opus-bouw → Fable-eindreview — expliciete schema-koppeling + native structured outputs, LIVE)
-
-### Samenvatting
-Startpunt PROMPT-S238. Model-cyclus expliciet gevolgd (wissel zelf gesignaleerd
-vóór start — les S237): bouw op Opus, eindreview op Fable.
-
-**Hoofdtaak — de kwetsbaarste laag van het AI-fundament vervangen.**
-`kimi_client` raadde welk JSON-schema bij een aanroep hoorde via een Nederlands
-trefwoord in de prompttekst (`_detect_schema`); een gewijzigde promptzin liet zo'n
-aanroep stil terugvallen op tekst-parsen. Nu geeft **elke aanroeper zijn schema en
-purpose expliciet mee** (verplichte keyword-args, geen defaults): classificatie,
-intake, factuur (tekst + PDF), stap-concepten (`call_draft_ai`), dossier-concepten
-(`draft_service`), compose/antwoord (`unified_draft_service`) en het testronde-
-script. `_detect_schema`, `_PROMPT_SCHEMA_MAP`, `_parse_json`, `_call_haiku` en
-`_call_sonnet` zijn weg. Model-routing ongewijzigd (Haiku extractie, Sonnet
-concepten); `ai_usage`-registratie blijft per aanroep werken.
-
-**Native structured outputs + drie live gevonden API-grenzen.** Tekst-routes
-draaien op `output_config.format` (GA voor Sonnet 4.6/Haiku 4.5; API garandeert
-schema-geldige JSON); de PDF-route houdt forced tool_use (docs garanderen de
-combinatie met document-input niet), waar mogelijk met `strict`. De prod-natelling
-ving drie niet-gedocumenteerde grammar-grenzen: (1) max 24 optionele velden
-(factuurschema: 54 → alle velden verplicht gemaakt, nullable), (2) max 16
-nullable/union-velden (factuurschema: 27 → statische poort `_grammar_fits` kiest
-dan forced tool_use), (3) **"Grammar compilation timed out" op het intake-schema
-dat binnen de limieten past** (Fable-reviewvondst) → runtime-vangnet: elke 400 op
-het structured-pad krijgt één herkansing via niet-strict forced tool_use — het
-oude bewezen gedrag, maar mét expliciet schema. Nooit meer een harde AI-uitval
-door een schemagrens.
-
-**Schema's kloppend gemaakt met hun prompts.** De classificatie vroeg `sentiment`
-en `defense_type` die het oude schema niet kende; het factuurschema miste 13 van
-de 28 promptvelden (o.a. contactpersonen, crediteur-postadres) — met
-`additionalProperties=false` zouden die stil zijn weggefilterd. Nieuwe schema's
-naast hun prompt: `CASE_DRAFT_SCHEMA`, `UNIFIED_DRAFT_SCHEMA`, `_CORRECTOR_SCHEMA`.
-
-### Gewijzigde bestanden
-Backend: `ai_agent/kimi_client.py` (herschreven), `ai_agent/{service,intake_service,
-invoice_parser,draft_service,unified_draft_service}.py`, `incasso/automation_service.py`,
-`scripts/ai/antwoord_testronde.py`. Tests: `test_kimi_client_structured.py` (nieuw, 20
-wachters: verplichte keyword-args, schema-geldigheid, prompt↔schema-sync per route,
-grammar-poort, runtime-terugval), `test_unified_draft_service.py` (mock-signaturen).
-Commits `e278a51`, `6cf04a8`, `0687306`, `80786f1`; backend 4× via SSH
-`--force-recreate` (geen migratie, geen frontend).
-
-### Verificatie
-20 nieuwe wachters groen; brede AI-run 239 groen (kimi/unified_draft/ai_agent/
-intake/invoice) + followup/draft-suites 193 en incasso_pipeline 55 groen; ruff
-schoon; CI groen op alle 4 commits (conclusion=success via API nagetrokken).
-**Live natelling op prod: alle 7 routes** (classificatie, intake, factuur-tekst,
-compose/antwoord, dossier-concept, stap-concept, PDF) — elk 1 echte AI-call, resultaat
-schema-conform, 7 rijen in `ai_usage` met kosten. Prod-logs sinds deploy: 0 AI-fouten;
-containers healthy, login-API 200. **Extra op verzoek Arsalan: antwoord-testronde met
-46 verse AI-antwoorden** (18 scenario's + 28 goud-gevallen, corrector aan, niets
-verstuurd) — 0 storingen, 0 echte fouten; de 2 corrector-markeringen beide handmatig
-weerlegd als controleur-missers (rapport: `docs/sessions/S238-antwoord-testronde.md`).
-
-### Bekende issues / bewust niet gedaan
-- **Intake-route loopt structureel via het tool_use-vangnet** ("Grammar compilation
-  timed out" reproduceerde 2×) — functioneel identiek resultaat; als Anthropic de
-  grammar-compilatie verbetert gaat de route vanzelf native. Geen actie nodig.
-- De verweer-PDF-route (`call_draft_ai` mét AV-PDF) is niet apart live afgevuurd —
-  zelfde codepad als de wel-geteste PDF-route (enige verschil: het schema, en
-  INCASSO_DRAFT_SCHEMA is live bewezen op de tekst-route).
-- Lopende zaken onaangeraakt (bij Lisanne): verweer-concepten IN100592/IN100606,
-  IN100492-vraag, opruimronde.
-
-### Volgende sessie
-S239: **Arsalan legt de hoofdtaak bij start zelf uit** (aangekondigd bij dit
-sessie-einde). Achtergrond-punten die er nog liggen (Lisanne-antwoorden,
-opruimronde, onbekend-afzender-gat) staan als context in
-`docs/sessions/PROMPT-S239.md`.

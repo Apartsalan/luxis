@@ -1,8 +1,8 @@
 # Ontwerp — Juridische kennisregels ("standaard-onzin herkennen")
 
-**Status:** VOORSTEL — nog niet gebouwd. Nieuwe feature → vereist goedkeuring
-(4-stappen-werkwijze) + inhoud van Lisanne. Ontwerp-verfijning hoort op Fable
-(sessieprompt S247: "Ontwerp op Fable").
+**Status:** VOORSTEL, verfijnd op Fable (S248, 24 juli) — nog niet gebouwd.
+Wacht op: (a) GO van Arsalan op dit ontwerp, (b) eerste regels van Lisanne (§7).
+Nieuwe feature → vereist goedkeuring (4-stappen-werkwijze) + inhoud van Lisanne.
 
 **Aanleiding (demo-wens IN100458):** Studio Hartzema **B.V.** wil "de algemene
 voorwaarden vernietigen". Voor zo'n partij staat dat doorgaans zwak — maar let
@@ -44,23 +44,73 @@ De hele `learned_answers`-machinerie (backfill, dedup, anonimisering) is gebouwd
 rond *empirische* antwoorden met een bronmail. Kennisregels hebben die machinerie
 niet nodig en zouden er alleen door vervuild worden.
 
-## 3. Voorgestelde architectuur (technische richting — Fable verfijnt)
+## 3. Architectuur — verfijnd op Fable (S248, gemeten in bron + prod)
 
 **Aparte tabel `legal_knowledge_rules`** die de goedkeur-flow van `learned_answers`
-**hergebruikt**, niet de backfill:
+**hergebruikt**, niet de backfill (§6.3 hiermee besloten: de backfill-machinerie is
+~600 regels empirisch afgestelde knip-/dedup-heuristiek — curated regels horen daar
+niet doorheen, en meng je ze in één tabel, dan concurreren regels met voorbeelden om
+dezelfde 3 prompt-slots met de verkeerde framing).
 
-- Kolommen (voorstel): `trigger_keywords`/`trigger_description` (waaraan herken je de
-  stelling), `applies_when` (bv. `debtor_type`/`legal_form` = niet-consument),
-  `rebuttal_body` (de standaard-weerlegging), `legal_basis` (bv. "art. 6:235 BW"),
-  `language`, `status` (`kandidaat`/`goedgekeurd`/`afgewezen`), `is_active`,
-  `reviewed_at`. `TenantBase` → **RLS in dezelfde migratie** (huisregel S183).
+### 3a. Trigger = het bestaande verweer-type (géén eigen trefwoord-machinerie)
+
+De S247-versie stelde `trigger_keywords` voor — geschrapt. Er bestaat al een
+13-type-woordenschat (`defense_types.py`) die door twee kanten wordt gebruikt: de
+classificatie-AI kiest er één per inkomende verweer-mail (`prompts.py`), en de
+geleerde-voorbeelden-matching draait er al op (`get_learned_examples`,
+voorrang op `defense_type`). Een kennisregel krijgt dus gewoon een `defense_type`
+uit die lijst als matchsleutel — nul nieuwe matching-machinerie.
+
+**Gevalideerd op het echte ijkgeval (prod, S248):** de betwisting-mail van
+IN100458 (7-10-2025) is geclassificeerd als `betwisting` / **`av_toepasselijkheid`**
+— de type-match raakt het ijkgeval exact. Verdeling prod: 93 verweer-mails over 12
+types (top: betwisting_ongemotiveerd 21, derde_partij 16, afwikkeling_intrekking 14;
+av_toepasselijkheid 7). Faalrichting bij een mis-classificatie is veilig: regel
+wordt dan NIET geïnjecteerd (concept mist extra kennis — geen fout advies).
+
+### 3b. Toepasbaarheids-poort = `Case.debtor_type`, hard in code
+
+De S247-versie noemde `debtor_type`/`legal_form`. **Gemeten (prod, S248): het
+`legal_form`-veld van de IN100458-debiteur is LEEG** (KvK-verrijking staat uit —
+"KvK: niet naar vragen"). Een poort op rechtsvorm zou dus stil falen op precies het
+ijkgeval. De afdwingbare poort is `applies_to` ∈ {`alle`, `zakelijk`, `consument`},
+in code gematcht tegen `Case.debtor_type` (b2b/b2c — not-null, stuurt nu al
+WIK/14-dagenbrief/rente/stap-guards; de grondwaarheid van het systeem voor
+consument-zijn):
+
+- `applies_to='zakelijk'` + dossier b2c → regel gaat NOOIT de prompt in. Dit doodt
+  het §4-doemscenario (art. 6:235 omgekeerd op een consument) deterministisch.
+- De fijnere nuance van 6:235 lid 1 (jaarrekening-publicatie, ≥50 werknemers) kent
+  Luxis niet en komt dus in de REGELTEKST van Lisanne te staan; de AI krijgt hem
+  conditioneel geframed en het concept passeert altijd nog Lisanne's review
+  (AIDraft + nakijk-taak — het tweede net).
+- Rechtsvorm-verfijning (BV/NV via `legal_form`, patroon `compliance.py`
+  `EXCLUDED_LEGAL_FORM_KEYWORDS`) kan later als optioneel extra filter, zodra het
+  veld gevuld raakt — nu zou hij niets filteren.
+
+### 3c. Kolommen (definitief voorstel)
+
+`defense_type` (String(50), matchsleutel, één van de 13), `applies_to`
+(String(10), harde poort), `title` (korte naam voor het dashboard),
+`claim_description` (waaraan herken je de stelling — context voor de AI),
+`rebuttal_body` (de standaard-weerlegging), `legal_basis` (bv. "art. 6:235 lid 1
+BW"), `language` (default 'nl'), `status` (`kandidaat`/`goedgekeurd`/`afgewezen`),
+`is_active`, `reviewed_at`. `TenantBase` → **RLS via `apply_rls` in dezelfde
+migratie** (huisregel S183).
+
 - **Dezelfde goedkeur-flow**: elke regel is eerst `kandidaat` en voedt de AI pas na
-  goedkeuring door Lisanne. Nieuwe tab in het bestaande "Slim leren"-dashboard naast
-  de verweer-kandidaten.
-- **Voeding**: bij de verweer-stap (en evt. de antwoord-route) krijgt de AI de
-  matchende goedgekeurde regels mee, ánders geframed dan de voorbeeldteksten:
-  "*Als de debiteur deze onjuiste stelling aanvoert én de voorwaarde klopt, is dit
-  de standaard juridische weerlegging (art. X BW).*"
+  goedkeuring door Lisanne (ook als Arsalan/Claude de regel namens haar invoert).
+  Nieuwe sectie in het bestaande "Slim leren"-dashboard
+  (`instellingen/ai-leren-tab.tsx`), endpoints naar het patroon van
+  `/learning/candidates` (ai_agent/router.py).
+- **Voeding — zelfde drie injectiepunten als de geleerde voorbeelden** (gemeten:
+  `automation_service.generate_draft_for_step` verweer-stap, `draft_service`,
+  `unified_draft_service` — alle drie halen daar al categorie + verweer-type van de
+  laatste inkomende mail op). Eén nieuwe gedeelde functie
+  `build_knowledge_rules_text(db, tenant_id, defense_type, debtor_type)` ernaast,
+  eigen prompt-blok met eigen framing: "*Als de debiteur deze onjuiste stelling
+  aanvoert én de voorwaarde klopt, is dit de standaard juridische weerlegging
+  (art. X BW)*" — dus GEEN toon-voorbeeld, maar conditionele kennis.
 
 ## 4. Scherpste risico (premortem)
 
@@ -85,7 +135,19 @@ tekst naar een debiteur. Concreet gevaar bij het IN100458-voorbeeld: art. 6:235 
 
 ## 6. Openstaand vóór bouw
 
-1. **Goedkeuring van dit ontwerp** (Arsalan) + **model naar Fable** voor de detail-verfijning.
+1. **Goedkeuring van dit verfijnde ontwerp** (Arsalan). ~~Model naar Fable~~ — verfijning
+   gedaan op Fable, S248.
 2. **Eerste set regels van Lisanne** (minimaal het IN100458-geval als ijkpunt).
-3. Beslissing: aparte tabel (dit voorstel) vs. uitbreiding van `learned_answers` met een
-   `rule_type`-kolom (compacter, maar dwingt curated regels door de empirische machinerie).
+   Vragenlijst per regel (§7).
+3. ~~Aparte tabel vs. `rule_type`-kolom~~ — **besloten: aparte tabel** (onderbouwing §3).
+
+## 7. Vragenlijst voor Lisanne (per regel — inhoud is aan haar)
+
+1. **Welke stelling** voert de debiteur? (bv. "wij vernietigen de algemene voorwaarden")
+2. **Waarom is die (meestal) onjuist**, met welk wetsartikel? (de weerlegging zoals zij
+   die zou schrijven)
+3. **Onder welke voorwaarde geldt de regel** — zakelijke wederpartij, consument, of
+   allebei? En zit er een nuance in die in de regeltekst zelf moet (zoals bij 6:235:
+   gepubliceerde jaarrekening / ≥50 werknemers / zelfde AV in eigen contracten)?
+4. **Ijkgeval IN100458:** hoe zou zij het "wij vernietigen de AV"-verweer van Studio
+   Hartzema B.V. concreet weerleggen? (die tekst wordt regel #1)

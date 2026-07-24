@@ -166,11 +166,20 @@ def _is_blocked_host(host: str) -> bool:
         ipaddress.ip_network("10.0.0.0/8"),
         ipaddress.ip_network("172.16.0.0/12"),
         ipaddress.ip_network("192.168.0.0/16"),
+        # SEC-29: extra ranges die de oude lijst miste.
+        ipaddress.ip_network("169.254.0.0/16"),  # link-local + cloud-metadata (169.254.169.254)
+        ipaddress.ip_network("0.0.0.0/8"),  # "dit netwerk" / 0.0.0.0
+        ipaddress.ip_network("100.64.0.0/10"),  # CGNAT
         ipaddress.ip_network("::1/128"),
         ipaddress.ip_network("fe80::/10"),
+        ipaddress.ip_network("fc00::/7"),  # unique-local IPv6
     ]
     for addrinfo in addrinfos:
         ip = ipaddress.ip_address(addrinfo[4][0])
+        # SEC-29: een IPv4-mapped IPv6 (::ffff:127.0.0.1) omzeilde de IPv4-ranges —
+        # controleer het onderliggende IPv4-adres apart.
+        if ip.version == 6 and ip.ipv4_mapped is not None:
+            ip = ip.ipv4_mapped
         for net in blocked_networks:
             if ip in net:
                 return True

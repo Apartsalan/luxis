@@ -2,13 +2,14 @@
 
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
 from app.auth.models import User
 from app.dependencies import get_current_user
 from app.email.service import is_configured, send_email
 from app.email.templates import _render_base
+from app.middleware.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -41,11 +42,17 @@ async def get_email_status(
 
 
 @router.post("/test", response_model=TestEmailResponse)
+@limiter.limit("5/minute")
 async def send_test_email(
+    request: Request,
     data: TestEmailRequest,
     user: User = Depends(get_current_user),
 ) -> TestEmailResponse:
-    """Send a test email to verify SMTP configuration."""
+    """Send a test email to verify SMTP configuration.
+
+    SEC-31: rate-limited — de vaste testinhoud kan niet voor phishing dienen, maar
+    zonder limiet kon een ingelogde gebruiker er een willekeurig adres mee bestoken.
+    """
     if not is_configured():
         return TestEmailResponse(
             success=False,

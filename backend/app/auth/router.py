@@ -296,7 +296,9 @@ async def update_profile(
 
 
 @router.put("/me/password", status_code=204)
+@limiter.limit("5/minute")
 async def change_password_put(
+    request: Request,
     data: ChangePasswordRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -306,12 +308,18 @@ async def change_password_put(
 
 
 @router.post("/change-password", status_code=204)
+@limiter.limit("5/minute")
 async def change_password(
+    request: Request,
     data: ChangePasswordRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Change the current user's password."""
+    """Change the current user's password.
+
+    SEC-31: rate-limited — zonder limiet kon een gekaapte (kortlevende) access-token
+    het huidige wachtwoord online raden; de lockout-teller telt hier niet mee.
+    """
     await _change_password(data, db, current_user)
 
 

@@ -13,9 +13,13 @@ class LoginRequest(BaseModel):
 
 
 def _validate_password_complexity(password: str) -> str:
-    """Enforce password complexity: min 12 chars, 1 uppercase, 1 digit."""
+    """Enforce password complexity: 12-128 chars, 1 uppercase, 1 digit."""
     if len(password) < 12:
         raise ValueError("Wachtwoord moet minimaal 12 tekens bevatten")
+    # SEC-30: bovengrens — begrenst de invoer (geen onbeperkte body) en maakt de
+    # bcrypt-72-byte-afkapping expliciet i.p.v. een stille verrassing.
+    if len(password) > 128:
+        raise ValueError("Wachtwoord mag maximaal 128 tekens bevatten")
     if not re.search(r"[A-Z]", password):
         raise ValueError("Wachtwoord moet minimaal 1 hoofdletter bevatten")
     if not re.search(r"[0-9]", password):

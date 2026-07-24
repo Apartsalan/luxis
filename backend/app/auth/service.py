@@ -219,31 +219,52 @@ async def rotate_refresh_token(
 
     Returns the RefreshToken record if valid, None if not found/expired.
     Raises ValueError if token was already used (possible theft).
+
+    SEC-26: het consumeren gebeurt ATOMAIR (``UPDATE ... WHERE is_used = false``).
+    De oude opzet (SELECT → controleer is_used → UPDATE) had een TOCTOU-race: twee
+    gelijktijdige requests met dezelfde token lazen allebei ``is_used = False`` en
+    kregen allebei een nieuw tokenpaar — de hergebruik-detectie (SEC-12) werd zo
+    omzeild en tokendiefstal bleef onzichtbaar. Nu wint alleen de eerste request de
+    UPDATE; de tweede raakt 0 rijen en valt in de hergebruik-detectie hieronder.
     """
     token_hash = _hash_token(old_token)
-    result = await db.execute(select(RefreshToken).where(RefreshToken.token_hash == token_hash))
-    rt = result.scalar_one_or_none()
 
-    if rt is None:
+    # Atomair claimen: alleen een nog-ongebruikte token wordt geconsumeerd.
+    result = await db.execute(
+        update(RefreshToken)
+        .where(RefreshToken.token_hash == token_hash, RefreshToken.is_used.is_(False))
+        .values(is_used=True)
+        .returning(RefreshToken.id, RefreshToken.user_id, RefreshToken.expires_at)
+    )
+    row = result.first()
+
+    if row is None:
+        # Niet geconsumeerd → token bestaat niet, óf was al gebruikt (hergebruik).
+        existing = (
+            await db.execute(
+                select(RefreshToken.user_id, RefreshToken.is_used).where(
+                    RefreshToken.token_hash == token_hash
+                )
+            )
+        ).first()
+        if existing is not None and existing.is_used:
+            logger.warning(
+                "Refresh token reuse detected for user %s — revoking all tokens",
+                existing.user_id,
+            )
+            await revoke_all_refresh_tokens(db, existing.user_id)
+            raise ValueError("Token reuse detected")
         return None
 
-    # Token reuse detection — possible token theft
-    if rt.is_used:
-        logger.warning(
-            "Refresh token reuse detected for user %s — revoking all tokens",
-            rt.user_id,
-        )
-        await revoke_all_refresh_tokens(db, rt.user_id)
-        raise ValueError("Token reuse detected")
-
-    # Check expiry
-    if rt.expires_at < datetime.now(UTC):
+    # Verlopen? De token is nu geconsumeerd (onschadelijk — hij was toch onbruikbaar).
+    if row.expires_at < datetime.now(UTC):
         return None
 
-    # Mark as used (consumed)
-    rt.is_used = True
     await db.flush()
-    return rt
+    # Contract: geef het geconsumeerde record terug (caller checkt alleen op None).
+    return (
+        await db.execute(select(RefreshToken).where(RefreshToken.id == row.id))
+    ).scalar_one()
 
 
 async def revoke_all_refresh_tokens(

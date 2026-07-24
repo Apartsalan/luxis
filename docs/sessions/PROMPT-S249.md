@@ -51,12 +51,25 @@ Extra taak-context (alleen als de gekozen hoofdtaak dat raakt):
 - **Fase-heropening per groep:** `docs/plans/BASENET-STATUS-HERSTEL.md` (406 dossiers,
   GO per groep, draaiboek-checks éérst).
 
+## Security (S248-nagekomen — context)
+Kimi-security-scan gedaan (6 domeinen), 7 fixes live (SEC-25..31: SSTI-sandbox,
+refresh-TOCTOU, kantoor-actief, RLS-default-secure, IMAP-SSRF, wachtwoordlengte,
+rate-limits). Details: nagekomen-sectie entry S248 in SESSION-NOTES; rapport
+`scratchpad/BEVINDINGEN-SECURITY-S248.md` (scratchpad, niet in repo). **Twee open
+aanbevelingen — Arsalan beslist, ze kosten iets:**
+- Aparte `TOKEN_ENCRYPTION_KEY` op de VPS zetten (nu valt tokenversleuteling terug op
+  SECRET_KEY). LET OP: aanzetten verbreekt Lisanne's e-mailkoppeling → ze moet opnieuw
+  verbinden. Laag risico (SECRET_KEY is sterk).
+- Kennisregel-endpoints (`/api/ai-agent/learning/rules*`) admin/advocaat-only maken
+  (nu get_current_user, spiegelt learned_answers). Laag (2 vertrouwde gebruikers).
+
 ## Taak
 Arsalan bepaalt de hoofdtaak bij start. Sterke kandidaten uit de roadmap:
 1. Losse punten (afgeronde-taak-"X dagen te laat", melding mislukte geplande mail
-   alleen naar inplanner, DMARC, kostenblokje, sharp-CVE's).
+   alleen naar inplanner, DMARC, kostenblokje, sharp-CVE frontend-dep-audit).
 2. Fase-heropening volgende groep uit BASENET-STATUS-HERSTEL.
-3. Eventueel: kennisregels-verfijning ná Lisanne's eerste regels (bv. rechtsvorm-
+3. Twee open security-aanbevelingen hierboven (indien Arsalan ze wil).
+4. Eventueel: kennisregels-verfijning ná Lisanne's eerste regels (bv. rechtsvorm-
    filter via `legal_form` als de KvK-verrijking ooit aangaat — nu leeg, ongeschikt).
 
 **Signaleren, niet oppakken (rolverdeling S240 — inhoudelijk werk = Lisanne):**

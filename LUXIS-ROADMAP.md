@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 24 juli 2026 (S248 — juridische kennisregels GEBOUWD + LIVE; harde poort op prod bewezen + door alle 3 de draft-routes een echte AI-brief; wacht nu op de inhoud van Lisanne). Rapport: entry S248 in `SESSION-NOTES.md`. **Volgende = S249: Arsalan bepaalt hoofdtaak; START met uitleg wat Lisanne moet doen (`docs/sessions/PROMPT-S249.md`).**
+**Laatst bijgewerkt:** 24 juli 2026 (S248 — kennisregels LIVE; NAGEKOMEN: Kimi-security-scan + 7 fixes SEC-25..31 live, alle CI groen; 2 security-aanbevelingen open). Rapport: entry S248 in `SESSION-NOTES.md`. **Volgende = S249: Arsalan bepaalt hoofdtaak; START met uitleg wat Lisanne moet doen (`docs/sessions/PROMPT-S249.md`).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -66,6 +66,18 @@
 > teruggedraaid, prod schoon (0 regels). 8 wachters, CI groen. Doc bijgewerkt naar
 > GEBOUWD + LIVE: `docs/plans/ONTWERP-juridische-kennisregels-S247.md`. Rapport: entry
 > S248 in SESSION-NOTES.
+>
+> ✅ **S248-NAGEKOMEN — Kimi-security-scan + 7 fixes LIVE.** Op verzoek van Arsalan een
+> grote security-scan via zijn Kimi-API (K3 voor auth/tenant/geld, k2.7-code voor de rest;
+> alleen broncode, geen PII/secrets — ~$4,31). Claude verifieerde élke vondst tegen de echte
+> code + prod. Kroonjuwelen houden stand; de meeste "critical/high" waren al afgeschermd
+> (11 vals-alarm bevestigd). 7 echte fixes gebouwd, getest en live: SSTI-sandbox voor
+> sjablonen (SEC-25, RCE dicht — latent-kritiek voor multi-tenant), atomaire refresh-token-
+> rotatie (SEC-26), kantoor-actief-check (SEC-27), RLS-grendel default-secure (SEC-28),
+> IMAP-SSRF-ranges (SEC-29), max wachtwoordlengte (SEC-30), rate-limits (SEC-31). Alle CI
+> groen (m.u.v. de al bestaande niet-blokkerende sharp-CVE-audit). **Open (Arsalan beslist,
+> kost iets):** aparte TOKEN_ENCRYPTION_KEY (verbreekt Lisanne's mailkoppeling), kennisregel-
+> endpoints admin-only. Rapport: nagekomen-sectie entry S248 in SESSION-NOTES.
 >
 > 🎯 **VOLGENDE (S249): Arsalan bepaalt de hoofdtaak.** **Eerst de uitleg-opdracht:**
 > in gewone taal precies vertellen wat Lisanne moet doen om de kennisregels in te

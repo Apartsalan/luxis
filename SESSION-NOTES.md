@@ -2,10 +2,10 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 24 juli 2026 (S248 — juridische kennisregels GEBOUWD + LIVE; harde poort live bewezen op prod + door alle 3 de draft-routes een echte AI-brief; wacht nu op inhoud van Lisanne).
-**Laatste feature/fix:** juridische kennisregels — aparte tabel `legal_knowledge_rules` (+ RLS), harde `applies_to`-poort vs `Case.debtor_type`, injectie in alle 3 de draft-paden, dashboard-sectie in "Slim leren" (`350f8c7` + reviewfixes `6f8d399`); 8 wachters + live end-to-end bewezen ($0,09), prod schoon (0 regels), nul gedragsverandering tot goedkeuring.
-**Openstaand:** **kennisregels wachten op INHOUD Lisanne** (eerste regels intikken, ijkpunt IN100458; §7 van `docs/plans/ONTWERP-juridische-kennisregels-S247.md`). Verder Lisanne-werk: oud IN100606-concept opnieuw genereren, IN100592 3e betwisting, regeling-taken IN100281/IN100537, 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai. Losse punten: afgeronde taak "X dagen te laat"; melding mislukte geplande mail alleen naar inplanner; fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`); BaseNet-delisting, kostenblokje, opmaak-restpunt S227, S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE's.
-**Volgende sessie:** S249 — Arsalan bepaalt hoofdtaak. START met: aan Arsalan in gewone taal uitleggen wat Lisanne precies moet doen om de kennisregels in te vullen (zie PROMPT-S249). Zie `docs/sessions/PROMPT-S249.md`.
+**Laatst bijgewerkt:** 24 juli 2026 (S248 — kennisregels GEBOUWD + LIVE; NAGEKOMEN: Kimi-security-scan (6 domeinen) + 7 fixes SEC-25..31 live, alle CI groen).
+**Laatste feature/fix:** security-scan via Kimi (K3 + k2.7-code) → 7 geverifieerde fixes live: SSTI-sandbox voor sjablonen (SEC-25, RCE dicht), atomaire refresh-token-rotatie (SEC-26), kantoor-actief-check (SEC-27), RLS-grendel default-secure (SEC-28), IMAP-SSRF-ranges (SEC-29), max wachtwoordlengte (SEC-30), rate-limits (SEC-31). Daarvoor: kennisregels (`350f8c7`+`6f8d399`).
+**Openstaand:** **Security-aanbevelingen (jouw keuze, kosten iets):** aparte TOKEN_ENCRYPTION_KEY (verbreekt Lisanne's mailkoppeling → herverbinden), kennisregel-endpoints admin-only. **Kennisregels wachten op INHOUD Lisanne** (§7 `docs/plans/ONTWERP-juridische-kennisregels-S247.md`, ijkpunt IN100458). Lisanne-werk: oud IN100606-concept, IN100592 3e betwisting, regeling-taken IN100281/IN100537, 4 review-mails + intake Ram Charan Sukhdai. Losse punten: afgeronde taak "X dagen te laat"; melding mislukte geplande mail alleen naar inplanner; fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`); kostenblokje, S227/S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE (frontend dep-audit, niet-blokkerend).
+**Volgende sessie:** S249 — Arsalan bepaalt hoofdtaak. START met: aan Arsalan in gewone taal uitleggen wat Lisanne moet doen om de kennisregels in te vullen (zie PROMPT-S249). Zie `docs/sessions/PROMPT-S249.md`.
 
 ## Sessie 248 (24 juli 2026, Fable-ontwerp → Opus-bouw → Fable-review + live end-to-end — juridische kennisregels GEBOUWD + LIVE)
 
@@ -87,6 +87,45 @@ waarschuwing + create/delete-flow.
   bevestigd behalve via de prompt-inhoud.
 - Endpoints niet rol-beperkt (spiegelt learned_answers; 2 vertrouwde gebruikers +
   tenant-isolatie) — kan later naar advocaat/admin.
+
+### Nagekomen — Kimi-security-scan + 7 fixes (Fable, GO Arsalan)
+Arsalan: "laat Kimi (mijn API, ~$13 tegoed) een grote security-scan doen — waar kan
+hij inbreken — zodat we het kunnen fixen." Kimi kan geen PII zien (S159), maar een
+CODE-scan mag: alleen broncode gestuurd, nooit `.env`/secrets/data.
+
+**Aanpak:** onderzoek vooraf → beste model = **Kimi K3** (vlaggenschip, 1M-context) voor
+de kroonjuwelen (auth/tenant + geld-routes); **Kimi k2.7-code** (coding-specialist, snel
+genoeg om binnen de 600s-voorgrondlimiet te blijven → geen kill) voor de 4 overige
+domeinen. 6 domeinen gescand, ~$4,31 (saldo $9,13). Scanner-script + rapporten in de
+scratchpad (`kimi_scan.py`, `BEVINDINGEN-SECURITY-S248.md`). **Élke vondst door Claude
+tegen de echte code + prod geverifieerd** (Kimi overrapporteert — cross-check verplicht,
+memory `feedback_verify_own_research`).
+
+**Kernoordeel:** kroonjuwelen (tenant-isolatie, RLS, auth) houden stand; de meeste
+"critical/high" van Kimi waren al afgeschermd door eerder werk (SEC-21/22, AUDIT-H3,
+config-hardening). 11 vals-alarm/al-dicht bevestigd (OAuth-CSRF = HMAC+nonce, Next.js-docs
+uit in prod, XFF-bypass, path traversal = whitelist, e-mail-XSS = DOMPurify SEC-24,
+achtergrond-taken = expliciete tenant_id, cross-case IDOR = kantoor-brede autorisatie, ...).
+
+**7 echte fixes gebouwd + getest + live (4 commits `3b58cac`/`84f4e0d`/`2b27a93`/`34e720c`):**
+- **SEC-25 (zwaarst, latent-kritiek):** docxtpl + oud HTML-pad renderden geüploade
+  sjablonen zonder Jinja-sandbox → SSTI/RCE. Nu `SandboxedEnvironment`. Tegenproef: oude
+  env rendert de `__globals__`-escape wél, sandbox blokkeert; 112 sjabloon-tests groen.
+- **SEC-26:** refresh-token-rotatie was SELECT→check→UPDATE (TOCTOU). Nu atomair
+  (`UPDATE ... WHERE is_used=false RETURNING`); gelijktijdigheidstest (2 sessies, 1 token).
+  Live bewezen: hergebruik oude token → 401 + alles ingetrokken.
+- **SEC-27:** `get_current_user` checkte alleen `user.is_active` → geschorst kantoor hield
+  toegang. Nu ook `Tenant.is_active`. Prod: 1 kantoor is_active=t (geen lockout).
+- **SEC-28:** RLS-rol-grendel in tenant.py was fail-open (`== "production"`) → nu
+  default-secure (dev/test-lijst uit config; typefout/lege APP_ENV faalt hard).
+- **SEC-29:** `_is_blocked_host` mist 169.254/16 (cloud-metadata) + IPv4-mapped IPv6 → toegevoegd.
+- **SEC-30:** max wachtwoordlengte 128. **SEC-31:** rate-limits op change-password + email/test.
+
+**Bewust NIET gedaan (aanbeveling, kost iets — Arsalan beslist):** aparte
+TOKEN_ENCRYPTION_KEY (verbreekt Lisanne's mailkoppeling → herverbinden), kennisregel-
+endpoints admin-only. Fixes deed Claude zelf (Kimi kan niet fixen; wij sturen geen code naar
+Moonshot). Deploy backend via SSH; login/`/me`/refresh/hergebruik live 200/200/ok/401; alle
+CI-jobs groen behalve de al bestaande niet-blokkerende sharp-CVE-frontend-audit.
 
 ### Volgende sessie
 S249 — Arsalan bepaalt de hoofdtaak. **START met de uitleg-opdracht van Arsalan:**

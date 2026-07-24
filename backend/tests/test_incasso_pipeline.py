@@ -1720,6 +1720,48 @@ def test_fidelity_issues_flags_xxx_on_verweer_step():
     assert any("XXX" in i for i in issues)
 
 
+def test_fidelity_issues_flags_leaked_placeholder_mal_on_verweer_step():
+    """S247 (IN100606): de STAP-4-placeholder-mal mag niet letterlijk lekken.
+    De AI moet <kernverweer letterlijk uit incoming_defense> vervangen door de
+    eigen woorden van de debiteur; blijft de meta-mal staan, dan is het concept
+    misleidend en moet de getrouwheids-poort het vangen (regenereren/markeren)."""
+    from app.incasso.automation_service import _draft_fidelity_issues
+
+    body = (
+        "Betreft: 2026-00042\n"
+        "[handmatig invullen door Lisanne: weerlegging van de stelling dat "
+        "<kernverweer letterlijk uit incoming_defense>]"
+    )
+    issues = _draft_fidelity_issues(
+        body,
+        step_name="Verweer beantwoorden",
+        template_body="",
+        case_number="2026-00042",
+        amounts={},
+    )
+    assert any("mal" in i.lower() or "kernverweer" in i.lower() for i in issues)
+
+
+def test_fidelity_issues_filled_placeholder_passes_on_verweer_step():
+    """Tegenproef: een NETJES ingevulde placeholder (debiteurwoorden i.p.v. de
+    meta-mal) is legitiem en mag de poort NIET laten afgaan."""
+    from app.incasso.automation_service import _draft_fidelity_issues
+
+    body = (
+        "Betreft: 2026-00042\n"
+        "[handmatig invullen door Lisanne: weerlegging van de stelling dat "
+        "de geleverde machine niet werkte]"
+    )
+    issues = _draft_fidelity_issues(
+        body,
+        step_name="Verweer beantwoorden",
+        template_body="",
+        case_number="2026-00042",
+        amounts={},
+    )
+    assert issues == []
+
+
 async def test_draft_gate_regenerates_and_marks_review_task(
     db, test_tenant, test_user, test_company
 ):

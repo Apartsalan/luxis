@@ -284,8 +284,19 @@ def _draft_fidelity_issues(
                 continue
             if not any(v in body for v in _amount_variants(value)):
                 issues.append(f"{label} € {value}")
-    if step_name == "Verweer beantwoorden" and "XXX" in body:
-        issues.append("'XXX'-plaatshouder niet vervangen")
+    if step_name == "Verweer beantwoorden":
+        if "XXX" in body:
+            issues.append("'XXX'-plaatshouder niet vervangen")
+        # S247 (IN100606): de STAP-4-fallback-placeholder mag Lisanne wél zien
+        # (bewust vangnet: onbekend verweer → invulregel i.p.v. verzonnen
+        # argument), maar de META-mal daarbinnen mag NOOIT letterlijk blijven
+        # staan — de AI moet '<kernverweer letterlijk uit incoming_defense>'
+        # vervangen door de eigen woorden van de debiteur. Blijft de mal staan,
+        # dan regenereren (en anders reviewtaak markeren) — nooit stil laten
+        # passeren.
+        low = body.lower()
+        if "incoming_defense" in low or "kernverweer letterlijk" in low:
+            issues.append("placeholder-mal <kernverweer…> niet ingevuld")
     return issues
 
 

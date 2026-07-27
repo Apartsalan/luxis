@@ -11404,3 +11404,69 @@ S241/S242).
 
 ### Volgende sessie
 S241 draaide parallel (zie entry hierboven); S242 = veegsessie voorstel-lijst.
+## Sessie 241 (23 juli 2026, Fable-testronde → Opus-bouw → Fable-tegenlezing — testronde 3 + Negeren-fix + meldingen-bundeling, LIVE)
+
+### Samenvatting
+Parallel aan de S240-afronding in een andere terminal (afspraak: administratie
+dáár, dus deze afsluiting kwam pas na expliciete opdracht van Arsalan; de
+S240-entry ontbreekt hier nog). Model-cyclus netjes gevolgd: testronde op Fable,
+bundeling gebouwd op Opus (wissel door Arsalan), Fable-tegenlezing erna.
+
+**Testronde 3 — 10 scenario's, drie verse brillen** (logboek:
+`docs/sessions/S241-SCENARIOS.md`; verwacht-resultaat vooraf, wegwerpdossier
+2026-00021 volledig gewist + nageteld 0, lokale wegwerp-medewerker idem):
+- **Bril A (S240-functies op kruispunten):** belofte-taak met verleden-datum,
+  auto-sluiten bij betaling, heropening, dossier-sync×melding — allemaal goed.
+  **Vondst 1 (gefixt, `da81429`): een met "Negeren" weggedrukte mail werd bij een
+  latere sync stil aan een dossier gekoppeld** (via dossier-sync én via later
+  aangemaakt dossiernummer). Rode test eerst; Negeren wint nu van elke sync,
+  bounces mogen wél blijven koppelen (tegenproef). 6 wachters, 1002 tests groen.
+- **Bril B (twee gebruikers/rollen):** werklijst-verschil seidony 61 vs kesting 38
+  = puur toewijzing + bewuste eigenaarloze-taken-regel; rollen-matrix klopt (droog
+  + live steekproef lokale omgeving: 4× 403 beheer, 200 dagelijks werk).
+- **Bril C (de ochtend van morgen):** server draait UTC → jobs 08:00-10:00 NL;
+  morgen kleurt 1 taak, 0 nieuwe meldingen (30-dagen-dedup werkt). Werklast-meting:
+  65 taken (39 test/26 echt), 21 adviezen (14/7), 16 aanvragen — opruimronde is de
+  sleutel, niet nieuwe bouw. Blok D (derde AI-ronde) bewust overgeslagen: S238
+  testte de antwoordlaag vers en S240/S241 raakten dat pad niet.
+
+**Meldingen-bundeling gebouwd + LIVE (GO Arsalan, `275d9f4`).** Meting: 112
+ongelezen bij seidony, 93 bij kesting (63× taak-te-laat, 25× nieuwe-mail) — de
+bel was onbruikbaar. Nu: typen met 3+ ongelezen worden één bundel-rij met teller
+("63 taken of deadlines te laat"); klik → overzichtspagina van dat type + hele
+stapel in één keer gelezen (nieuwe route `PUT /read-by-type`, alleen eigen
+gebruiker+type). Bundels altijd bovenaan (nooit weggedrukt door de 15-rijen-kap);
+losse + gelezen meldingen onveranderd; platte lijst (dossier-actiefeed) expliciet
+ongewijzigd — wachter bewaakt beide. Direct effect: 2 verjaringswaarschuwingen
+("VERJAARD! Direct actie vereist", IN100015 + IN100127) werden zichtbaar die
+eerst in de stapel verdronken → **inhoudelijk oppakken is aan Lisanne/Arsalan
+(rolverdeling S240)**. Fable-tegenlezing: geen fouten; 3 bewuste nuances
+gedocumenteerd (snooze telt mee in bundel-klik, zelfde rijen als dossier-feed,
+badge blijft ruw aantal).
+
+### Gewijzigde bestanden
+`backend/app/email/sync_service.py` (Negeren-poort),
+`backend/app/notifications/{service,schemas,router}.py` (bundeling),
+`frontend/src/hooks/use-notifications.ts`,
+`frontend/src/components/layout/app-header.tsx`. Nieuwe tests:
+`test_s241_sync_kruispunten.py` (6), `test_notification_bundling.py` (7).
+Logboek: `docs/sessions/S241-SCENARIOS.md`.
+
+### Verificatie
+Email/sync-suite 1002 groen + 33 meldingen-tests groen; ruff + tsc schoon; 2×
+gedeployd via SSH `--force-recreate` (backend; daarna backend+frontend),
+containers healthy, login 200, prod-logs 0 fouten. Bundeling live nageteld
+(gebundelde én platte lijst naast elkaar); klik-flow live bewezen met 3
+wegwerp-meldingen (precies 3 gelezen, 0 andere geraakt, daarna gewist,
+natelling 0). CI: fix-commit groen (alleen bekende sharp-audit rood, mag falen);
+bundeling-commit liep nog bij afsluiten — **natrekken bij S242-start**.
+
+### Bekende issues
+- S240-entry in dit bestand ontbreekt nog (parallelle terminal) — staat die er
+  bij S242-start nog niet, schrijf hem dan compact uit `S240-SCENARIOS.md` + git log.
+- Voorstellen (niet gebouwd, scope-hek): belofte-taak naast actieve regeling =
+  dubbel bewakingswerk; eigenaarloze te-laat-taken melden bij "eerste" gebruiker
+  (willekeurige volgorde).
+
+### Volgende sessie
+S242 (Opus): kleine veegsessie voorstel-lijst — zie `docs/sessions/PROMPT-S242.md`.

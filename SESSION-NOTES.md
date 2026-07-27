@@ -2,10 +2,74 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 27 juli 2026 (S249 — Fable-doorlichting kennisregel-keten, GEEN code; uitleg Lisanne + les "standaard-conventies eerst"; bouwlijst voor S250 klaargezet).
-**Laatste feature/fix:** geen code deze sessie (Fable, onderzoek/uitleg). Vorige: security-scan Kimi → 7 fixes SEC-25..31 live (S248).
-**Openstaand:** **Bouwlijst S250 (klaargezet, moet op Opus):** (1) gespreksregels correspondentie op conventie-niveau — deelnemers i.p.v. richting-pijl + voorbeeldregel + datum-notatie; (2) "X dagen te laat" weg bij afgeronde taken; (3) melding mislukte geplande mail breder dan alleen inplanner; (4) kostenblokje. **Security-aanbevelingen (jouw keuze, kosten iets):** aparte TOKEN_ENCRYPTION_KEY (verbreekt Lisanne's mailkoppeling), kennisregel-endpoints admin-only. **Kennisregels wachten op INHOUD Lisanne** (ijkpunt IN100458). Verder: fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`), DMARC, sharp-CVE (niet-blokkerend).
-**Volgende sessie:** S250 (Opus/Opus 5) — bouwlijst hierboven, gespreksregels eerst. Zie `docs/sessions/PROMPT-S250.md`.
+**Laatst bijgewerkt:** 27 juli 2026 (S250 — Opus 5-bouw: bouwlijst 1-3 live (gespreksregels op mail-conventie, taken-cosmetiek, faalmelding kantoorbreed); punt 4 bewust NIET gebouwd).
+**Laatste feature/fix:** gespreksregels correspondentie op Gmail/Outlook-conventie + faalmelding geplande mail naar hele kantoor (S250, live + visueel nagekeken).
+**Openstaand:** **Kostenblokje uitgesteld** (besluit Arsalan S250: 1 week cijfers, $6,53 waarvan >helft testverkeer — opnieuw bekijken bij een echte maand). **Vondst (voorstel, niet gebouwd):** de bel kent `scheduled_email_failed` én `bik_above_staffel` niet → tonen als grijs "Systeem". **Security-aanbevelingen (jouw keuze):** aparte TOKEN_ENCRYPTION_KEY (verbreekt Lisanne's mailkoppeling), kennisregel-endpoints admin-only. **Kennisregels wachten op INHOUD Lisanne** (ijkpunt IN100458). Verder: fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`), DMARC, sharp-CVE (niet-blokkerend).
+**Volgende sessie:** S251 — zie `docs/sessions/PROMPT-S251.md` (kleine bel-labels + vrije keuze uit openstaand).
+
+## Sessie 250 (27 juli 2026, Opus 5-bouw — mail-conventie gespreksregels + 2 veegpunten, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S250. Bouwlijst 1-3 gebouwd, gedeployd en live nagekeken; punt 4
+na meting bewust niet gebouwd.
+
+**1. Gespreksregels correspondentie op conventie-niveau (hoofdtaak).** Het gesprek
+toonde één richting-pijl van het LAATSTE bericht: na "sommatie uit → antwoord binnen"
+zag je alleen inkomend, alsof er nooit iets uitging. Nu de Gmail/Outlook-conventie in
+béide regelvarianten (breed `md:flex` + smalle/mobiele):
+- **Deelnemers** i.p.v. pijl (`threadParticipants`) — namen in volgorde van opkomst,
+  eigen berichten als "ik" ("ik, Incasso Kesting Legal (2)"); alleen-verstuurd gesprek
+  toont "Aan: <ontvanger>". Aantal "(n)" verhuisde mee naar de namen.
+- **Voorbeeldregel** — grijze snippet van het laatste bericht achter het onderwerp.
+- **Datum** — nagemeten: `formatDateTime(..,"short")` gaf altijd "17-02-2026 14:30".
+  Hergebruikt wat er al was: `formatRelativeTime` (dezelfde notatie als de mailwerkbank)
+  → "Vrijdag 00:14" / "17 jul" / oudere volledige datum. Geen tweede datumhelper erbij.
+- Behouden: vet + blauwe stip ongelezen, paperclip, Review-badge, datum rechts,
+  nieuwste bovenaan. In het geopende gesprek staat de per-bericht-pijl er nog (correct,
+  daar is het één bericht per regel).
+
+**2. "X dagen te laat" weg bij afgeronde taken.** Afgerond/overgeslagen toont de kale
+vervaldatum; open taken houden het relatieve label. Eén regel op de enige aanroep van
+`getRelativeDateLabel` (gegrepped: geen andere plek toont dit).
+
+**3. Faalmelding geplande mail kantoorbreed.** Ging naar precies één persoon — wie hem
+inplande. Werd die inactief, dan zag niemand het; bestond de gebruiker niet meer, dan
+viel de melding zelfs hélemaal weg (het pad "gebruiker weg" meldde niets). Nieuwe
+`create_scheduled_email_failed_notification` → `_notify_all_tenant_users` (alle actieve
+gebruikers, dedup 60 min op titel+dossier), zelfde keuze als de bak-melding S240. Alle
+vijf faalroutes lopen door één functie, dus blokkade, verzendfout, mislukte nazorg,
+vastgelopen claim én "gebruiker weg" erven hem in één keer. Wachter-test (kruispunt-
+discipline): melding bereikt de collega, NIET de inactieve collega en NIET een ander
+kantoor — eerst rood bewezen via `git stash`, daarna groen.
+
+**4. Kostenblokje — NIET gebouwd (besluit Arsalan).** Eerst gemeten op prod: 453 rijen
+in `ai_usage`, alleen 20-25 juli, $6,53 totaal waarvan >de helft eigen testverkeer
+(`testronde_*`, `s238_natelling_*`). Echt gebruik ≈ $3,50/week ≈ €13/maand. Advies
+"nu niet bouwen, opnieuw bekijken bij een echte maand" — overgenomen.
+
+**Deploy-hobbel:** de eerste `docker compose up -d` botste op een restcontainer van een
+eerdere mislukte hercreatie (`9ccf0730aafe_luxis-backend`, status Created). Opgeruimd;
+backend + frontend draaien op HEAD (`b108ce1`), code in de container geverifieerd.
+
+### Gewijzigde bestanden
+- `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx` — deelnemers,
+  voorbeeldregel, mail-datum (beide varianten)
+- `frontend/src/app/(dashboard)/taken/page.tsx` — kale datum bij afgeronde taken
+- `backend/app/notifications/service.py` — `create_scheduled_email_failed_notification`
+- `backend/app/email/scheduled_service.py` — `_notify_failure` kantoorbreed + melding op
+  het pad "gebruiker weg"
+- `backend/tests/test_scheduled_emails.py` — wachter kantoorbrede melding (24 tests groen)
+
+### Bekende issues / bewust niet gedaan
+- **Voorstel, niet gebouwd (scope-hek):** de bel kent de typen `scheduled_email_failed`
+  en `bik_above_staffel` niet (`NOTIFICATION_TYPE_CONFIG` in `hooks/use-notifications.ts`)
+  → ze vallen terug op grijs "Systeem" met info-icoon. Twee regels werk, apart te doen.
+- Punt 3 is live geverifieerd via tests + code-in-container, niet via een échte mislukte
+  verzending op prod (dat zou een testmail vereisen).
+- Kostenblokje uitgesteld (zie boven).
+
+### Volgende sessie
+S251 — zie `docs/sessions/PROMPT-S251.md`.
 
 ## Sessie 249 (27 juli 2026, Fable — doorlichting kennisregel-keten + uitleg Lisanne, GEEN code)
 
@@ -805,69 +869,3 @@ S243: Arsalan bepaalt de hoofdtaak (opruimronde met Lisanne is de sterkste
 kandidaat volgens de S241-werklastmeting — geen nieuwe bouw nodig). Zie
 `docs/sessions/PROMPT-S243.md`.
 
-## Sessie 241 (23 juli 2026, Fable-testronde → Opus-bouw → Fable-tegenlezing — testronde 3 + Negeren-fix + meldingen-bundeling, LIVE)
-
-### Samenvatting
-Parallel aan de S240-afronding in een andere terminal (afspraak: administratie
-dáár, dus deze afsluiting kwam pas na expliciete opdracht van Arsalan; de
-S240-entry ontbreekt hier nog). Model-cyclus netjes gevolgd: testronde op Fable,
-bundeling gebouwd op Opus (wissel door Arsalan), Fable-tegenlezing erna.
-
-**Testronde 3 — 10 scenario's, drie verse brillen** (logboek:
-`docs/sessions/S241-SCENARIOS.md`; verwacht-resultaat vooraf, wegwerpdossier
-2026-00021 volledig gewist + nageteld 0, lokale wegwerp-medewerker idem):
-- **Bril A (S240-functies op kruispunten):** belofte-taak met verleden-datum,
-  auto-sluiten bij betaling, heropening, dossier-sync×melding — allemaal goed.
-  **Vondst 1 (gefixt, `da81429`): een met "Negeren" weggedrukte mail werd bij een
-  latere sync stil aan een dossier gekoppeld** (via dossier-sync én via later
-  aangemaakt dossiernummer). Rode test eerst; Negeren wint nu van elke sync,
-  bounces mogen wél blijven koppelen (tegenproef). 6 wachters, 1002 tests groen.
-- **Bril B (twee gebruikers/rollen):** werklijst-verschil seidony 61 vs kesting 38
-  = puur toewijzing + bewuste eigenaarloze-taken-regel; rollen-matrix klopt (droog
-  + live steekproef lokale omgeving: 4× 403 beheer, 200 dagelijks werk).
-- **Bril C (de ochtend van morgen):** server draait UTC → jobs 08:00-10:00 NL;
-  morgen kleurt 1 taak, 0 nieuwe meldingen (30-dagen-dedup werkt). Werklast-meting:
-  65 taken (39 test/26 echt), 21 adviezen (14/7), 16 aanvragen — opruimronde is de
-  sleutel, niet nieuwe bouw. Blok D (derde AI-ronde) bewust overgeslagen: S238
-  testte de antwoordlaag vers en S240/S241 raakten dat pad niet.
-
-**Meldingen-bundeling gebouwd + LIVE (GO Arsalan, `275d9f4`).** Meting: 112
-ongelezen bij seidony, 93 bij kesting (63× taak-te-laat, 25× nieuwe-mail) — de
-bel was onbruikbaar. Nu: typen met 3+ ongelezen worden één bundel-rij met teller
-("63 taken of deadlines te laat"); klik → overzichtspagina van dat type + hele
-stapel in één keer gelezen (nieuwe route `PUT /read-by-type`, alleen eigen
-gebruiker+type). Bundels altijd bovenaan (nooit weggedrukt door de 15-rijen-kap);
-losse + gelezen meldingen onveranderd; platte lijst (dossier-actiefeed) expliciet
-ongewijzigd — wachter bewaakt beide. Direct effect: 2 verjaringswaarschuwingen
-("VERJAARD! Direct actie vereist", IN100015 + IN100127) werden zichtbaar die
-eerst in de stapel verdronken → **inhoudelijk oppakken is aan Lisanne/Arsalan
-(rolverdeling S240)**. Fable-tegenlezing: geen fouten; 3 bewuste nuances
-gedocumenteerd (snooze telt mee in bundel-klik, zelfde rijen als dossier-feed,
-badge blijft ruw aantal).
-
-### Gewijzigde bestanden
-`backend/app/email/sync_service.py` (Negeren-poort),
-`backend/app/notifications/{service,schemas,router}.py` (bundeling),
-`frontend/src/hooks/use-notifications.ts`,
-`frontend/src/components/layout/app-header.tsx`. Nieuwe tests:
-`test_s241_sync_kruispunten.py` (6), `test_notification_bundling.py` (7).
-Logboek: `docs/sessions/S241-SCENARIOS.md`.
-
-### Verificatie
-Email/sync-suite 1002 groen + 33 meldingen-tests groen; ruff + tsc schoon; 2×
-gedeployd via SSH `--force-recreate` (backend; daarna backend+frontend),
-containers healthy, login 200, prod-logs 0 fouten. Bundeling live nageteld
-(gebundelde én platte lijst naast elkaar); klik-flow live bewezen met 3
-wegwerp-meldingen (precies 3 gelezen, 0 andere geraakt, daarna gewist,
-natelling 0). CI: fix-commit groen (alleen bekende sharp-audit rood, mag falen);
-bundeling-commit liep nog bij afsluiten — **natrekken bij S242-start**.
-
-### Bekende issues
-- S240-entry in dit bestand ontbreekt nog (parallelle terminal) — staat die er
-  bij S242-start nog niet, schrijf hem dan compact uit `S240-SCENARIOS.md` + git log.
-- Voorstellen (niet gebouwd, scope-hek): belofte-taak naast actieve regeling =
-  dubbel bewakingswerk; eigenaarloze te-laat-taken melden bij "eerste" gebruiker
-  (willekeurige volgorde).
-
-### Volgende sessie
-S242 (Opus): kleine veegsessie voorstel-lijst — zie `docs/sessions/PROMPT-S242.md`.

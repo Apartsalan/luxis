@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 27 juli 2026 (S249 — Fable-doorlichting kennisregel-keten: machine klopt, wacht op inhoud Lisanne; geen code). Rapport: entry S249 in `SESSION-NOTES.md`. **Volgende = S250 (Opus): bouwlijst — gespreksregels correspondentie op conventie-niveau eerst, dan taken-cosmetiek + melding mislukte mail + kostenblokje (`docs/sessions/PROMPT-S250.md`).**
+**Laatst bijgewerkt:** 27 juli 2026 (S250 — Opus 5: gespreksregels correspondentie op mail-conventie, "X dagen te laat" weg bij afgeronde taken, faalmelding geplande mail kantoorbreed — alles live; kostenblokje uitgesteld na meting). Rapport: entry S250 in `SESSION-NOTES.md`. **Volgende = S251 (`docs/sessions/PROMPT-S251.md`).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,7 +53,22 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 24 juli 2026, S248)
+## 🎯 Huidige prioriteit (bijgewerkt 27 juli 2026, S250)
+
+> ✅ **S250 AFGEROND — mail-conventie in de gespreksregels + 2 veegpunten, LIVE.** De
+> gespreksregel toonde één richting-pijl van het laatste bericht (na "sommatie uit →
+> antwoord binnen" zag je alleen inkomend). Nu de Gmail/Outlook-conventie in beide
+> regelvarianten: deelnemers met "ik", "Aan: <ontvanger>" bij alleen-verstuurd, grijze
+> voorbeeldregel en mail-datums ("Vrijdag 00:14" / "17 jul"). Verder: een afgeronde taak
+> toont niet langer "X dagen te laat", en de faalmelding van een mislukte geplande mail
+> gaat nu naar álle actieve gebruikers i.p.v. alleen de inplanner (inclusief het pad
+> "gebruiker bestaat niet meer", dat eerder helemaal stil viel) — wachter-test rood
+> bewezen, daarna groen. Visueel nagekeken op prod, desktop + telefoon. Rapport: entry
+> S250 in SESSION-NOTES.
+>
+> ⏸️ **Kostenblokje uitgesteld (besluit Arsalan, S250).** Gemeten: 1 week cijfers, $6,53
+> waarvan meer dan de helft eigen testverkeer; echt gebruik ≈ €13/maand. Opnieuw bekijken
+> zodra er een volle maand echte cijfers ligt.
 
 > ✅ **S248 AFGEROND — juridische kennisregels GEBOUWD + LIVE.** Nieuwe feature naast
 > "Slim leren": Lisanne kan zelf juridische standaardkennis vastleggen ("als een
@@ -79,17 +94,17 @@
 > kost iets):** aparte TOKEN_ENCRYPTION_KEY (verbreekt Lisanne's mailkoppeling), kennisregel-
 > endpoints admin-only. Rapport: nagekomen-sectie entry S248 in SESSION-NOTES.
 >
-> 🎯 **VOLGENDE (S249): Arsalan bepaalt de hoofdtaak.** **Eerst de uitleg-opdracht:**
-> in gewone taal precies vertellen wat Lisanne moet doen om de kennisregels in te
-> vullen (machine is af, alleen de inhoud ontbreekt nog — §7 van het ontwerp-doc,
-> ijkpunt IN100458). Voor Lisanne (inhoudelijk): oud IN100606-concept opnieuw
-> genereren; IN100592 3e betwisting; regeling-taken IN100281/IN100537; IN100127; 2
-> open mails (IN100128/IN100586); IN100492-vraag. Parallel beslispunt: fase-heropening
-> per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`, 406 dossiers, GO per groep). Verder
-> blijven staan: 4 review-mails ongesorteerde bak + intake Ram Charan Sukhdai,
-> verweer-parkeerstap-voorstel, rest voorstel-lijst, BaseNet-delisting, kostenblokje,
-> opmaak-restpunt S227, S221b-rest, DMARC, cosmetisch (afgeronde taak toont "X dagen
-> te laat", melding mislukte geplande mail alleen naar inplanner, 4 restjes S235),
+> 🎯 **VOLGENDE (S251): Arsalan bepaalt de hoofdtaak.** Klein en concreet klaar: de bel
+> kent de meldingstypen `scheduled_email_failed` en `bik_above_staffel` niet, waardoor ze
+> als grijs "Systeem" tonen (2 regels in `hooks/use-notifications.ts`). Voor Lisanne
+> (inhoudelijk, niet door ons): kennisregels invullen (machine af, ijkpunt IN100458); oud
+> IN100606-concept opnieuw genereren; IN100592 3e betwisting; regeling-taken
+> IN100281/IN100537; IN100127; 2 open mails (IN100128/IN100586); IN100492-vraag.
+> Beslispunten Arsalan: fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`,
+> 406 dossiers, GO per groep), aparte TOKEN_ENCRYPTION_KEY, kennisregel-endpoints
+> admin-only. Verder blijven staan: 4 review-mails ongesorteerde bak + intake Ram Charan
+> Sukhdai, verweer-parkeerstap-voorstel, rest voorstel-lijst, BaseNet-delisting,
+> kostenblokje (uitgesteld), opmaak-restpunt S227, S221b-rest, DMARC, 4 restjes S235,
 > sharp-CVE's. KvK: niet naar vragen.
 
 ## Projectdocumenten

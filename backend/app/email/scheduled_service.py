@@ -36,9 +36,6 @@ from app.shared.exceptions import BadRequestError, NotFoundError
 
 logger = logging.getLogger(__name__)
 
-# Meldingstype bij een mislukte geplande verzending.
-NOTIF_SCHEDULED_EMAIL_FAILED = "scheduled_email_failed"
-
 # Een claim die zó lang blijft hangen, is een halverwege afgebroken run (herstart,
 # stroomstoring). We weten dan NIET of de provider hem verstuurd heeft → nooit
 # stilzwijgend opnieuw sturen, wel melden dat het onzeker is.
@@ -417,7 +414,11 @@ async def _notify_failure(
     mail_sent: bool = False,
     blocked: bool = False,
 ) -> None:
-    """Meld aan wie de mail inplande dat er iets misging.
+    """Meld aan alle actieve gebruikers van het kantoor dat er iets misging.
+
+    S250 — ging eerst alleen naar wie de mail inplande; werd die inactief of was
+    hij verwijderd, dan zag niemand het. De wachtrij is blind: er is geen scherm
+    waar het vanzelf opvalt, dus moet de melding breed landen.
 
     De staartzin hangt af van wat we zéker weten (S246/S247-review — een
     verkeerde staartzin nodigt uit tot een dúbbele mail aan de debiteur):
@@ -429,8 +430,7 @@ async def _notify_failure(
       meegenomen is dan NIET zeker (time-out ná acceptatie bestaat), dus
       eerst de map Verzonden controleren vóór iemand hem zelf opnieuw stuurt.
     """
-    from app.notifications.schemas import NotificationCreate
-    from app.notifications.service import create_notification
+    from app.notifications.service import create_scheduled_email_failed_notification
 
     if mail_sent:
         titel = f"Geplande e-mail: nazorg mislukt — {row.subject or '(geen onderwerp)'}"
@@ -445,16 +445,12 @@ async def _notify_failure(
             "map Verzonden vóórdat u de mail zelf opnieuw verstuurt."
         )
 
-    await create_notification(
+    await create_scheduled_email_failed_notification(
         db,
         row.tenant_id,
-        row.created_by_id,
-        NotificationCreate(
-            type=NOTIF_SCHEDULED_EMAIL_FAILED,
-            title=titel,
-            message=f"Aan {row.recipients}. {reason} {staart}",
-            case_id=row.case_id,
-        ),
+        title=titel,
+        message=f"Aan {row.recipients}. {reason} {staart}",
+        case_id=row.case_id,
     )
 
 
@@ -550,6 +546,9 @@ async def _send_one(session: AsyncSession, row_id: uuid.UUID, tenant_id: uuid.UU
     if user is None:
         row.status = STATUS_FAILED
         row.last_error = "De gebruiker die deze mail inplande bestaat niet meer."
+        # S250: dit gat viel eerst helemaal stil — de melding ging naar precies
+        # die verdwenen gebruiker. Nu gaat hij naar het hele kantoor.
+        await _notify_failure(session, row, row.last_error, blocked=True)
         await session.commit()
         return "mislukt (gebruiker weg)"
 

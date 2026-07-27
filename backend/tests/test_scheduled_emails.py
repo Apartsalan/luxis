@@ -955,3 +955,53 @@ async def test_lijst_toont_eigen_geplande_mails(
     assert resp.status_code == 200, resp.text
     ids = [r["id"] for r in resp.json()]
     assert ids == [str(vroeg.id), str(laat.id)]  # eerstvolgende bovenaan
+
+
+@pytest.mark.asyncio
+async def test_faalmelding_bereikt_het_hele_kantoor_niet_alleen_de_inplanner(
+    db: AsyncSession, session_factory, test_tenant: Tenant, test_user: User,
+    second_tenant: Tenant, second_user: User,
+):
+    """S250 — foutSOORT 'melding bereikt maar één paar ogen'.
+
+    De wachtrij is blind: mislukt een geplande mail, dan is de melding het enige
+    signaal. Ging die alleen naar wie hem inplande, dan viel hij stil zodra die
+    persoon inactief werd. Wachters: elke ACTIEVE collega van hetzelfde kantoor
+    krijgt hem, een inactieve collega niet, en een ander kantoor al helemaal niet.
+    """
+    from app.auth.service import hash_password
+
+    collega = User(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, email="collega@kestinglegal.nl",
+        hashed_password=hash_password("testpassword123"), full_name="Collega",
+        role="medewerker",
+    )
+    oud = User(
+        id=uuid.uuid4(), tenant_id=test_tenant.id, email="oud@kestinglegal.nl",
+        hashed_password=hash_password("testpassword123"), full_name="Oud-medewerker",
+        role="medewerker", is_active=False,
+    )
+    db.add_all([collega, oud])
+    case = await _case(db, test_tenant.id)
+    await _account(db, test_tenant.id, test_user.id)
+    await db.commit()
+    row = await _queue_row(db, test_tenant.id, test_user.id, case.id,
+                           when=datetime.now(UTC) - timedelta(minutes=1))
+
+    provider = _mock_provider(boom=True)
+    p1, p2, p3 = _send_patches(provider)
+    with p1, p2, p3:
+        await _dispatch(session_factory)
+
+    await db.refresh(row)
+    assert row.status == STATUS_FAILED
+
+    notifs = list((await db.execute(
+        select(Notification).where(Notification.type == "scheduled_email_failed")
+    )).scalars().all())
+    ontvangers = {n.user_id for n in notifs}
+    assert test_user.id in ontvangers      # de inplanner
+    assert collega.id in ontvangers        # KERN: de collega ziet het ook
+    assert oud.id not in ontvangers        # inactief → geen bel vol dode meldingen
+    assert second_user.id not in ontvangers  # ander kantoor blijft erbuiten
+    assert all(n.tenant_id == test_tenant.id for n in notifs)

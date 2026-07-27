@@ -19,6 +19,7 @@ NOTIF_INSTALLMENT_OVERDUE = "installment_overdue"  # regeling-alarm: termijn gem
 NOTIF_BIK_ABOVE_STAFFEL = "bik_above_staffel"  # S230/V1: B2C-kosten boven WIK-staffel
 NOTIF_CASE_CLOSED_INVOICE = "case_closed_invoice"  # S235: auto-afgesloten → cliënt factureren?
 NOTIF_EMAIL_UNSORTED = "email_unsorted"  # S240: nieuwe mail in de ongesorteerde bak
+NOTIF_SCHEDULED_EMAIL_FAILED = "scheduled_email_failed"  # S246: geplande mail mislukt
 
 # A5/A11 (S198): meldings-typen die uit de meldingenlijst + ongelezen-teller worden
 # gefilterd. De classificatielijn staat op pauze en 'classification_done' verzoop de
@@ -432,6 +433,37 @@ async def create_email_unsorted_notification(
             type=NOTIF_EMAIL_UNSORTED,
             title=title,
             message=message,
+        ),
+        dedup_minutes=60,
+    )
+
+
+async def create_scheduled_email_failed_notification(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    title: str,
+    message: str,
+    case_id: uuid.UUID | None = None,
+) -> int:
+    """S250: een mislukte geplande verzending ging alleen naar wie hem inplande.
+
+    Werd die gebruiker inactief (of bestond hij niet meer), dan zag NIEMAND dat
+    er een mail was blijven liggen — terwijl de wachtrij blind is en er dus geen
+    scherm is waarop het opvalt. Zelfde keuze als de ongesorteerde-bak-melding
+    (S240): naar alle actieve gebruikers van het kantoor.
+
+    Deduped per (gebruiker, titel, dossier) binnen 60 minuten — de titel draagt
+    het onderwerp, dus verschillende mislukte mails melden allebei.
+    """
+    return await _notify_all_tenant_users(
+        db,
+        tenant_id,
+        NotificationCreate(
+            type=NOTIF_SCHEDULED_EMAIL_FAILED,
+            title=title,
+            message=message,
+            case_id=case_id,
         ),
         dedup_minutes=60,
     )

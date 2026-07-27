@@ -206,7 +206,9 @@ function TaskRow({
           {/* Due date */}
           <span className="flex items-center gap-1">
             <CalendarDays className="h-3 w-3" />
-            {getRelativeDateLabel(task.due_date)}
+            {/* S250: afgeronde taak toont de kale datum — "3 dagen te laat"
+                slaat nergens meer op zodra de taak af is. */}
+            {isDone ? formatDateShort(task.due_date) : getRelativeDateLabel(task.due_date)}
           </span>
 
           {/* Case link — dossiernummer + debiteur (wederpartij) */}

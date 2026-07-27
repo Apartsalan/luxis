@@ -11353,3 +11353,54 @@ Arsalan: GO voor voorstel 1+2 (bak-melding + belofte-bewaking) en testronde 2 me
 brillen "slordige gebruiker" + "klik-ronde als Lisanne" — in een VERSE sessie op Opus
 (S240, prompt klaargezet). CI beide S239-commits groen (success via gh nagetrokken).
 De 2 gevonden mails wachten nog op antwoord — eerste vraag van S240.
+
+## Sessie 240 (23 juli 2026, Opus-bouw → Fable-review → Fable-testronde 2 — bak-melding + belofte-bewaking + klik-ronde, LIVE)
+
+### Samenvatting
+Entry geschreven bij S242-start (compact uit `docs/sessions/S240-SCENARIOS.md` +
+git log) — de parallelle terminal sloot af zonder deze entry.
+
+**Bouw (GO Arsalan na S239, `4c8f787`, Opus):** de twee sterkste S239-voorstellen:
+- **Melding ongesorteerde bak** — nieuwe binnenkomende mail die niet automatisch
+  te koppelen is → melding bij alle actieve gebruikers (dicht het S237-gat
+  "debiteur-reactie vanaf onbekend adres valt stil"); geldt alleen NIEUWE
+  binnenkomers, de 81 oude ongesorteerde mails spammen niet.
+- **Betaalbelofte-bewaking** — belofte-mail (datum+bedrag al herkend door de
+  classificatie) → bewakingstaak op de beloofde datum
+  (`ensure_payment_promise_task`); sluit automatisch bij volledige betaling.
+
+**Fable-review → 2 fixes (`d141f35`):** belofte-taak sluit ook bij handmátig
+zaak-afsluiten (route-kruispunt); melding-doorklik werkt ook als de Mail-pagina
+al open staat. Rolverdeling vastgelegd (`b42a140`, Working Agreement CLAUDE.md):
+sessies bouwen, Lisanne doet het inhoudelijke werk.
+
+**Testronde 2 (Fable na modelwissel, logboek `S240-SCENARIOS.md`):** bril
+"slordige gebruiker" (8 scenario's, prod-API op wegwerpdossier 2026-00021) +
+bril "klik-ronde als Lisanne" (6 scenario's, Playwright tegen prod, desktop +
+mobiel 390×844). 13/14 goed — validaties overal netjes (422/400 met NL-meldingen,
+bedragen op de cent), cijfers dashboard/dossier consistent én handmatig nagerekend.
+- **Vondst 1 (🅰, gefixt `6192ac3`):** melding-doorklik naar exact dezelfde URL
+  deed niets na eerdere doorklik + handmatige tabwissel — tabwissel maakt de URL
+  nu weer kaal; live herbeklikt en bewezen.
+- **Vondst 2 (🅲, → S242):** dubbelklik/2 tabs boekt een deelbetaling dubbel
+  (beide 201; alleen UI-demping, geen slot in de service-laag).
+
+Bijvangst (echt, niet aangeraakt): IN100592 (Zwartbol) mailde opnieuw mét
+dossiernummer → automatisch gekoppeld + als verweer beoordeeld (0.75).
+
+### Gewijzigde bestanden
+Backend: `ai_agent/orchestrator.py`, `collections/service.py`,
+`email/sync_service.py`, `notifications/service.py`, `workflow/hooks.py`,
+`cases/service.py`. Frontend: `correspondentie/page.tsx`, `app-header.tsx`,
+`use-notifications.ts`. Tests: `test_email_unsorted_notification.py`,
+`test_payment_promise_task.py`. Commits `4c8f787`, `d141f35`, `6192ac3`,
+`b42a140`, `d9e35f0`.
+
+### Verificatie
+Wegwerpdossier 2026-00021 volledig gewist (natelling 0); klikproef-melding
+gewist (natelling 0); geen mail verstuurd; 0 consolefouten in de klik-ronde;
+screenshots mobiel bewaard. CI van alle S240-commits groen (nagetrokken in
+S241/S242).
+
+### Volgende sessie
+S241 draaide parallel (zie entry hierboven); S242 = veegsessie voorstel-lijst.

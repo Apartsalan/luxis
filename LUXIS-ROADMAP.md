@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 24 juli 2026 (S248 — kennisregels LIVE; NAGEKOMEN: Kimi-security-scan + 7 fixes SEC-25..31 live, alle CI groen; 2 security-aanbevelingen open). Rapport: entry S248 in `SESSION-NOTES.md`. **Volgende = S249: Arsalan bepaalt hoofdtaak; START met uitleg wat Lisanne moet doen (`docs/sessions/PROMPT-S249.md`).**
+**Laatst bijgewerkt:** 27 juli 2026 (S249 — Fable-doorlichting kennisregel-keten: machine klopt, wacht op inhoud Lisanne; geen code). Rapport: entry S249 in `SESSION-NOTES.md`. **Volgende = S250 (Opus): bouwlijst — gespreksregels correspondentie op conventie-niveau eerst, dan taken-cosmetiek + melding mislukte mail + kostenblokje (`docs/sessions/PROMPT-S250.md`).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl

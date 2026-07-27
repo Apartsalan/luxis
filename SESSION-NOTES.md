@@ -2,10 +2,60 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 24 juli 2026 (S248 — kennisregels GEBOUWD + LIVE; NAGEKOMEN: Kimi-security-scan (6 domeinen) + 7 fixes SEC-25..31 live, alle CI groen).
-**Laatste feature/fix:** security-scan via Kimi (K3 + k2.7-code) → 7 geverifieerde fixes live: SSTI-sandbox voor sjablonen (SEC-25, RCE dicht), atomaire refresh-token-rotatie (SEC-26), kantoor-actief-check (SEC-27), RLS-grendel default-secure (SEC-28), IMAP-SSRF-ranges (SEC-29), max wachtwoordlengte (SEC-30), rate-limits (SEC-31). Daarvoor: kennisregels (`350f8c7`+`6f8d399`).
-**Openstaand:** **Security-aanbevelingen (jouw keuze, kosten iets):** aparte TOKEN_ENCRYPTION_KEY (verbreekt Lisanne's mailkoppeling → herverbinden), kennisregel-endpoints admin-only. **Kennisregels wachten op INHOUD Lisanne** (§7 `docs/plans/ONTWERP-juridische-kennisregels-S247.md`, ijkpunt IN100458). Lisanne-werk: oud IN100606-concept, IN100592 3e betwisting, regeling-taken IN100281/IN100537, 4 review-mails + intake Ram Charan Sukhdai. Losse punten: afgeronde taak "X dagen te laat"; melding mislukte geplande mail alleen naar inplanner; fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`); kostenblokje, S227/S221b-rest, DMARC, 4 cosmetische restjes S235, sharp-CVE (frontend dep-audit, niet-blokkerend).
-**Volgende sessie:** S249 — Arsalan bepaalt hoofdtaak. START met: aan Arsalan in gewone taal uitleggen wat Lisanne moet doen om de kennisregels in te vullen (zie PROMPT-S249). Zie `docs/sessions/PROMPT-S249.md`.
+**Laatst bijgewerkt:** 27 juli 2026 (S249 — Fable-doorlichting kennisregel-keten, GEEN code; uitleg Lisanne + les "standaard-conventies eerst"; bouwlijst voor S250 klaargezet).
+**Laatste feature/fix:** geen code deze sessie (Fable, onderzoek/uitleg). Vorige: security-scan Kimi → 7 fixes SEC-25..31 live (S248).
+**Openstaand:** **Bouwlijst S250 (klaargezet, moet op Opus):** (1) gespreksregels correspondentie op conventie-niveau — deelnemers i.p.v. richting-pijl + voorbeeldregel + datum-notatie; (2) "X dagen te laat" weg bij afgeronde taken; (3) melding mislukte geplande mail breder dan alleen inplanner; (4) kostenblokje. **Security-aanbevelingen (jouw keuze, kosten iets):** aparte TOKEN_ENCRYPTION_KEY (verbreekt Lisanne's mailkoppeling), kennisregel-endpoints admin-only. **Kennisregels wachten op INHOUD Lisanne** (ijkpunt IN100458). Verder: fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`), DMARC, sharp-CVE (niet-blokkerend).
+**Volgende sessie:** S250 (Opus/Opus 5) — bouwlijst hierboven, gespreksregels eerst. Zie `docs/sessions/PROMPT-S250.md`.
+
+## Sessie 249 (27 juli 2026, Fable — doorlichting kennisregel-keten + uitleg Lisanne, GEEN code)
+
+### Samenvatting
+Startpunt PROMPT-S249. Geen bouwsessie: uitleg + doorlichting op verzoek Arsalan.
+
+**1. Uitleg aan Arsalan (gewone taal) — wat moet Lisanne doen voor de kennisregels.**
+Scherm eerst in de bron geverifieerd (`knowledge-rules-section.tsx` + `ai-leren-tab.tsx`):
+Instellingen → "Slim leren" → blok "Juridische kennisregels" → "Nieuwe regel"; 2 keuzes
+(verweer-type + geldt-voor als veiligheidsklep) + 4 velden; concept → groen vinkje keurt goed.
+
+**2. Doorlichting kennisregel-keten (kernvraag Arsalan: "werkt 'Bij welk verweer?' echt,
+en hoe matcht dat met de incassostappen?").** Hele keten in code gevolgd + op prod gemeten:
+- **Matchsleutel = dezelfde 13-type-woordenschat** (`defense_types.py`) die de mail-
+  classificatie gebruikt; géén aparte herken-machine. Regel-dropdown = die lijst minus 'overig'.
+- **Koppeling met stappen:** binnenkomend verweer op een hoofdpad-stap → auto-switch naar
+  "Verweer beantwoorden" + concept; kennisregels gaan ALLEEN in die verweer-prompt mee,
+  via de gedeelde `build_knowledge_rules_text` in alle 3 de draft-paden. Twee harde poorten:
+  type-match + `rule_applies` (zakelijk/consument vs `Case.debtor_type`), fail-closed.
+- **Prod-meting:** 332 verweer-classificaties; élke verse mail sinds 6 juli krijgt een type
+  (94/94 op open dossiers, 0 gemist — de 238 typeloze zijn één oude bulk van 3 juli). Alle
+  5 dossiers in "Verweer beantwoorden" hebben een bruikbaar type. Alle 627 dossiers hebben
+  debtor_type (546 b2b / 81 b2c, 0 leeg) → veiligheidsklep blokkeert nergens onnodig.
+- **Grenzen benoemd (geen bug):** één type per mail (max 3 regels); alleen de NIEUWSTE mail
+  telt bij auto/verweer-knop (op IN100458 verschoof de debiteur van av-vernietiging naar NCNP
+  → oude regel vuurt niet meer, correct); gesloten dossiers doen niet mee (10 verse mails op
+  afgesloten zaken onbeoordeeld, o.a. IN100492/IN100582). **Oordeel: geen los eiland, machine
+  klopt; ontbreekt alleen INHOUD (0 regels). Niets bijbouwen tot Lisanne's eerste regels.**
+
+**3. Werkregel vastgelegd (memory `feedback_standaard_conventies_eerst`).** Naar aanleiding
+van de gespreksregel die alleen een richting-pijl van het laatste bericht toont: bij lang-
+bestaande functionaliteit (mail/lijst/agenda) eerst onderzoeken hoe gevestigde partijen het
+oplossen en het COMPLETE beeld in één keer bouwen — niet elke mini-feature apart laten vragen.
+
+**4. Modelnieuws:** Arsalan wees erop dat Opus 5 bestaat (uit 24 juli — ná mijn kennisstop);
+webcheck bevestigd. Claude Code al up-to-date (2.1.220); Opus 5 verscheen niet in de picker
+(plan-/uitrolkwestie, buiten wat Claude kan zien). Bouwen kan op Opus 4.8 of 5.
+
+### Gewijzigde bestanden
+Geen code. Memory: `feedback_standaard_conventies_eerst.md` (nieuw). Docs: deze entry +
+roadmap-kop + `docs/sessions/PROMPT-S250.md`.
+
+### Bekende issues / bewust niet gedaan
+- Geen bouwwerk — expliciet een onderzoeks-/uitlegsessie.
+- Bouwlijst S250 staat in de kop + PROMPT-S250; gespreksregels eerst (conventie-niveau).
+- Kennisregels: 0 regels, wacht op Lisanne (inhoud = haar werk, rolverdeling S240).
+
+### Volgende sessie
+S250 (Opus) — bouwlijst uit de kop, gespreksregels correspondentie eerst.
+Zie `docs/sessions/PROMPT-S250.md`.
 
 ## Sessie 248 (24 juli 2026, Fable-ontwerp → Opus-bouw → Fable-review + live end-to-end — juridische kennisregels GEBOUWD + LIVE)
 
@@ -821,55 +871,3 @@ bundeling-commit liep nog bij afsluiten — **natrekken bij S242-start**.
 
 ### Volgende sessie
 S242 (Opus): kleine veegsessie voorstel-lijst — zie `docs/sessions/PROMPT-S242.md`.
-
-## Sessie 240 (23 juli 2026, Opus-bouw → Fable-review → Fable-testronde 2 — bak-melding + belofte-bewaking + klik-ronde, LIVE)
-
-### Samenvatting
-Entry geschreven bij S242-start (compact uit `docs/sessions/S240-SCENARIOS.md` +
-git log) — de parallelle terminal sloot af zonder deze entry.
-
-**Bouw (GO Arsalan na S239, `4c8f787`, Opus):** de twee sterkste S239-voorstellen:
-- **Melding ongesorteerde bak** — nieuwe binnenkomende mail die niet automatisch
-  te koppelen is → melding bij alle actieve gebruikers (dicht het S237-gat
-  "debiteur-reactie vanaf onbekend adres valt stil"); geldt alleen NIEUWE
-  binnenkomers, de 81 oude ongesorteerde mails spammen niet.
-- **Betaalbelofte-bewaking** — belofte-mail (datum+bedrag al herkend door de
-  classificatie) → bewakingstaak op de beloofde datum
-  (`ensure_payment_promise_task`); sluit automatisch bij volledige betaling.
-
-**Fable-review → 2 fixes (`d141f35`):** belofte-taak sluit ook bij handmátig
-zaak-afsluiten (route-kruispunt); melding-doorklik werkt ook als de Mail-pagina
-al open staat. Rolverdeling vastgelegd (`b42a140`, Working Agreement CLAUDE.md):
-sessies bouwen, Lisanne doet het inhoudelijke werk.
-
-**Testronde 2 (Fable na modelwissel, logboek `S240-SCENARIOS.md`):** bril
-"slordige gebruiker" (8 scenario's, prod-API op wegwerpdossier 2026-00021) +
-bril "klik-ronde als Lisanne" (6 scenario's, Playwright tegen prod, desktop +
-mobiel 390×844). 13/14 goed — validaties overal netjes (422/400 met NL-meldingen,
-bedragen op de cent), cijfers dashboard/dossier consistent én handmatig nagerekend.
-- **Vondst 1 (🅰, gefixt `6192ac3`):** melding-doorklik naar exact dezelfde URL
-  deed niets na eerdere doorklik + handmatige tabwissel — tabwissel maakt de URL
-  nu weer kaal; live herbeklikt en bewezen.
-- **Vondst 2 (🅲, → S242):** dubbelklik/2 tabs boekt een deelbetaling dubbel
-  (beide 201; alleen UI-demping, geen slot in de service-laag).
-
-Bijvangst (echt, niet aangeraakt): IN100592 (Zwartbol) mailde opnieuw mét
-dossiernummer → automatisch gekoppeld + als verweer beoordeeld (0.75).
-
-### Gewijzigde bestanden
-Backend: `ai_agent/orchestrator.py`, `collections/service.py`,
-`email/sync_service.py`, `notifications/service.py`, `workflow/hooks.py`,
-`cases/service.py`. Frontend: `correspondentie/page.tsx`, `app-header.tsx`,
-`use-notifications.ts`. Tests: `test_email_unsorted_notification.py`,
-`test_payment_promise_task.py`. Commits `4c8f787`, `d141f35`, `6192ac3`,
-`b42a140`, `d9e35f0`.
-
-### Verificatie
-Wegwerpdossier 2026-00021 volledig gewist (natelling 0); klikproef-melding
-gewist (natelling 0); geen mail verstuurd; 0 consolefouten in de klik-ronde;
-screenshots mobiel bewaard. CI van alle S240-commits groen (nagetrokken in
-S241/S242).
-
-### Volgende sessie
-S241 draaide parallel (zie entry hierboven); S242 = veegsessie voorstel-lijst.
-

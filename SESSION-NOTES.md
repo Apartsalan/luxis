@@ -51,6 +51,22 @@ in `ai_usage`, alleen 20-25 juli, $6,53 totaal waarvan >de helft eigen testverke
 eerdere mislukte hercreatie (`9ccf0730aafe_luxis-backend`, status Created). Opgeruimd;
 backend + frontend draaien op HEAD (`b108ce1`), code in de container geverifieerd.
 
+**Nagekomen — Fable-review (verse ogen, óók visueel op prod, `e135bf0`).** Diff herlezen
++ echt dossier bekeken (IN100458): de conventie doet daar precies wat bedoeld was —
+"ik, Office (2)" op de sommatie-plus-antwoord-draad, "Aan: …" op alleen-verstuurd,
+relatieve datums. Twee vondsten, beide direct gefixt en live geverifieerd:
+- **Geplette Van/Aan-kop (bestond al sinds S244):** in een smal leesvenster met de
+  AI-antwoord-knop erbij werd de kop van een geopend bericht één letter per regel.
+  Oorzaak: kolom/rij-keuze hing aan de viewport (`sm:`), terwijl de paneelbreedte van
+  het geopende gesprek afhangt. Nu flex-wrap + minimumbreedte; knoppen zakken eronder.
+- **"(n)" kon mee-afkappen** in de brede regel (zat ín de truncate-span) → erbuiten
+  gezet, Gmail houdt het aantal altijd zichtbaar.
+Niet gefixt, wel gezien (klein/data): voorbeeldregel kan het onderwerp herhalen als de
+brieftekst met het onderwerp begint (Gmail doet hetzelfde); ingeklapte uitgaande
+berichtregel in een smal paneel kapt hard af ("Aa…"); reply-aan-onszelf-testdraad toont
+"Incasso Kesting Legal, ik" (testdata). CI reviewfix: alles groen behalve de bekende
+sharp-audit.
+
 ### Gewijzigde bestanden
 - `frontend/src/app/(dashboard)/zaken/[id]/components/CorrespondentieTab.tsx` — deelnemers,
   voorbeeldregel, mail-datum (beide varianten)

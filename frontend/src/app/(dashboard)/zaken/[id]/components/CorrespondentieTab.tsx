@@ -263,8 +263,12 @@ function ThreadMessage({
           ) : (
             <>
               {/* Volledige kop + acties */}
-              <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start sm:justify-between border-b border-border">
-                <div className="space-y-0.5 text-xs text-muted-foreground min-w-0">
+              {/* S250-review: wrap i.p.v. col/row op viewport — de breedte van dit
+                  paneel hangt af van het geopende gesprek, niet van het scherm.
+                  basis-56 houdt Van/Aan leesbaar; passen de knoppen er niet naast,
+                  dan zakken ze eronder (voorheen: kop geplet tot 1 letter/regel). */}
+              <div className="flex flex-wrap items-start justify-between gap-2 px-4 py-3 border-b border-border">
+                <div className="space-y-0.5 text-xs text-muted-foreground min-w-0 flex-1 basis-56">
                   <p className="break-words">
                     <span className="font-medium text-foreground">Van:</span>{" "}
                     {detail.from_name
@@ -668,7 +672,7 @@ function CorrespondentieTab({
                 const narrow = !!selectedThread;
                 const naam = threadParticipants(thread);
                 const aantal = thread.items.length > 1 && (
-                  <span className="ml-1 text-xs text-muted-foreground font-normal">
+                  <span className="ml-1 shrink-0 text-xs text-muted-foreground font-normal">
                     ({thread.items.length})
                   </span>
                 );
@@ -743,14 +747,17 @@ function CorrespondentieTab({
                         {unread && (
                           <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" aria-label="Ongelezen" />
                         )}
+                        {/* S250-review: (n) búiten de afkap-span — bij een lange
+                            namenlijst kapt de naam af, maar het aantal blijft staan
+                            (Gmail-gedrag). */}
                         <span
                           className={`shrink-0 max-w-[35%] truncate text-sm ${
                             unread ? "font-semibold" : "font-medium"
                           } text-foreground`}
                         >
                           {naam}
-                          {aantal}
                         </span>
+                        {aantal}
                         <span
                           className={`min-w-0 flex-1 truncate text-sm ${
                             unread ? "font-semibold text-foreground" : "text-muted-foreground"

@@ -66,6 +66,15 @@
 > bewezen, daarna groen. Visueel nagekeken op prod, desktop + telefoon. Rapport: entry
 > S250 in SESSION-NOTES.
 >
+> 🎨 **Ontwerpspoor klaargezet, NIET gestart (S250).** Eerste doorlichting van de live app
+> met Impeccable: **28/40**. Geen AI-slop, maar geen vormtaal eronder — 877 rauwe
+> kleurklassen naast het tokensysteem, 15 families met dubbelingen, badge-component wordt
+> in 3 bestanden gebruikt terwijl de rest handmatig badges bouwt. 5 gemeten contrastfouten
+> (amber-tekst 3,19 · groen 3,77 · wit-op-rood 3,76 · lichtrood-op-roze 2,13 · grijs 4,39)
+> en één echte bug: de zwevende Timer-knop dekt inhoud af (dashboard + incassotabel).
+> Doorgerekend plan met stappen: `docs/plans/ONTWERP-kleur-en-leesbaarheid-S250.md`.
+> Volledige doorlichting: `.impeccable/critique/`. **Arsalan: richting akkoord, nu geen actie.**
+>
 > ⏸️ **Kostenblokje uitgesteld (besluit Arsalan, S250).** Gemeten: 1 week cijfers, $6,53
 > waarvan meer dan de helft eigen testverkeer; echt gebruik ≈ €13/maand. Opnieuw bekijken
 > zodra er een volle maand echte cijfers ligt.

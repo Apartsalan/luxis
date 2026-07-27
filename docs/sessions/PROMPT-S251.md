@@ -21,7 +21,17 @@ label/icoon/kleur (rood/amber), in de stijl van de bestaande regels. Controleer 
 echte melding in de bel op prod of het klopt.
 
 ## Taak 2 — Arsalan kiest de hoofdtaak
-Openstaand (roadmap §Huidige prioriteit): fase-heropening per groep
+
+**Optie A — ontwerpspoor (ligt klaar, doorgerekend).**
+`docs/plans/ONTWERP-kleur-en-leesbaarheid-S250.md`: vier statuskleuren vastleggen, één
+badge-component i.p.v. 26 handgemaakte, rood terug naar "alleen storing", zwevende
+Timer-knop alleen tonen als er een timer loopt. **Stap 0 is verplicht:** eerst een pagina
+met oud naast nieuw laten zien, pas bouwen na akkoord. Startpunt: 5 gemeten contrastfouten
+(amber-tekst 3,19 · groen 3,77 · wit-op-rood 3,76 · lichtrood-op-roze 2,13 · grijs 4,39);
+norm is 4,5. Achtergrond: `.impeccable/critique/` (28/40, eerste meting).
+Arsalan zei bij het opstellen: richting akkoord, maar toen geen actie — dus eerst vragen.
+
+**Optie B — openstaande lijst.** Roadmap §Huidige prioriteit: fase-heropening per groep
 (`docs/plans/BASENET-STATUS-HERSTEL.md`, 406 dossiers — GO per groep nodig), aparte
 TOKEN_ENCRYPTION_KEY (verbreekt Lisanne's mailkoppeling), kennisregel-endpoints
 admin-only, verweer-parkeerstap-voorstel, rest voorstel-lijst, opmaak-restpunt S227,

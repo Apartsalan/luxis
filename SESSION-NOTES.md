@@ -2,10 +2,11 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 27 juli 2026 (S250 — Opus 5-bouw: bouwlijst 1-3 live (gespreksregels op mail-conventie, taken-cosmetiek, faalmelding kantoorbreed); punt 4 bewust NIET gebouwd).
+**Laatst bijgewerkt:** 27 juli 2026 (S250 — bouwlijst 1-3 live + Fable-review; daarna eerste ontwerp-doorlichting van de app: 28/40, plan klaar maar bewust niet gestart).
 **Laatste feature/fix:** gespreksregels correspondentie op Gmail/Outlook-conventie + faalmelding geplande mail naar hele kantoor (S250, live + visueel nagekeken).
 **Openstaand:** **Kostenblokje uitgesteld** (besluit Arsalan S250: 1 week cijfers, $6,53 waarvan >helft testverkeer — opnieuw bekijken bij een echte maand). **Vondst (voorstel, niet gebouwd):** de bel kent `scheduled_email_failed` én `bik_above_staffel` niet → tonen als grijs "Systeem". **Security-aanbevelingen (jouw keuze):** aparte TOKEN_ENCRYPTION_KEY (verbreekt Lisanne's mailkoppeling), kennisregel-endpoints admin-only. **Kennisregels wachten op INHOUD Lisanne** (ijkpunt IN100458). Verder: fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`), DMARC, sharp-CVE (niet-blokkerend).
-**Volgende sessie:** S251 — zie `docs/sessions/PROMPT-S251.md` (kleine bel-labels + vrije keuze uit openstaand).
+**Ontwerpspoor (klaar, niet gestart):** `docs/plans/ONTWERP-kleur-en-leesbaarheid-S250.md` — doorgerekende statuskleuren + één badge-component + rood-beleid + timer-fix; stap 0 = oud-naast-nieuw voorbeeldpagina. Arsalan wil er nu niets mee doen.
+**Volgende sessie:** S251 — zie `docs/sessions/PROMPT-S251.md` (kleine bel-labels + vrije keuze uit openstaand; ontwerpspoor is één van de opties).
 
 ## Sessie 250 (27 juli 2026, Opus 5-bouw — mail-conventie gespreksregels + 2 veegpunten, LIVE)
 
@@ -84,8 +85,31 @@ sharp-audit.
   verzending op prod (dat zou een testmail vereisen).
 - Kostenblokje uitgesteld (zie boven).
 
+**Nagekomen 2 — eerste Impeccable-doorlichting van de live app (GEEN code).** Op verzoek
+Arsalan de hele app door de ontwerp-tool gehaald: dashboard, dossierlijst, incassolijst en
+een echt dossier, op 1440x900 én 390x844, met de kleuren gemeten op de échte pagina.
+**Cijfer 28/40** (eerste meting, snapshot in `.impeccable/critique/`).
+- **Kern:** geen AI-slop (geen verlopen/glas/hero), maar géén vormtaal eronder — 877 rauwe
+  kleurklassen naast het tokensysteem, 15 families met dubbelingen (emerald+green,
+  slate+gray, violet+purple); badge-component bestaat maar wordt in 3 bestanden gebruikt,
+  de rest knutselt ze met de hand. Dát is waarom het "simpel" leest.
+- **5 gemeten contrastfouten** (norm 4,5): amber-tekst 3,19 · groen 3,77 · wit-op-rood 3,76 ·
+  lichtrood-op-roze 2,13 · grijze telling 4,39.
+- **Echte bug gemeten:** de zwevende Timer-knop staat altijd in beeld en dekt op het
+  dashboard de AI-suggesties-balk af, in de incassolijst een bedrag in de tabel.
+- Verder: dashboard = 15 kaarten over 2,8 schermhoogtes met een ragged 5e KPI-kaart
+  (raster staat op 4, er zijn er 5) en twee lege staten die 260px kosten; alarmmoeheid
+  (3 permanent rode tellers in de zijbalk + rode bedragen/dagen/datums).
+- **Onderzoek gedaan** (Radix 12-stappenschaal: alleen tint 11-12 zijn tekstkleuren, amber
+  nooit met wit; Linear "attention distribution" + "structure felt not seen"; Carbon/ISA:
+  rood alleen voor storing). Onze fout is exact de Radix-regel: tint ~6 als tekst.
+- **Plan geschreven, NIET gebouwd:** `docs/plans/ONTWERP-kleur-en-leesbaarheid-S250.md`
+  (doorgerekende statuskleuren, badge-component, rood-beleid, timer-fix; stap 0 = eerst een
+  oud-naast-nieuw voorbeeldpagina). Arsalan: richting akkoord (kleur + leesbaarheid eerst),
+  maar "ik ga hier nu niks mee doen" → ligt klaar, geen actie.
+
 ### Volgende sessie
-S251 — zie `docs/sessions/PROMPT-S251.md`.
+S251 — zie `docs/sessions/PROMPT-S251.md`. Ontwerpspoor ligt klaar maar is niet gestart.
 
 ## Sessie 249 (27 juli 2026, Fable — doorlichting kennisregel-keten + uitleg Lisanne, GEEN code)
 

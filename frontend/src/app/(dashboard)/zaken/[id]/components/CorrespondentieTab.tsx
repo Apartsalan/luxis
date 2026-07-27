@@ -37,7 +37,7 @@ import {
 } from "@/hooks/use-email-sync";
 import { useClassifications, type Classification } from "@/hooks/use-ai-agent";
 import { useEmailOAuthStatus } from "@/hooks/use-email-oauth";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, formatRelativeTime } from "@/lib/utils";
 import { tokenStore } from "@/lib/token-store";
 
 // ── Draad-groepering (S244) ─────────────────────────────────────────────────
@@ -82,6 +82,25 @@ function normalizeSubject(subject: string): string {
     s = stripped;
   }
   return s.toLowerCase();
+}
+
+// Deelnemers in de gespreksregel (S250) — mail-conventie van Gmail/Outlook:
+// niet de richting van het laatste bericht, maar wie er in het gesprek zitten,
+// in volgorde van opkomst, met eigen berichten als "ik". Een gesprek waarin
+// alleen wij stuurden toont "Aan: <ontvanger>" i.p.v. een kaal "ik".
+function threadParticipants(thread: Thread): string {
+  const names: string[] = [];
+  for (const item of thread.items) {
+    const naam = item.direction === "outbound" ? "ik" : item.from;
+    if (naam && !names.some((n) => n.toLowerCase() === naam.toLowerCase())) {
+      names.push(naam);
+    }
+  }
+  if (names.length === 1 && names[0] === "ik") {
+    const eerste = thread.latest.to.split(",")[0].trim();
+    return eerste ? `Aan: ${eerste}` : "ik";
+  }
+  return names.join(", ") || "(Onbekend)";
 }
 
 function buildThreads(items: TimelineItem[]): Thread[] {
@@ -647,10 +666,17 @@ function CorrespondentieTab({
                 // (2/5) — één regel drukte het onderwerp dan volledig weg.
                 // Smal = twee regels (afzender·datum / onderwerp), breed = één.
                 const narrow = !!selectedThread;
-                const naam = t.direction === "inbound" ? t.from : t.to;
+                const naam = threadParticipants(thread);
                 const aantal = thread.items.length > 1 && (
                   <span className="ml-1 text-xs text-muted-foreground font-normal">
                     ({thread.items.length})
+                  </span>
+                );
+                // Voorbeeldregel van het laatste bericht, grijs achter het
+                // onderwerp — zoals elk mailprogramma.
+                const voorbeeld = t.snippet && (
+                  <span className="ml-1.5 font-normal text-muted-foreground">
+                    — {t.snippet}
                   </span>
                 );
                 const badges = (
@@ -685,11 +711,6 @@ function CorrespondentieTab({
                         ook weg. Eén regel alleen op md+ zonder open gesprek. */}
                       <div className={narrow ? "" : "md:hidden"}>
                         <div className="flex items-center gap-2">
-                          {t.direction === "inbound" ? (
-                            <ArrowDownLeft className="h-3.5 w-3.5 shrink-0 text-blue-600" />
-                          ) : (
-                            <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                          )}
                           {unread && (
                             <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" aria-label="Ongelezen" />
                           )}
@@ -699,30 +720,26 @@ function CorrespondentieTab({
                             } text-foreground`}
                           >
                             {naam}
+                            {aantal}
                           </span>
                           <span className="shrink-0 text-xs text-muted-foreground whitespace-nowrap">
-                            {formatDateTime(t.date, "short")}
+                            {formatRelativeTime(t.date)}
                           </span>
                         </div>
-                        <div className="mt-0.5 flex items-center gap-1.5 pl-[22px]">
+                        <div className="mt-0.5 flex items-center gap-1.5">
                           <span
                             className={`min-w-0 flex-1 truncate text-sm ${
                               unread ? "font-semibold text-foreground" : "text-muted-foreground"
                             }`}
                           >
                             {thread.subject}
-                            {aantal}
+                            {voorbeeld}
                           </span>
                           {badges}
                         </div>
                       </div>
                     {!narrow && (
                       <div className="hidden md:flex items-center gap-2">
-                        {t.direction === "inbound" ? (
-                          <ArrowDownLeft className="h-3.5 w-3.5 shrink-0 text-blue-600" />
-                        ) : (
-                          <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                        )}
                         {unread && (
                           <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" aria-label="Ongelezen" />
                         )}
@@ -732,6 +749,7 @@ function CorrespondentieTab({
                           } text-foreground`}
                         >
                           {naam}
+                          {aantal}
                         </span>
                         <span
                           className={`min-w-0 flex-1 truncate text-sm ${
@@ -739,11 +757,11 @@ function CorrespondentieTab({
                           }`}
                         >
                           {thread.subject}
-                          {aantal}
+                          {voorbeeld}
                         </span>
                         {badges}
                         <span className="shrink-0 text-xs text-muted-foreground whitespace-nowrap">
-                          {formatDateTime(t.date, "short")}
+                          {formatRelativeTime(t.date)}
                         </span>
                       </div>
                     )}

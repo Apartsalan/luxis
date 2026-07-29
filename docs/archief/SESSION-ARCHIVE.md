@@ -11470,3 +11470,116 @@ bundeling-commit liep nog bij afsluiten — **natrekken bij S242-start**.
 
 ### Volgende sessie
 S242 (Opus): kleine veegsessie voorstel-lijst — zie `docs/sessions/PROMPT-S242.md`.
+## Sessie 242 (23 juli 2026, Opus-bouw — veegsessie voorstel-lijst: 3 kleine verbeteringen, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S242, op Opus (klopt met de prompt — bouwwerk). Bij start de
+administratie afgewerkt: S240-entry alsnog geschreven (parallelle terminal had
+hem niet meer geschreven; S232+S233 naar het archief, PROMPT-S241 gearchiveerd),
+CI van S241 nagetrokken (alle runs groen) en de 2 verjaringsmeldingen + 2 open
+mails aan Arsalan gesignaleerd (niet zelf opgepakt — rolverdeling S240).
+
+**1. Dubbelklik-betaling-slot (S240 vondst 2, `cd4c70a`).** Twee gelijktijdige
+identieke deelbetalingen werden allebei geboekt (beide 201, live bewezen S240).
+Poort op het gedeelde punt van álle boekroutes (service-laag, agent-laag-afspraak
+S237): (a) rij-slot op de zaak (zelfde patroon als derdengelden audit #70)
+serialiseert gelijktijdige boekingen — maakt ook de volbetaald-/overbetaal-poort
+race-vrij; (b) dedup-venster 10s weigert een identieke betaling (bedrag/datum/
+wijze/omschrijving) direct na de vorige, met duidelijke NL-melding. Bron-record-
+routes (bankimport, BaseNet-import, S195-script) slaan de dedup-poort expliciet
+over (twee identieke échte overboekingen op één dag zijn daar legitiem; het slot
+geldt wél). Rode tests eerst, sequentieel én echt gelijktijdig — beide rood
+bewezen tegen de oude code. Bekende grens (bewust, in commit): dubbelklik ÉN
+overbetaling tegelijk op de derdengelden-route glipt langs het venster
+(afgekapt bedrag ≠ ingediend bedrag); upgrade-pad = uniek indienings-id.
+
+**2. Belofte-taak × actieve regeling (S241 voorstel 2, `024eb6b`).** Gekozen
+gedrag, beide volgordes van hetzelfde dubbel-werk: belofte-mail op zaak met
+lopende regeling → géén belofte-taak (de termijn-bewaking bewaakt die betaling
+al; zelfde poort als de regeling-verzoek-taak S235); én regeling vastgelegd
+terwijl er al een belofte-taak open staat (de gewone gang van zaken) → open
+belofte-taak wordt 'skipped' via de bestaande sluit-helper (S236-conventie).
+Tegenproeven: belofte zonder regeling geeft gewoon een taak; geannuleerde
+regeling onderdrukt niets meer.
+
+**3. Eigenaarloze te-laat-taken-melding (S241 voorstel 3, `ec10221`).** De
+dagelijkse job stuurde de melding voor een taak zonder eigenaar naar de
+toevallig 'eerste' gebruiker. Nu: melding bij álle actieve gebruikers,
+consistent met de werklijst; taken mét eigenaar blijven bij die eigenaar;
+30-dagen-dedup blijft gelden. Eenmalig effect: de andere gebruiker krijgt de
+al-gemelde eigenaarloze taken bij de eerstvolgende ochtendrun alsnog — als
+bundel-rij (S241-bundeling), geen storm.
+
+### Gewijzigde bestanden
+Backend: `collections/service.py` (slot + dedup + regeling-poorten),
+`workflow/scheduler.py` (melding-doelen), `ai_agent/payment_matching_service.py`
++ 2 importscripts (skip-vlag). Tests: `test_payment_double_submit.py` (nieuw, 5),
+`test_payment_promise_task.py` (+3), `test_deadline_notification_targets.py`
+(nieuw, 3). Geen frontend, geen migratie. Commits `cd4c70a`, `024eb6b`,
+`ec10221` + 3 docs-commits (administratie).
+
+### Verificatie
+Elke fix eerst rood bewezen (het gelijktijdigheids-scenario apart tegen de oude
+code via git stash). 11 nieuwe wachters; brede run payment/promise/notification/
+scheduler 231 groen + trust/matching 82 groen; ruff schoon (frontend onaangeraakt,
+geen tsc nodig). Backend gedeployd via SSH `--force-recreate`, container healthy,
+login 200, prod-logs 0 fouten. CI groen op alle drie de fix-commits (success
+nagetrokken via gh) + Deploy-runs groen.
+
+### Bekende issues / bewust niet gedaan
+- Derdengelden-randgeval van punt 1 (zie boven) — voorstel: uniek indienings-id
+  per formulier als het ooit speelt.
+- Rest van de voorstel-lijst bewust niet aangeraakt (scope-hek S242): categorie
+  'onduidelijk', overbetaling-knop, cascade bij dossier-verwijderen,
+  weekend-logica, kostenblokje.
+- Inhoudelijk werk blijft bij Lisanne/Arsalan: verjaringsmelding IN100127
+  beoordelen, 2 open mails (IN100128, IN100586), verweer-concepten, opruimronde.
+
+### Nagekomen (vraag Arsalan): kent Luxis stuiting? Nee — gemeten op IN100015
+Arsalan: "IN100015 is niet verjaard, Lisanne stuit altijd; de deurwaarder heeft
+een verzoekschrift betekend — ziet Luxis dat?" Onderzocht (alleen-lezen, niets
+gebouwd): **nee.** De verjaringsbewaking is een kaal rekensommetje (oudste
+vordering opeisbaar + 5 jaar; hier 15-10-2020 → "VERJAARD" per 15-10-2025) en
+kijkt nérgens naar mails, sommaties, deurwaarder of betekening; een
+stuitingsveld bestaat niet. Ironie: Luxis' eigen sommatiebrieven bevatten een
+stuitingsclausule (art. 3:317 BW) — het systeem schrijft stuitingen maar telt
+ze niet. Het bewijs zit wél in het dossier: 15 mails, waarvan 8 over
+deurwaarder/betekening/verzoekschrift (apr-mei 2025) en 2 letterlijk over
+stuiting. De melding (4-7) is bovendien dubbel achterhaald: dossier is 13-7
+afgesloten (afgesloten dossiers worden niet meer gecheckt) — mag weggeklikt.
+Zelfde kanttekening geldt voor de IN100127-waarschuwing (zelfde sommetje).
+**Voorstel (niet gebouwd, scope-hek): stuitingsdatum op het dossier die de
+teller verzet, evt. slimme herkenning van stuitings-/deurwaardermails.**
+Verder voor de demo een nakijk-lijst (20 punten) aan Arsalan gegeven; demo-ronde
+met Lisanne + Fable-tegenlezing van S242 volgen buiten deze sessie.
+
+### Nagekomen 2 (demo-staart, live met Arsalan)
+- **IN100592 uitgelegd (niets gewijzigd):** de twee betwistingsmails schoven de
+  keten NIET twee keer door — verzending eerste sommatie = 1 stap door, eerste
+  betwisting = parkeren op 'Verweer beantwoorden', tweede mail deed niets met de
+  stap. Er is geen sommatie overgeslagen (keten heeft 4 sommatiestappen; alleen
+  de eerste is ooit verstuurd). Wel gat: de parkeerstap heeft geen doorschuif-
+  regel én alle bewakers slaan hem over → na het verweer-antwoord bewaakt
+  niemand de reactietermijn (3-4 dagen) uit de brief.
+- **Voorstel vastgelegd (richting akkoord Arsalan, NIET gebouwd):**
+  `docs/plans/VOORSTEL-verweer-parkeerstap-terugkeer.md` — verstuurd antwoord +
+  X dagen stilte → dossier automatisch terug naar de sommatiestap van vóór het
+  verweer; follow-up-adviseur pakt het dan vanzelf op. Met 3 controlepunten
+  (openstaand-verweer-slot, generate-only-batch-randgeval, termijn nameten).
+- **Demo-vondst afzender-weergave, GEFIXT + LIVE (`7d0b831`, op Fable —
+  bewuste afwijking model-regel wegens lopende demo, gemeld):** bij 'Verzenden
+  als' kantooradres registreerde het dossier de vervoerende mailbox (seidony@)
+  als afzender i.p.v. wat er écht op de mail stond (incasso@). Alleen
+  wéérgave — de debiteur zag altijd al incasso@ (bezorging bewezen: 0 bounces,
+  antwoorden komen op incasso@ binnen). Rode test eerst + tegenproef, 134
+  send/compose-tests groen, gedeployd, login 200. De 9 oude registraties
+  (7 sommaties 22-7 + 2 antwoorden 23-7) blijven staan — keuze Arsalan
+  (cosmetisch). Structureel verdwijnt seidony@ als vervoerder pas bij de
+  geplande M365-verhuizing van Lisanne. CI van deze commit liep nog bij
+  afsluiten — natrekken bij S243-start.
+
+### Volgende sessie
+S243: Arsalan bepaalt de hoofdtaak (opruimronde met Lisanne is de sterkste
+kandidaat volgens de S241-werklastmeting — geen nieuwe bouw nodig). Zie
+`docs/sessions/PROMPT-S243.md`.
+

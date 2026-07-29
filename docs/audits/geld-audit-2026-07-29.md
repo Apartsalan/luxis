@@ -109,3 +109,29 @@ nieuw dossier precies de vorm waar de wachter blind voor is.
 - IN100605: € 232,75 was toevallig het juiste bedrag → geen correctie naar de debiteur.
 - **IN100077** (Incassocenter, actief) staat op wettelijke rente i.p.v. 2%/mnd
   contractueel — bewust of niet?
+
+## Addendum — Fable-reviews op het gebouwde werk (zelfde dag)
+
+**Review 1 (`360a8e3`).** De 15%-standaard op de klantkaarten maakte een bestaand gat
+acuut: de erf-regel bij dossier-aanmaak keek niet naar het debiteurtype, dus een nieuw
+consumentendossier zou de 15% erven — boven de dwingende staffel, en sinds de
+brieffix ook afgedrukt in de 14-dagenbrief (die daarmee ongeldig zou zijn, art. 6:96
+lid 6 BW). Tweede lek: de invoerblokkade (AUDIT-23) zag alleen vaste bedragen, geen
+percentages. Beide op het echte pad bewezen vóór de fix. Nu: erf-regel slaat b2c
+over; één gedeelde grendel voor beide vormen (ook bij wissel naar b2c); live op prod
+geweigerd (IN100540-toets). Nul bestaande slachtoffers (0 b2c met percentage, 0
+14-dagenbrieven verstuurd sinds de import).
+
+**Review 2 (`b0ca0dd`).** Het intake-pad — de normale route voor nieuwe dossiers —
+bouwde het dossier zelf en erfde de kosten-afspraak helemaal niet. Dát verklaart
+waarom IN100602 zonder afspraak binnenkwam. Nu erft intake via dezelfde resolver
+(zakelijk wél, consument niet). Plus: een bodem-wijziging triggert nu ook de grendel.
+
+**Eind-natelling (onafhankelijk, Fable):** alle 45 actieve incassodossiers op vijf
+punten tot de cent geverifieerd met een eigen berekening naast de app (kosten,
+hoofdsom, rente-perioden, totaal, openstaand) — 0 afwijkingen.
+
+**Incident, hersteld:** een live weiger-toets op een dossier waar 15% onder de
+staffelbodem bleef, werd terecht toegestaan en schreef dus echt (testdossier
+2026-00009); direct teruggezet en geverifieerd. Regel voortaan: weiger-toetsen
+alleen op een dossier waar de grens écht overschreden wordt.

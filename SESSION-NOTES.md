@@ -2,11 +2,85 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 27 juli 2026 (S250 — bouwlijst 1-3 live + Fable-review; daarna eerste ontwerp-doorlichting van de app: 28/40, plan klaar maar bewust niet gestart).
-**Laatste feature/fix:** gespreksregels correspondentie op Gmail/Outlook-conventie + faalmelding geplande mail naar hele kantoor (S250, live + visueel nagekeken).
-**Openstaand:** **Kostenblokje uitgesteld** (besluit Arsalan S250: 1 week cijfers, $6,53 waarvan >helft testverkeer — opnieuw bekijken bij een echte maand). **Vondst (voorstel, niet gebouwd):** de bel kent `scheduled_email_failed` én `bik_above_staffel` niet → tonen als grijs "Systeem". **Security-aanbevelingen (jouw keuze):** aparte TOKEN_ENCRYPTION_KEY (verbreekt Lisanne's mailkoppeling), kennisregel-endpoints admin-only. **Kennisregels wachten op INHOUD Lisanne** (ijkpunt IN100458). Verder: fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`), DMARC, sharp-CVE (niet-blokkerend).
-**Ontwerpspoor (klaar, niet gestart):** `docs/plans/ONTWERP-kleur-en-leesbaarheid-S250.md` — doorgerekende statuskleuren + één badge-component + rood-beleid + timer-fix; stap 0 = oud-naast-nieuw voorbeeldpagina. Arsalan wil er nu niets mee doen.
-**Volgende sessie:** S251 — zie `docs/sessions/PROMPT-S251.md` (kleine bel-labels + vrije keuze uit openstaand; ontwerpspoor is één van de opties).
+**Laatst bijgewerkt:** 29 juli 2026 (S251 — geld-audit + briefmachine-fix + 15%-instellingen + b2c-grendel + intake-erving, alles LIVE).
+**Laatste feature/fix:** brieven rekenen met de kosten-afspraak en rente-stopdatum van het dossier (43/43 brief == scherm); intake erft de klant-afspraak; consument kan nooit meer boven de staffel (S251).
+**Openstaand:** "Verstuur later" bevriest bedragen op inplanmoment (voorstel); IN100077 wettelijke i.p.v. contractuele rente (vraag Lisanne); bel-labels 2 meldingstypen (kleine taak S251 niet gedaan); verder ongewijzigd: fase-heropening 406, TOKEN_ENCRYPTION_KEY, kennisregel-endpoints admin-only, DMARC, kostenblokje uitgesteld.
+**Volgende sessie:** S252 — zie `docs/sessions/PROMPT-S252.md` (openstaande vragen S251 + bel-labels + jouw keuze).
+
+## Sessie 251 (29 juli 2026, Fable-onderzoek → Opus-bouw → Fable-review×2 — geld-audit + 4 fixes, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S251, maar de sessie werd volledig overgenomen door een melding van
+Arsalan: IN100602 toonde in Financieel € 2.840,12 incassokosten, de verstuurde sommatie
+€ 964,34. Op zijn verzoek een **volledige geld-audit** (alles, tot de cent) vóór er
+gebouwd werd — rapport: `docs/audits/geld-audit-2026-07-29.md`.
+
+**Audit-kernvondsten (alles op prod gemeten):**
+1. **Briefmachine deed zijn eigen som** — alle briefroutes bouwden een eigen
+   financiële aanroep zónder de zaakinstellingen: kosten-afspraak genegeerd
+   (altijd kale staffel) én rente altijd t/m vandaag (stopdatum genegeerd).
+   Zat er vanaf de eerste versie in. 6 verstuurde brieven fout: € 10.304,71 te
+   weinig gevorderd bij 4 debiteuren (grootste IN100598 € 5.470), € 232,75 te
+   veel bij IN100605. Rente-bewijs IN100612: tabblad € 58,41 vs brief € 202,79.
+2. **Twee 15%-afspraken liepen door elkaar**: provisie-15% (stond goed op alle 6
+   kaarten) vs incassokosten-15% richting debiteur (stond als standaard op 1 van
+   6 kaarten; Incassocenter zelfs 14,97 = typefout). Besluit Arsalan: **alles 15%.**
+3. Gezond: hoofdsommen 627 dossiers 0 afwijkingen; staffel op de cent; 0 B2C boven
+   staffel; Financieel-tab/betalingen/dashboard/facturen/AI-concepten rekenden al goed.
+
+**Gebouwd + LIVE (4 commits, alle CI groen):**
+- `f31bc39` briefmachine op de gedeelde rekenroute (`case_calc_kwargs`) — kosten-
+  afspraak + rente-stopdatum in ALLE brieven; waakhond ziet nu ook percentages.
+  Natelling: **43/43 actieve dossiers brief == Financieel-tabblad.**
+- Instellingen: 6 klantkaarten op 15% + bodem € 40; IN100602 + IN100605 op 15%
+  (back-up: `_s251_bik_backup_contacts`/`_cases`).
+- `360a8e3` (Fable-review 1): **b2c-grendel** — de klant-afspraak lekte naar
+  consumentendossiers (erving zonder debiteurtype-check; percentage kwam langs de
+  AUDIT-23-blokkade). Bewezen op het echte pad vóór de fix; nu één gedeelde grendel
+  (vast+percentage+bodem, ook bij wissel naar b2c), nieuw-scherm belooft het niet
+  meer bij particulier. Live geweigerd op prod met nette melding (IN100540-toets).
+- `b0ca0dd` (Fable-review 2): **intake-erving** — het intake-pad (de normale route!)
+  erfde de kosten-afspraak helemaal niet; dáárom miste IN100602 zijn 15%. Nu via
+  dezelfde resolver (b2b wél, b2c niet). Bodem-wijziging triggert nu ook de grendel.
+- 22 nieuwe wachters totaal, elk eerst rood bewezen via git stash; 886 tests groen.
+
+**Onafhankelijke eind-natelling (Fable):** alle 45 actieve dossiers op 5 punten tot
+de cent geverifieerd met een eigen som naast de app — 0 afwijkingen.
+
+**Verder in de sessie:** uitleg verweer-stap (IN100606/IN100607 blijven bewust op
+"Verweer beantwoorden" staan — handmatige vervolgkeuze); sjabloon-naamgeving-vondst
+("Tweede sommatie (standaard herhaling)" is intern de dérde-sommatie-brief → stap
+schoof niet door op IN100602, voorstel blijft liggen); geplande mail IN100606 door
+Arsalan geannuleerd (geverifieerd); IN100612-verschil = bekende status-kwestie
+(heropeningsplan 406, 153 met rentemeter op openingsdatum).
+
+**Incident (hersteld):** bij het live toetsen van de grendel koos ik eerst een
+dossier (testdossier 2026-00009, € 80) waar 15% onder de bodem bleef — de "poging"
+werd terecht toegestaan en schreef dus echt; direct teruggezet naar leeg en
+geverifieerd. Les: een weiger-toets doe je op een dossier waar de grens écht
+overschreden wordt.
+
+### Gewijzigde bestanden
+- `backend/app/collections/service.py` — `case_calc_kwargs` (gedeelde bron brief+betaling)
+- `backend/app/documents/docx_service.py` + `documents/service.py` — brief-context via gedeelde route
+- `backend/app/collections/compliance.py` — waakhond ziet percentage + bodem
+- `backend/app/cases/service.py` — `resolve_client_bik_defaults` (b2c erft niets) + `assert_bik_within_staffel`
+- `backend/app/ai_agent/intake_service.py` — intake erft kosten-afspraak
+- `frontend/src/app/(dashboard)/zaken/nieuw/page.tsx` — geen valse belofte bij particulier
+- tests: `test_brief_bedragen_gelijk_aan_scherm.py`, `test_b2c_kosten_grendel.py`, uitbreidingen sweep+intake
+- `docs/audits/geld-audit-2026-07-29.md` — volledig auditrapport
+
+### Bekende issues / bewust niet gedaan
+- **"Verstuur later" bevriest bedragen op het inplanmoment** — dagen later klopt de
+  rente in de mail net niet meer. Voorstel, wacht op GO.
+- **IN100077** (Incassocenter, actief): wettelijke i.p.v. 2%/mnd contractuele rente — vraag Lisanne.
+- **Bel-labels-taak uit PROMPT-S251 niet gedaan** (sessie ging op aan de audit).
+- Sjabloonmenu-naamgeving vs stap-koppeling (voorstel S251, niet gebouwd).
+- Voor Lisanne: 4 dossiers te-weinig-gevorderd herstellen zichzelf bij de volgende
+  brief; IN100605 vroeg toevallig het juiste bedrag (afspraak was 0, nu 15%).
+
+### Volgende sessie
+S252 — zie `docs/sessions/PROMPT-S252.md`.
 
 ## Sessie 250 (27 juli 2026, Opus 5-bouw — mail-conventie gespreksregels + 2 veegpunten, LIVE)
 
@@ -795,117 +869,3 @@ GO Arsalan toen S244 klaar was):
 
 ### Volgende sessie
 S244 (Opus): mail-werkbank — zie `docs/sessions/PROMPT-S244.md`.
-
-## Sessie 242 (23 juli 2026, Opus-bouw — veegsessie voorstel-lijst: 3 kleine verbeteringen, LIVE)
-
-### Samenvatting
-Startpunt PROMPT-S242, op Opus (klopt met de prompt — bouwwerk). Bij start de
-administratie afgewerkt: S240-entry alsnog geschreven (parallelle terminal had
-hem niet meer geschreven; S232+S233 naar het archief, PROMPT-S241 gearchiveerd),
-CI van S241 nagetrokken (alle runs groen) en de 2 verjaringsmeldingen + 2 open
-mails aan Arsalan gesignaleerd (niet zelf opgepakt — rolverdeling S240).
-
-**1. Dubbelklik-betaling-slot (S240 vondst 2, `cd4c70a`).** Twee gelijktijdige
-identieke deelbetalingen werden allebei geboekt (beide 201, live bewezen S240).
-Poort op het gedeelde punt van álle boekroutes (service-laag, agent-laag-afspraak
-S237): (a) rij-slot op de zaak (zelfde patroon als derdengelden audit #70)
-serialiseert gelijktijdige boekingen — maakt ook de volbetaald-/overbetaal-poort
-race-vrij; (b) dedup-venster 10s weigert een identieke betaling (bedrag/datum/
-wijze/omschrijving) direct na de vorige, met duidelijke NL-melding. Bron-record-
-routes (bankimport, BaseNet-import, S195-script) slaan de dedup-poort expliciet
-over (twee identieke échte overboekingen op één dag zijn daar legitiem; het slot
-geldt wél). Rode tests eerst, sequentieel én echt gelijktijdig — beide rood
-bewezen tegen de oude code. Bekende grens (bewust, in commit): dubbelklik ÉN
-overbetaling tegelijk op de derdengelden-route glipt langs het venster
-(afgekapt bedrag ≠ ingediend bedrag); upgrade-pad = uniek indienings-id.
-
-**2. Belofte-taak × actieve regeling (S241 voorstel 2, `024eb6b`).** Gekozen
-gedrag, beide volgordes van hetzelfde dubbel-werk: belofte-mail op zaak met
-lopende regeling → géén belofte-taak (de termijn-bewaking bewaakt die betaling
-al; zelfde poort als de regeling-verzoek-taak S235); én regeling vastgelegd
-terwijl er al een belofte-taak open staat (de gewone gang van zaken) → open
-belofte-taak wordt 'skipped' via de bestaande sluit-helper (S236-conventie).
-Tegenproeven: belofte zonder regeling geeft gewoon een taak; geannuleerde
-regeling onderdrukt niets meer.
-
-**3. Eigenaarloze te-laat-taken-melding (S241 voorstel 3, `ec10221`).** De
-dagelijkse job stuurde de melding voor een taak zonder eigenaar naar de
-toevallig 'eerste' gebruiker. Nu: melding bij álle actieve gebruikers,
-consistent met de werklijst; taken mét eigenaar blijven bij die eigenaar;
-30-dagen-dedup blijft gelden. Eenmalig effect: de andere gebruiker krijgt de
-al-gemelde eigenaarloze taken bij de eerstvolgende ochtendrun alsnog — als
-bundel-rij (S241-bundeling), geen storm.
-
-### Gewijzigde bestanden
-Backend: `collections/service.py` (slot + dedup + regeling-poorten),
-`workflow/scheduler.py` (melding-doelen), `ai_agent/payment_matching_service.py`
-+ 2 importscripts (skip-vlag). Tests: `test_payment_double_submit.py` (nieuw, 5),
-`test_payment_promise_task.py` (+3), `test_deadline_notification_targets.py`
-(nieuw, 3). Geen frontend, geen migratie. Commits `cd4c70a`, `024eb6b`,
-`ec10221` + 3 docs-commits (administratie).
-
-### Verificatie
-Elke fix eerst rood bewezen (het gelijktijdigheids-scenario apart tegen de oude
-code via git stash). 11 nieuwe wachters; brede run payment/promise/notification/
-scheduler 231 groen + trust/matching 82 groen; ruff schoon (frontend onaangeraakt,
-geen tsc nodig). Backend gedeployd via SSH `--force-recreate`, container healthy,
-login 200, prod-logs 0 fouten. CI groen op alle drie de fix-commits (success
-nagetrokken via gh) + Deploy-runs groen.
-
-### Bekende issues / bewust niet gedaan
-- Derdengelden-randgeval van punt 1 (zie boven) — voorstel: uniek indienings-id
-  per formulier als het ooit speelt.
-- Rest van de voorstel-lijst bewust niet aangeraakt (scope-hek S242): categorie
-  'onduidelijk', overbetaling-knop, cascade bij dossier-verwijderen,
-  weekend-logica, kostenblokje.
-- Inhoudelijk werk blijft bij Lisanne/Arsalan: verjaringsmelding IN100127
-  beoordelen, 2 open mails (IN100128, IN100586), verweer-concepten, opruimronde.
-
-### Nagekomen (vraag Arsalan): kent Luxis stuiting? Nee — gemeten op IN100015
-Arsalan: "IN100015 is niet verjaard, Lisanne stuit altijd; de deurwaarder heeft
-een verzoekschrift betekend — ziet Luxis dat?" Onderzocht (alleen-lezen, niets
-gebouwd): **nee.** De verjaringsbewaking is een kaal rekensommetje (oudste
-vordering opeisbaar + 5 jaar; hier 15-10-2020 → "VERJAARD" per 15-10-2025) en
-kijkt nérgens naar mails, sommaties, deurwaarder of betekening; een
-stuitingsveld bestaat niet. Ironie: Luxis' eigen sommatiebrieven bevatten een
-stuitingsclausule (art. 3:317 BW) — het systeem schrijft stuitingen maar telt
-ze niet. Het bewijs zit wél in het dossier: 15 mails, waarvan 8 over
-deurwaarder/betekening/verzoekschrift (apr-mei 2025) en 2 letterlijk over
-stuiting. De melding (4-7) is bovendien dubbel achterhaald: dossier is 13-7
-afgesloten (afgesloten dossiers worden niet meer gecheckt) — mag weggeklikt.
-Zelfde kanttekening geldt voor de IN100127-waarschuwing (zelfde sommetje).
-**Voorstel (niet gebouwd, scope-hek): stuitingsdatum op het dossier die de
-teller verzet, evt. slimme herkenning van stuitings-/deurwaardermails.**
-Verder voor de demo een nakijk-lijst (20 punten) aan Arsalan gegeven; demo-ronde
-met Lisanne + Fable-tegenlezing van S242 volgen buiten deze sessie.
-
-### Nagekomen 2 (demo-staart, live met Arsalan)
-- **IN100592 uitgelegd (niets gewijzigd):** de twee betwistingsmails schoven de
-  keten NIET twee keer door — verzending eerste sommatie = 1 stap door, eerste
-  betwisting = parkeren op 'Verweer beantwoorden', tweede mail deed niets met de
-  stap. Er is geen sommatie overgeslagen (keten heeft 4 sommatiestappen; alleen
-  de eerste is ooit verstuurd). Wel gat: de parkeerstap heeft geen doorschuif-
-  regel én alle bewakers slaan hem over → na het verweer-antwoord bewaakt
-  niemand de reactietermijn (3-4 dagen) uit de brief.
-- **Voorstel vastgelegd (richting akkoord Arsalan, NIET gebouwd):**
-  `docs/plans/VOORSTEL-verweer-parkeerstap-terugkeer.md` — verstuurd antwoord +
-  X dagen stilte → dossier automatisch terug naar de sommatiestap van vóór het
-  verweer; follow-up-adviseur pakt het dan vanzelf op. Met 3 controlepunten
-  (openstaand-verweer-slot, generate-only-batch-randgeval, termijn nameten).
-- **Demo-vondst afzender-weergave, GEFIXT + LIVE (`7d0b831`, op Fable —
-  bewuste afwijking model-regel wegens lopende demo, gemeld):** bij 'Verzenden
-  als' kantooradres registreerde het dossier de vervoerende mailbox (seidony@)
-  als afzender i.p.v. wat er écht op de mail stond (incasso@). Alleen
-  wéérgave — de debiteur zag altijd al incasso@ (bezorging bewezen: 0 bounces,
-  antwoorden komen op incasso@ binnen). Rode test eerst + tegenproef, 134
-  send/compose-tests groen, gedeployd, login 200. De 9 oude registraties
-  (7 sommaties 22-7 + 2 antwoorden 23-7) blijven staan — keuze Arsalan
-  (cosmetisch). Structureel verdwijnt seidony@ als vervoerder pas bij de
-  geplande M365-verhuizing van Lisanne. CI van deze commit liep nog bij
-  afsluiten — natrekken bij S243-start.
-
-### Volgende sessie
-S243: Arsalan bepaalt de hoofdtaak (opruimronde met Lisanne is de sterkste
-kandidaat volgens de S241-werklastmeting — geen nieuwe bouw nodig). Zie
-`docs/sessions/PROMPT-S243.md`.
-

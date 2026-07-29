@@ -53,8 +53,32 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 27 juli 2026, S250)
+## 🎯 Huidige prioriteit (bijgewerkt 29 juli 2026, S251)
 
+> ✅ **S251 AFGEROND — geld-audit + briefmachine-fix + 15% overal + b2c-grendel, LIVE.**
+> Vondst Arsalan (brief ≠ Financieel-tabblad) leidde tot een volledige geld-audit
+> (`docs/audits/geld-audit-2026-07-29.md`): de briefmachine negeerde de kosten-afspraak
+> én de rente-stopdatum van het dossier (6 brieven fout de deur uit, € 10.304,71 te
+> weinig gevorderd). Gefixt via één gedeelde rekenroute; alle 6 bureaukaarten +
+> IN100602/IN100605 op 15% (besluit Arsalan); consument kan nooit meer boven de
+> dwingende staffel (erving, handmatig én intake-pad); waakhond ziet nu ook
+> percentages. Eind-natelling: 45/45 actieve dossiers tot de cent kloppend,
+> 43/43 brief == scherm. 22 nieuwe wachters, 886 tests groen, alle CI groen.
+>
+> 🎯 **VOLGENDE (S252): openstaande S251-vragen + Arsalan bepaalt de hoofdtaak.**
+> Klein en concreet klaar: (a) bel-labels voor `scheduled_email_failed` en
+> `bik_above_staffel` (2 regels, taak uit S251 die bleef liggen); (b) voorstel
+> "Verstuur later"-bedragen vers renderen bij verzending i.p.v. bevriezen bij
+> inplannen; (c) vraag Lisanne: IN100077 wettelijke i.p.v. 2%/mnd rente — bewust?
+> Beslispunten Arsalan: fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`,
+> 406 dossiers, GO per groep; 153 daarvan met rentemeter bevroren op openingsdatum),
+> aparte TOKEN_ENCRYPTION_KEY, kennisregel-endpoints admin-only, sjabloonmenu-naamgeving
+> gelijktrekken met de 5 pijplijnstappen (S251-vondst: "Tweede sommatie (standaard
+> herhaling)" is intern de derde-sommatie-brief → stap schuift niet door). Verder
+> blijven staan: verweer-parkeerstap-voorstel, rest voorstel-lijst, BaseNet-delisting,
+> kostenblokje (uitgesteld), opmaak-restpunt S227, S221b-rest, DMARC, 4 restjes S235,
+> sharp-CVE's, ontwerpspoor kleur & leesbaarheid (ligt klaar). KvK: niet naar vragen.
+>
 > ✅ **S250 AFGEROND — mail-conventie in de gespreksregels + 2 veegpunten, LIVE.** De
 > gespreksregel toonde één richting-pijl van het laatste bericht (na "sommatie uit →
 > antwoord binnen" zag je alleen inkomend). Nu de Gmail/Outlook-conventie in beide
@@ -103,19 +127,6 @@
 > kost iets):** aparte TOKEN_ENCRYPTION_KEY (verbreekt Lisanne's mailkoppeling), kennisregel-
 > endpoints admin-only. Rapport: nagekomen-sectie entry S248 in SESSION-NOTES.
 >
-> 🎯 **VOLGENDE (S251): Arsalan bepaalt de hoofdtaak.** Klein en concreet klaar: de bel
-> kent de meldingstypen `scheduled_email_failed` en `bik_above_staffel` niet, waardoor ze
-> als grijs "Systeem" tonen (2 regels in `hooks/use-notifications.ts`). Voor Lisanne
-> (inhoudelijk, niet door ons): kennisregels invullen (machine af, ijkpunt IN100458); oud
-> IN100606-concept opnieuw genereren; IN100592 3e betwisting; regeling-taken
-> IN100281/IN100537; IN100127; 2 open mails (IN100128/IN100586); IN100492-vraag.
-> Beslispunten Arsalan: fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`,
-> 406 dossiers, GO per groep), aparte TOKEN_ENCRYPTION_KEY, kennisregel-endpoints
-> admin-only. Verder blijven staan: 4 review-mails ongesorteerde bak + intake Ram Charan
-> Sukhdai, verweer-parkeerstap-voorstel, rest voorstel-lijst, BaseNet-delisting,
-> kostenblokje (uitgesteld), opmaak-restpunt S227, S221b-rest, DMARC, 4 restjes S235,
-> sharp-CVE's. KvK: niet naar vragen.
-
 ## Projectdocumenten
 
 ### In de Git repo (`C:\Users\arsal\Documents\luxis\`)

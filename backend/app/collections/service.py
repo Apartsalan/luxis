@@ -590,15 +590,24 @@ async def create_payment(
     return payment
 
 
-def case_payment_kwargs(case: Case) -> dict:
-    """Per-case settings that must flow into ``create_payment()``.
+def case_calc_kwargs(case: Case) -> dict:
+    """Per-case geldinstellingen die in ELKE berekening mee moeten.
 
-    Single source of truth for every payment entry point — manual UI
-    (collections/router), bank-import matching (payment_matching_service),
-    and the AI agent (tools/handlers/collections). Keeping it here means a
-    payment is distributed identically per art. 6:44 BW no matter how it was
-    registered (AUDIT-B3 / AUDIT-H20). ``case`` must have ``client`` loaded
-    (it is ``lazy="selectin"``, so a plain get_case() suffices).
+    Eén bron van waarheid voor alle ingangen: betalingen (handmatig via de
+    router, bankimport-matching, AI-agent) én — sinds S251 — de brief-context
+    (`documents.docx_service.build_base_context` + `documents.service`). Zo
+    verdeelt een betaling identiek per art. 6:44 BW én toont een brief exact
+    dezelfde bedragen als het Financieel-tabblad, ongeacht de route.
+
+    S251-audit: de brieven bouwden hun eigen aanroep zónder deze instellingen
+    en negeerden daardoor de kosten-afspraak van het dossier — 6 verstuurde
+    sommaties met een verkeerd bedrag (€ 10.304,71 te weinig gevorderd bij 4
+    debiteuren, € 232,75 te veel bij 1). Vandaar: nooit meer met de hand een
+    `get_financial_summary`-aanroep samenstellen, altijd deze kwargs.
+
+    ``case`` moet ``client`` geladen hebben (``lazy="selectin"``, dus een
+    gewone get_case() volstaat); een zaak zónder cliënt valt terug op
+    "cliënt is btw-plichtig" — dan komt er géén BTW bovenop de BIK.
     """
     return {
         "interest_type": case.interest_type,
@@ -606,7 +615,7 @@ def case_payment_kwargs(case: Case) -> dict:
         "contractual_compound": case.contractual_compound,
         "bik_override": case.bik_override,
         "bik_override_percentage": case.bik_override_percentage,
-        "include_btw_on_bik": not case.client.is_btw_plichtig,
+        "include_btw_on_bik": (not case.client.is_btw_plichtig) if case.client else False,
         "nakosten_type": case.nakosten_type,
     }
 
@@ -627,7 +636,7 @@ async def create_payment_for_case(
 
     Convenience wrapper for callers that do not already hold a loaded Case —
     bank-import matching and the AI agent. Callers that already loaded the
-    case (the router) pass ``case_payment_kwargs(case)`` to ``create_payment``
+    case (the router) pass ``case_calc_kwargs(case)`` to ``create_payment``
     directly to avoid a second query.
     """
     from app.cases.service import get_case
@@ -643,7 +652,7 @@ async def create_payment_for_case(
         _skip_workflow_hook=_skip_workflow_hook,
         _skip_duplicate_guard=_skip_duplicate_guard,
         cap_to_outstanding=cap_to_outstanding,
-        **case_payment_kwargs(case),
+        **case_calc_kwargs(case),
     )
 
 

@@ -226,23 +226,29 @@ async def _build_template_context(
     # Get payments
     payments = await list_payments(db, tenant_id, case.id)
 
-    # Get financial summary
-    include_btw = not client.is_btw_plichtig if client else False
+    # Get financial summary — S251: via de gedeelde zaakinstellingen, zodat dit
+    # document-pad exact hetzelfde rekent als het Financieel-tabblad (kosten-
+    # afspraak + rente-bevriezing). Zie `case_calc_kwargs`.
+    from app.collections.service import case_calc_kwargs
+
+    calc_kwargs = case_calc_kwargs(case)
+    include_btw = calc_kwargs["include_btw_on_bik"]
 
     financieel = await get_financial_summary(
         db=db,
         tenant_id=tenant_id,
         case_id=case.id,
-        interest_type=case.interest_type,
-        contractual_rate=(Decimal(str(case.contractual_rate)) if case.contractual_rate else None),
-        contractual_compound=case.contractual_compound,
-        calc_date=today,
-        include_btw_on_bik=include_btw,
+        **calc_kwargs,
     )
 
-    # Calculate BIK
+    # BIK: effectief bedrag uit de samenvatting (afspraak → percentage → staffel)
     total_principal = sum(c.principal_amount for c in claims)
-    bik = calculate_bik(total_principal, include_btw=include_btw)
+    bik = {
+        **calculate_bik(total_principal, include_btw=include_btw),
+        "bik_exclusive": financieel["bik_amount"],
+        "btw_amount": financieel["bik_btw"],
+        "bik_inclusive": financieel["total_bik"],
+    }
 
     # Build context
     context = {

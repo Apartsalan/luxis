@@ -284,7 +284,7 @@ async def create_payment(
             case_id,
             data,
             current_user.id,
-            **service.case_payment_kwargs(case),
+            **service.case_calc_kwargs(case),
         )
     # S207: signaleer of deze betaling de zaak volledig heeft voldaan, zodat de
     # frontend kan vragen of de cliënt gefactureerd moet worden.

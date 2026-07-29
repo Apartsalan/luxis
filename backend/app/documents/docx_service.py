@@ -373,21 +373,34 @@ async def build_base_context(
     claims = await list_claims(db, tenant_id, case.id)
     payments = await list_payments(db, tenant_id, case.id)
 
-    include_btw = not case.client.is_btw_plichtig if case.client else False
+    # S251 — ÉÉN rekenroute voor brief én scherm. De brief-context stelde hier
+    # zijn eigen aanroep samen zonder de kosten-afspraak (`bik_override(_percentage)`)
+    # en met een harde `calc_date=today`, waardoor élke brief de kale WIK-staffel
+    # toonde en de rente-bevriezing van een afgewikkeld dossier negeerde. Nu via
+    # de gedeelde `case_calc_kwargs` (zelfde bron als betalingen + Financieel-tab)
+    # en zonder peildatum, zodat `interest_freeze_date` gerespecteerd wordt.
+    from app.collections.service import case_calc_kwargs
+
+    calc_kwargs = case_calc_kwargs(case)
+    include_btw = calc_kwargs["include_btw_on_bik"]
 
     financieel = await get_financial_summary(
         db=db,
         tenant_id=tenant_id,
         case_id=case.id,
-        interest_type=case.interest_type,
-        contractual_rate=(Decimal(str(case.contractual_rate)) if case.contractual_rate else None),
-        contractual_compound=case.contractual_compound,
-        calc_date=today,
-        include_btw_on_bik=include_btw,
+        **calc_kwargs,
     )
 
     total_principal = sum(c.principal_amount for c in claims)
-    bik = calculate_bik(total_principal, include_btw=include_btw)
+    # De BIK-velden in de brief volgen het effectieve bedrag uit de samenvatting
+    # (afspraak → percentage → staffel), niet een tweede kale staffel-berekening.
+    # `tiers` blijft uit de staffel komen: dat is puur de wettelijke onderbouwing.
+    bik = {
+        **calculate_bik(total_principal, include_btw=include_btw),
+        "bik_exclusive": financieel["bik_amount"],
+        "btw_amount": financieel["bik_btw"],
+        "bik_inclusive": financieel["total_bik"],
+    }
 
     # Pre-format claims for template
     vorderingen = [

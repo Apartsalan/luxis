@@ -8,9 +8,10 @@ Validates legal requirements before sending:
 
 import uuid
 from datetime import date
+from decimal import ROUND_HALF_UP, Decimal
 
 from dateutil.relativedelta import relativedelta
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case
@@ -309,7 +310,16 @@ async def find_bik_above_staffel(
             .where(
                 Case.tenant_id == tenant_id,
                 Case.debtor_type == "b2c",
-                Case.bik_override.isnot(None),
+                # S251: OOK de percentage-afspraak. De sweep keek alleen naar het
+                # vaste bedrag, terwijl een percentage (15% van de hoofdsom) bij een
+                # consument net zo hard boven de dwingende staffel uitkomt — precies
+                # de vorm waarin de 27 zaken van S230 ooit binnenkwamen. Sinds de
+                # klantkaarten een percentage-standaard hebben, erft élk nieuw
+                # dossier die vorm, dus zonder dit gat blijft de wachter blind.
+                or_(
+                    Case.bik_override.isnot(None),
+                    Case.bik_override_percentage.isnot(None),
+                ),
             )
         )
     ).all()
@@ -318,18 +328,31 @@ async def find_bik_above_staffel(
     for case, client_btw_plichtig, principal in rows:
         include_btw = not client_btw_plichtig if client_btw_plichtig is not None else False
         max_bik = calculate_bik(principal, include_btw=include_btw)["bik_inclusive"]
-        if case.bik_override > max_bik:
+        # Effectief gevorderd bedrag — zelfde rangorde als get_financial_summary
+        # (percentage vóór vast bedrag), inclusief de eigen bodem.
+        if case.bik_override_percentage is not None:
+            gevorderd = (
+                principal * case.bik_override_percentage / Decimal("100")
+            ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            if case.bik_minimum_fee and gevorderd < case.bik_minimum_fee:
+                gevorderd = Decimal(str(case.bik_minimum_fee))
+            vorm = f"{case.bik_override_percentage}% van de hoofdsom"
+        else:
+            gevorderd = case.bik_override
+            vorm = "vast bedrag"
+        if gevorderd > max_bik:
             treffers.append(
                 {
                     "case_id": case.id,
                     "case_number": case.case_number,
-                    "bik_override": case.bik_override,
+                    "bik_override": gevorderd,
+                    "vorm": vorm,
                     "staffel": max_bik,
                     # Vrijwel de hele BaseNet-import kwam binnen als 'afgesloten'
                     # (581 van 626). Zonder dit onderscheid leest elke melding als
                     # "er gaat nu geld de deur uit", terwijl het meestal archief is.
                     "afgesloten": case.status == "afgesloten",
-                    "te_veel": case.bik_override - max_bik,
+                    "te_veel": gevorderd - max_bik,
                 }
             )
     return sorted(treffers, key=lambda t: t["te_veel"], reverse=True)

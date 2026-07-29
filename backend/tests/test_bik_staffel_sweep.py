@@ -35,7 +35,9 @@ async def _case_met_bik(
     *,
     case_number: str,
     debtor_type: str,
-    bik_override: Decimal | None,
+    bik_override: Decimal | None = None,
+    bik_override_percentage: Decimal | None = None,
+    bik_minimum_fee: Decimal | None = None,
     client_btw_plichtig: bool = True,
 ) -> Case:
     client = Contact(
@@ -65,6 +67,8 @@ async def _case_met_bik(
         opposing_party_id=debtor.id,
         date_opened=date.today(),
         bik_override=bik_override,
+        bik_override_percentage=bik_override_percentage,
+        bik_minimum_fee=bik_minimum_fee,
     )
     db.add(case)
     await db.flush()
@@ -220,3 +224,75 @@ async def test_sweep_telt_btw_mee_bij_niet_btw_plichtige_opdrachtgever(
     assert len(treffers) == 1
     assert treffers[0]["staffel"] == Decimal("1058.75")
     assert treffers[0]["te_veel"] == Decimal("441.25")
+
+
+# ── S251: de sweep moet OOK de percentage-afspraak zien ──────────────────────
+#
+# Het gat: de sweep filterde op `bik_override IS NOT NULL` en zag een percentage
+# dus nooit. Sinds de klantkaarten een 15%-standaard hebben, erft élk nieuw
+# dossier precies die vorm — een consumentendossier zou stil boven de dwingende
+# staffel kunnen uitkomen zonder dat één wachter aanslaat.
+
+
+@pytest.mark.asyncio
+async def test_sweep_vindt_percentage_afspraak_bij_consument(
+    db: AsyncSession, test_tenant: Tenant
+):
+    """15% van € 10.000 = € 1.500 vs staffel € 875 → € 625 te veel."""
+    await _case_met_bik(
+        db,
+        test_tenant.id,
+        case_number="2026-96007",
+        debtor_type="b2c",
+        bik_override_percentage=Decimal("15.00"),
+    )
+
+    treffers = await find_bik_above_staffel(db, test_tenant.id)
+
+    assert len(treffers) == 1
+    assert treffers[0]["case_number"] == "2026-96007"
+    assert treffers[0]["bik_override"] == VLAKKE_15_PCT
+    assert treffers[0]["te_veel"] == VLAKKE_15_PCT - STAFFEL
+    assert treffers[0]["vorm"] == "15.00% van de hoofdsom"
+
+
+@pytest.mark.asyncio
+async def test_sweep_telt_de_bodem_mee_bij_een_klein_percentage(
+    db: AsyncSession, test_tenant: Tenant
+):
+    """De bodem (`bik_minimum_fee`) hoort mee te tellen als hij het percentage
+    optilt — anders lijkt een zaak schoon terwijl er meer gevorderd wordt.
+
+    Hoofdsom € 10.000 met een percentage van 1% = € 100, maar een bodem van
+    € 1.200 tilt dat naar € 1.200 — boven de staffel van € 875.
+    """
+    await _case_met_bik(
+        db,
+        test_tenant.id,
+        case_number="2026-96008",
+        debtor_type="b2c",
+        bik_override_percentage=Decimal("1.00"),
+        bik_minimum_fee=Decimal("1200.00"),
+    )
+
+    treffers = await find_bik_above_staffel(db, test_tenant.id)
+
+    assert [t["case_number"] for t in treffers] == ["2026-96008"]
+    assert treffers[0]["bik_override"] == Decimal("1200.00")
+    assert treffers[0]["te_veel"] == Decimal("1200.00") - STAFFEL
+
+
+@pytest.mark.asyncio
+async def test_sweep_laat_zakelijke_percentage_afspraak_met_rust(
+    db: AsyncSession, test_tenant: Tenant
+):
+    """B2B mag contractueel 15% — de staffel is daar niet dwingend."""
+    await _case_met_bik(
+        db,
+        test_tenant.id,
+        case_number="2026-96009",
+        debtor_type="b2b",
+        bik_override_percentage=Decimal("15.00"),
+    )
+
+    assert await find_bik_above_staffel(db, test_tenant.id) == []

@@ -558,6 +558,74 @@ class TestIntakeApprove:
         assert claim.rate_basis == "monthly"
 
     @patch("app.ai_agent.intake_service.call_intake_ai")
+    async def test_approve_inherits_client_bik_for_business_debtor(
+        self, mock_ai, db: AsyncSession, test_tenant: Tenant, test_user: User
+    ):
+        """S251-review: een ZAKELIJK intake-dossier erft de kosten-afspraak van de
+        klantkaart (15% + bodem) — dit pad sloeg de BIK-erving volledig over,
+        waardoor IN100602 zonder afspraak binnenkwam."""
+        mock_ai.return_value = (FAKE_INTAKE_RESPONSE, "claude-haiku-4-5")
+
+        client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
+        client.default_bik_override_percentage = Decimal("15.00")
+        client.default_bik_minimum_fee = Decimal("40.00")
+        account = await _create_email_account(db, test_tenant.id, test_user.id)
+        email = await _create_inbound_email(db, test_tenant.id, account.id, from_email=client.email)
+        intake = IntakeRequest(
+            tenant_id=test_tenant.id,
+            synced_email_id=email.id,
+            client_contact_id=client.id,
+            status=IntakeStatus.DETECTED,
+        )
+        db.add(intake)
+        await db.commit()
+
+        await process_intake(db, intake.id, test_tenant.id)
+        await db.commit()
+        result = await approve_intake(db, intake.id, test_tenant.id, test_user.id)
+        await db.commit()
+
+        case_result = await db.execute(select(Case).where(Case.id == result.created_case_id))
+        case = case_result.scalar_one()
+        assert case.debtor_type == "b2b"
+        assert case.bik_override_percentage == Decimal("15.00")
+        assert case.bik_minimum_fee == Decimal("40.00")
+
+    @patch("app.ai_agent.intake_service.call_intake_ai")
+    async def test_approve_does_not_inherit_client_bik_for_consumer(
+        self, mock_ai, db: AsyncSession, test_tenant: Tenant, test_user: User
+    ):
+        """S251-review: een CONSUMENTEN-intake erft de kosten-afspraak NIET — de
+        WIK-staffel is dwingend (art. 6:96 BW)."""
+        consumer_response = {**FAKE_INTAKE_RESPONSE, "debtor_type": "person"}
+        mock_ai.return_value = (consumer_response, "claude-haiku-4-5")
+
+        client, _case = await _create_client_with_case(db, test_tenant.id, test_user.id)
+        client.default_bik_override_percentage = Decimal("15.00")
+        client.default_bik_minimum_fee = Decimal("40.00")
+        account = await _create_email_account(db, test_tenant.id, test_user.id)
+        email = await _create_inbound_email(db, test_tenant.id, account.id, from_email=client.email)
+        intake = IntakeRequest(
+            tenant_id=test_tenant.id,
+            synced_email_id=email.id,
+            client_contact_id=client.id,
+            status=IntakeStatus.DETECTED,
+        )
+        db.add(intake)
+        await db.commit()
+
+        await process_intake(db, intake.id, test_tenant.id)
+        await db.commit()
+        result = await approve_intake(db, intake.id, test_tenant.id, test_user.id)
+        await db.commit()
+
+        case_result = await db.execute(select(Case).where(Case.id == result.created_case_id))
+        case = case_result.scalar_one()
+        assert case.debtor_type == "b2c"
+        assert case.bik_override_percentage is None
+        assert case.bik_override is None
+
+    @patch("app.ai_agent.intake_service.call_intake_ai")
     async def test_approve_assigns_first_step_and_history(
         self, mock_ai, db: AsyncSession, test_tenant: Tenant, test_user: User
     ):

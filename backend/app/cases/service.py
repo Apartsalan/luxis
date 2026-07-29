@@ -779,6 +779,7 @@ async def update_case(
     raakt_kosten = (
         "bik_override" in update_data
         or "bik_override_percentage" in update_data
+        or "bik_minimum_fee" in update_data  # bodem kan het percentage optillen
         or "debtor_type" in update_data
     )
     if raakt_kosten:

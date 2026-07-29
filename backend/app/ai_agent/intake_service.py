@@ -16,7 +16,11 @@ from app.ai_agent.kimi_client import INTAKE_SCHEMA, call_intake_ai
 from app.ai_agent.pdf_extract import extract_text_from_pdf
 from app.ai_agent.prompts import strip_html
 from app.cases.models import Case, CaseActivity
-from app.cases.service import generate_case_number, resolve_client_interest_defaults
+from app.cases.service import (
+    generate_case_number,
+    resolve_client_bik_defaults,
+    resolve_client_interest_defaults,
+)
 from app.collections.models import Claim
 from app.email.synced_email_models import SyncedEmail
 from app.relations.models import Contact
@@ -449,6 +453,19 @@ async def approve_intake(
     if interest_type == "contractual" and contractual_rate is None:
         interest_type = "statutory"  # onvolledige klant-config mag de intake niet breken
 
+    # S251-review: erf óók de kosten-afspraak van de klantkaart (15% bureaus),
+    # exact zoals create_case — dit pad bouwde het Case-object zelf en sloeg de
+    # BIK-erving volledig over. Dáárom miste IN100602 zijn 15% (via intake
+    # binnengekomen). De gedeelde resolver geeft bij een CONSUMENT niets terug:
+    # de WIK-staffel is daar dwingend (art. 6:96 BW). De bodem erft los mee —
+    # inert zolang er geen percentage staat.
+    bik_override, bik_override_percentage = resolve_client_bik_defaults(
+        client_contact, debtor_type
+    )
+    bik_minimum_fee = (
+        client_contact.default_bik_minimum_fee if client_contact else None
+    )
+
     case = Case(
         tenant_id=tenant_id,
         case_number=case_number,
@@ -462,6 +479,9 @@ async def approve_intake(
         date_opened=date.today(),
         interest_type=interest_type,
         contractual_rate=contractual_rate,
+        bik_override=bik_override,
+        bik_override_percentage=bik_override_percentage,
+        bik_minimum_fee=bik_minimum_fee,
         **({"contractual_compound": contractual_compound} if contractual_compound is not None else {}),
     )
     db.add(case)

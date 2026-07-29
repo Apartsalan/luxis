@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import UTC, date, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -476,6 +476,93 @@ def resolve_client_interest_defaults(client) -> tuple[str, Decimal | None, bool 
     return "statutory", None, None
 
 
+def resolve_client_bik_defaults(
+    client, debtor_type: str
+) -> tuple[Decimal | None, Decimal | None]:
+    """Kosten-afspraak die een NIEUW dossier van de klantkaart erft.
+
+    Returns (bik_override, bik_override_percentage). De bodem
+    (`bik_minimum_fee`) erft apart — die is inert zolang er geen percentage
+    staat, en wordt bij een consument dus vanzelf nooit toegepast.
+
+    **Nooit bij een consument (b2c).** De WIK-staffel van art. 6:96 BW is daar
+    dwingend recht; een contractuele 15% van de opdrachtgever mag niet aan een
+    particulier worden doorbelast. De klantkaart-standaard is een afspraak tússen
+    kantoor en opdrachtgever en zegt niets over wat een consument verschuldigd is.
+
+    S251-review: dit gat bestond al, maar raakte tot 29-7 één klantkaart. Sinds
+    alle zes bureaus een 15%-standaard hebben, zou élke nieuwe consumentenzaak hem
+    erven — en sinds de brieffix van diezelfde dag drukt de 14-dagenbrief het
+    geërfde bedrag ook echt af. Een 14-dagenbrief met een te hoog BIK-bedrag is
+    ongeldig (art. 6:96 lid 6 BW) en kost het recht op incassokosten volledig.
+    Bewezen op het echte aanmaakpad: b2c-dossier erfde 15% → € 1.500 waar de
+    staffel € 875 toestaat.
+    """
+    if client is None or debtor_type == "b2c":
+        return None, None
+    if client.default_bik_override_percentage is not None:
+        return None, client.default_bik_override_percentage
+    if client.default_bik_override is not None:
+        return client.default_bik_override, None
+    return None, None
+
+
+async def assert_bik_within_staffel(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    case_id: uuid.UUID,
+    *,
+    debtor_type: str,
+    bik_override: Decimal | None,
+    bik_override_percentage: Decimal | None,
+    bik_minimum_fee: Decimal | None,
+    client,
+) -> None:
+    """Grendel: bij een consument mag de incassokosten-afspraak nooit boven de
+    WIK-staffel uitkomen (art. 6:96 BW, dwingend recht).
+
+    Eén bron voor beide vormen — vast bedrag én percentage. De oude AUDIT-23-check
+    keek alleen naar `bik_override`; een percentage kwam er ongehinderd langs
+    (S251-review, bewezen op het echte wijzigpad). Zelfde rangorde als
+    `get_financial_summary`: percentage vóór vast bedrag, met de eigen bodem.
+    """
+    if debtor_type != "b2c":
+        return
+    if bik_override is None and bik_override_percentage is None:
+        return
+
+    from app.collections.models import Claim
+    from app.collections.wik import calculate_bik
+
+    total_principal = (
+        await db.execute(
+            select(func.coalesce(func.sum(Claim.principal_amount), Decimal("0"))).where(
+                Claim.case_id == case_id, Claim.tenant_id == tenant_id
+            )
+        )
+    ).scalar() or Decimal("0")
+
+    include_btw = not client.is_btw_plichtig if client else False
+    max_bik = calculate_bik(total_principal, include_btw=include_btw)["bik_inclusive"]
+
+    if bik_override_percentage is not None:
+        gevorderd = (total_principal * Decimal(str(bik_override_percentage)) / 100).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        if bik_minimum_fee and gevorderd < Decimal(str(bik_minimum_fee)):
+            gevorderd = Decimal(str(bik_minimum_fee))
+        omschrijving = f"{bik_override_percentage}% van de hoofdsom (€ {gevorderd})"
+    else:
+        gevorderd = Decimal(str(bik_override))
+        omschrijving = f"€ {gevorderd}"
+
+    if gevorderd > max_bik:
+        raise BadRequestError(
+            f"Incassokosten {omschrijving} mogen bij een particulier niet hoger zijn "
+            f"dan de WIK-staffel (€ {max_bik}) — art. 6:96 BW is dwingend recht."
+        )
+
+
 async def create_case(
     db: AsyncSession,
     tenant_id: uuid.UUID,
@@ -534,11 +621,12 @@ async def create_case(
 
     # DF117-22: BIK inheritance — only inherit when neither field was explicitly set.
     # Percentage takes precedence over fixed amount (matches the case-level precedence).
+    # S251: via de gedeelde resolver, die bij een CONSUMENT niets teruggeeft — de
+    # WIK-staffel is daar dwingend (zie resolve_client_bik_defaults).
     if bik_override is None and bik_override_percentage is None and client:
-        if client.default_bik_override_percentage is not None:
-            bik_override_percentage = client.default_bik_override_percentage
-        elif client.default_bik_override is not None:
-            bik_override = client.default_bik_override
+        bik_override, bik_override_percentage = resolve_client_bik_defaults(
+            client, data.debtor_type
+        )
 
     # DF120: minimum_fee inheritance — same pattern as BIK override
     if minimum_fee is None and client and client.default_minimum_fee is not None:
@@ -683,26 +771,29 @@ async def update_case(
         update_data["contractual_rate"] = None
         update_data["contractual_compound"] = False
 
-    # AUDIT-23: BIK override mag niet hoger dan WIK-staffel bij B2C
-    if "bik_override" in update_data and update_data["bik_override"] is not None:
-        debtor_type = update_data.get("debtor_type", case.debtor_type)
-        if debtor_type == "b2c":
-            # Calculate max BIK from claims principal
-            from app.collections.models import Claim
-            from app.collections.wik import calculate_bik
-
-            claims_result = await db.execute(
-                select(func.coalesce(func.sum(Claim.principal_amount), Decimal("0")))
-                .where(Claim.case_id == case_id, Claim.tenant_id == tenant_id)
-            )
-            total_principal = claims_result.scalar() or Decimal("0")
-            include_btw = not case.client.is_btw_plichtig if case.client else False
-            max_bik = calculate_bik(total_principal, include_btw=include_btw)["bik_inclusive"]
-            if update_data["bik_override"] > max_bik:
-                raise BadRequestError(
-                    f"BIK override (€{update_data['bik_override']}) mag bij B2C niet hoger zijn "
-                    f"dan de WIK-staffel (€{max_bik})"
-                )
+    # AUDIT-23 (S251 verbreed): de kosten-afspraak mag bij een consument nooit boven
+    # de WIK-staffel uitkomen — in ELKE vorm. De oude check keek alleen naar
+    # `bik_override`; een percentage kwam er ongehinderd langs. Nu via de gedeelde
+    # grendel, dezelfde die het aanmaakpad gebruikt. Ook een wissel van debtor_type
+    # naar b2c wordt zo beoordeeld tegen de dan geldende afspraak.
+    raakt_kosten = (
+        "bik_override" in update_data
+        or "bik_override_percentage" in update_data
+        or "debtor_type" in update_data
+    )
+    if raakt_kosten:
+        await assert_bik_within_staffel(
+            db,
+            tenant_id,
+            case_id,
+            debtor_type=update_data.get("debtor_type", case.debtor_type),
+            bik_override=update_data.get("bik_override", case.bik_override),
+            bik_override_percentage=update_data.get(
+                "bik_override_percentage", case.bik_override_percentage
+            ),
+            bik_minimum_fee=update_data.get("bik_minimum_fee", case.bik_minimum_fee),
+            client=case.client,
+        )
 
     # A pipeline-step change must run through move_case_to_step (audit #97
     # follow-up) so it leaves a CaseStepHistory + pipeline_change activity and

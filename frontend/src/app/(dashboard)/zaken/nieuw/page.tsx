@@ -2061,7 +2061,18 @@ function NieuweZaakPage() {
                   {selectedClient.default_bik_override_percentage != null
                     ? `${selectedClient.default_bik_override_percentage}% van hoofdsom`
                     : `€ ${Number(selectedClient.default_bik_override).toFixed(2)} (vast bedrag)`}
-                  . Wordt automatisch toegepast op dit dossier; per dossier wijzigbaar in Vorderingen.
+                  .{" "}
+                  {form.debtor_type === "b2c" ? (
+                    // De WIK-staffel is bij een particulier dwingend recht (art. 6:96 BW),
+                    // dus de backend erft de klant-afspraak hier bewust NIET. Zonder deze
+                    // regel belooft het scherm iets dat niet gebeurt.
+                    <span className="font-medium">
+                      Geldt niet bij een particuliere debiteur — daar rekent Luxis de
+                      wettelijke staffel (art. 6:96 BW, dwingend recht).
+                    </span>
+                  ) : (
+                    "Wordt automatisch toegepast op dit dossier; per dossier wijzigbaar in Vorderingen."
+                  )}
                 </div>
               )}
 

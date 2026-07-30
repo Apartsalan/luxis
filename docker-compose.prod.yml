@@ -66,6 +66,8 @@ services:
       MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
       MICROSOFT_REDIRECT_URI: ${MICROSOFT_REDIRECT_URI:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # KvK Basisprofiel-API (S211/S253) — leeg = koppeling slapend, rechtsvorm blijft leeg
+      KVK_API_KEY: ${KVK_API_KEY:-}
       SENTRY_DSN: ${SENTRY_DSN:-}
     expose:
       - "8000"

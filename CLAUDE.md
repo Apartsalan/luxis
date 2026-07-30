@@ -9,9 +9,11 @@ Practice management system for Dutch law firms. First client: Kesting Legal (1 l
 > geen jargon — harde regel), werkdiscipline en veiligheidsregels. Geldt voor iedere Claude Code
 > die in deze map werkt.
 
-## Notificatiegeluid (HARDE REGEL)
+## Automatisch afgedwongen (hooks — niet je geheugen)
 
-**Speel geluid af bij wacht op gebruiker:** `cscript //nologo //e:vbscript "C:\Users\arsal\.claude\notify.vbs"` via Bash VOORDAT je `AskUserQuestion`, `EnterPlanMode`, `ExitPlanMode` gebruikt, klaar bent met grote taak, of een vraag stelt.
+`.claude/hooks/bash-guard.py` blokkeert `git add -A`/`git add .` en weigert een push
+als ruff rood staat. Notificatiegeluid speelt automatisch bij vragen/plan-modus en aan
+het einde van een beurt. Deze drie hoeven dus niet onthouden te worden.
 
 ## Critical Rules
 
@@ -95,9 +97,8 @@ fixes mogen direct.
   `docs/archief/` (verplaatsen, nooit weggooien — regels in `/sessie-einde`)
 - Scripts/commands altijd in voorgrond
 - Commit + push na elke taak. **Na ELKE commit ALTIJD `git push origin main`.**
-- **NOOIT `git add -A` of `git add .`** — stage expliciete paden. De repo bevat
-  bewust-untracked bestanden (bank-CSV, AV-PDF's, tmp-SQL); één `git add -A` veegde ze in
-  S203 de historie in (history-rewrite nodig). Zie `.gitignore`.
+- Stage expliciete paden — de repo bevat bewust-untracked bestanden (bank-CSV, AV-PDF's,
+  tmp-SQL). `git add -A` wordt door de hook geblokkeerd (S203-oorzaak). Zie `.gitignore`.
 - Bij parallelle terminals: ALTIJD kant-en-klare prompts meegeven
 
 **Deploy:** na commit+push → deploy automatisch via SSH. Details in skill `deploy-regels`.

@@ -137,6 +137,27 @@
         ]
       }
     ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"C:/Users/arsal/AppData/Local/Programs/Python/Python312/python.exe\" \"${CLAUDE_PROJECT_DIR:-C:/Users/arsal/Documents/luxis}/.claude/hooks/bash-guard.py\"",
+            "statusMessage": "Git-wachter"
+          }
+        ]
+      },
+      {
+        "matcher": "AskUserQuestion|ExitPlanMode|EnterPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cscript //nologo //e:vbscript \"C:/Users/arsal/.claude/notify.vbs\" >/dev/null 2>&1 || true"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
@@ -155,6 +176,10 @@
           {
             "type": "command",
             "command": "bash C:/Users/arsal/Documents/luxis/.claude/hooks/check-session-end.sh"
+          },
+          {
+            "type": "command",
+            "command": "cscript //nologo //e:vbscript \"C:/Users/arsal/.claude/notify.vbs\" >/dev/null 2>&1 || true"
           }
         ]
       }

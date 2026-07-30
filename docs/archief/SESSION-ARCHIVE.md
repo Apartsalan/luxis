@@ -11795,3 +11795,80 @@ verzoek-mails (inhoud voor Lisanne; die van IN100537 dateert van 22 juni).
 
 ### Volgende sessie
 S245 (Opus): taken + meldingen — zie `docs/sessions/PROMPT-S245.md`.
+
+## Sessie 245 (23 juli 2026, Opus-bouw → Fable-eindreview — taken+meldingen: 4 demo-punten blok 2, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S245, op Opus (klopt met de prompt: bouwen op Opus, eindreview
+op Fable). Masterplan `PLAN-DEMO-PUNTEN-S243.md` sectie S245. Vier onderdelen
+gebouwd, elk een eigen commit, daarna gedeployd en live geverifieerd.
+
+**1. Dossierinfo op taken (`3cc8c37`).** `WorkflowTaskResponse` kreeg een compact
+`case`-subobject (zaaknummer, cliëntnaam, debiteurnaam) via een before-validator
+op het al eager geladen Case-ORM (`lazy="selectin"` op WorkflowTask.case → Case.
+client/opposing_party — geen extra selectinload nodig, geen MissingGreenlet).
+Fixt beide takeneindpunten tegelijk: `/api/workflow/tasks` én
+`/api/dashboard/my-tasks` (die de Taken-pagina echt voedt — de prompt wees naar
+`wf_list_tasks`, dat is de alias in dashboard/router). Frontend toonde
+`task.case.case_number` al maar kreeg nooit data; nu ook de debiteurnaam in de
+taakregel. Debiteur = opposing_party, cliënt = client.
+
+**2. Filters op de Taken-pagina (`2517575`).** Client-side (lijst is al volledig
+geladen): vrij zoeken (zaaknummer/cliënt-/debiteurnaam/taaktitel), taaktype-
+dropdown (alleen aanwezige types, afgeleid van de volledige lijst — stabiel) en
+eigenaar (Alle/Aan mij/Zonder eigenaar). Lege-staat is filter-bewust ("Geen
+taken gevonden") + Wissen-knop.
+
+**3. Dubbel-wegklik-bug (`91d00f1`).** Oorzaak in de bron: `completeTask.isPending`
+was globaal voor álle rijen én er was geen optimistische update — de rij bleef
+tot de refetch, dus na de eerste actie was de knop alweer klikbaar → tweede klik
+(en bij herhalende taken meteen een dubbele opvolger). Fix: optimistische status-
+update in complete/skip/restore (rij verschuift/verdwijnt meteen, rollback bij
+fout, onSettled invalidate) + per-rij bezig-indicator via `mutation.variables`.
+
+**4. Mail-meldingen gelezen na antwoord (`42c6ffb`).** Nieuwe gerichte service-
+functie `mark_case_type_read` (tenant-breed, scoped op case_id + type) naast
+`mark_type_read`. Aangeroepen op het gedeelde reply-verzendpunt
+(`compose_router.send_via_provider`) wanneer een antwoord (`reply_to_message_id`)
+op een dossier verstuurd is → ongelezen `email_received`-meldingen van dat
+dossier op gelezen. Kruispunt gemeten: `reply_to_message_id` is het enige
+reply-signaal en komt alléén in compose_router voor; de S244-shell stuurt het nog
+steeds mee (frontend geverifieerd). Verse mail/doorsturen/sjablonen raken de
+meldingen niet.
+
+### Scope-keuze om te bevestigen
+Onderdeel 4 markeert **tenant-breed** (hele kantoor), niet alleen de verzender —
+omdat die mail-meldingen ook tenant-breed worden aangemaakt en de inbound na een
+antwoord voor iedereen afgehandeld is. Makkelijk te versmallen naar per-gebruiker
+als Arsalan dat liever heeft.
+
+### Gewijzigde bestanden
+Backend: `workflow/schemas.py` (TaskCaseInfo), `notifications/service.py`
+(mark_case_type_read), `email/compose_router.py` (aanroep op reply).
+Frontend: `app/(dashboard)/taken/page.tsx` (filters + debiteur in regel + per-rij
+pending), `hooks/use-workflow.ts` (case-type + optimistische updates).
+Tests (5 nieuwe wachters): `test_workflow.py` (case-info), `test_notifications_service.py`
+(scope mark_case_type_read), `test_reply_marks_mail_read.py` (2 route-wachters:
+reply wist + scoping, verse mail wist niet). Commits `3cc8c37`/`2517575`/`91d00f1`/
+`42c6ffb`/`bfd57b7`. Backend+frontend gedeployd via SSH `--force-recreate` (geen migratie — additief).
+
+### Verificatie
+121 tests groen (brede -k "workflow or task or notification"); ruff + tsc schoon;
+CI-groen niet apart afgewacht (deploy via SSH). Live-klikronde op prod (desktop +
+mobiel 390×844, screenshots bekeken): dossierinfo op elke taak, zoeken op
+debiteurnaam versmalt correct, filtercombinaties + lege-staat, één-klik-wegklik
+bewezen op een verse testtaak (2026-00006, daarna via API opgeruimd). Fable-
+eindreview: alle 6 commits gelezen + eigen visuele ronde (desktop filters/afgerond/
+dashboard + mobiel lange debiteurnaam) — **nul reparaties**. Onderdeel 4 niet
+live-gemaild (constraint geen echte debiteuren) — bewezen met de 2 route-wachters.
+
+### Bekende issues / bewust niet gedaan
+- **Onderdeel 4-scope** (tenant-breed) wacht op bevestiging Arsalan (zie boven).
+- **Cosmetisch (van vóór deze sessie):** afgeronde taak toont nog "X dagen te laat"
+  in de regel; meldingen-teller ververst pas bij de 30s-poll (niet direct na antwoord).
+- **IN100592 3e betwisting + regeling-taken IN100281/IN100537** blijven bij Lisanne.
+
+### Volgende sessie
+S246 — uitgesteld versturen (nieuwe tabel `scheduled_emails` + RLS in dezelfde
+migratie, "Verstuur later" op alle 7 verzenddeuren, scheduler met lock-patroon).
+Masterplan sectie S246. Zie `docs/sessions/PROMPT-S246.md`.

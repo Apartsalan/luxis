@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 30 juli 2026 (S253 — KVK-koppeling live; werkwijze-omslag naar `WAARHEDEN.md` als definitie van "af"; CLAUDE.md 250→139 regels; drie regels omgezet naar hooks). Rapport: entry S253 in `SESSION-NOTES.md`. **Volgende = S254 (`docs/sessions/PROMPT-S254.md`).**
+**Laatst bijgewerkt:** 30 juli 2026 (S254 — de oogst: `WAARHEDEN.md` compleet (32 ✅ / 5 ⚠️ / 2 ❓), 4 wachters gebouwd en één echte verzendfout gedicht). Rapport: entry S254 in `SESSION-NOTES.md`. **Volgende = S255 (`docs/sessions/PROMPT-S255.md`).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,7 +53,7 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 30 juli 2026, S253)
+## 🎯 Huidige prioriteit (bijgewerkt 30 juli 2026, S254)
 
 > 🧭 **KOERSREGEL (Arsalan, 30 juli): GEEN nieuwe features meer — afmaken en verbeteren
 > wat er al is.** Luxis moet áf. Sessievoorstellen zijn herstel-/afmaakklussen (bugs,
@@ -65,7 +65,26 @@
 > geld, reputatie of juridische fouten verdienen een wachter. Elke gevonden fout wordt
 > voortaan een waarheid + wachter voor zijn SOORT. Luxis is AF wanneer de lijst geen ⚠️/❓
 > meer heeft én twee weken echt gebruik geen nieuwe schending oplevert. Werkafspraken:
-> `WERKWIJZE.md` → "Klaar is een lijst, geen gevoel". Startstand: 13 ✅ / 7 ⚠️ / 3 ❓.
+> `WERKWIJZE.md` → "Klaar is een lijst, geen gevoel". Stand na de S254-oogst: **32 ✅ / 5 ⚠️ / 2 ❓**.
+>
+> ✅ **S254 AFGEROND — de oogst + 4 wachters + één echte verzendfout gedicht.**
+> (a) `WAARHEDEN.md` van startlijst naar compleet: 13✅/7⚠️/3❓ → **32 ✅ / 5 ⚠️ / 2 ❓**, elke
+> status tegen de echte testbestanden gecheckt. Eén onterecht vinkje gecorrigeerd (er was géén
+> wachter die een NIEUWE verzenddeur zonder 14-dagenbrief-gate betrapt). (b) **Echte fout:** de
+> batch-knop én follow-up 'Uitvoeren' verstuurden een sommatie op een betaald/afgesloten dossier
+> (rood bewezen, `emails_sent=1`); alleen de 'Verstuur later'-wachtrij controleerde dit. Nu één
+> gedeelde poort `check_case_closed_gate`. (c) Vier wachters, elk bewezen bijtend door de regel
+> te slopen: gesloten dossier (gedrag + soort), 14-dagenbrief-gate op nieuwe deuren, afzender
+> altijd incasso@, meldingsoort heeft label/icoon/kleur. 375 tests groen, CI groen, live.
+>
+> 🎯 **VOLGENDE (S255): Arsalan bepaalt.** Sterkste kandidaat = de **438 KVK-opzoekingen**
+> (±€9, GO al gegeven) — eerst het wederpartij-filter in `backend/scripts/kvk_backfill_legal_form.py`,
+> daarna de **etiket-vergelijking** rechtsvorm↔zakelijk/consument; dat dicht de dikste ⚠️.
+> Overige ⚠️ (4): actualiteit griffierecht-/nakosten-tarieven, sjabloonmenu per stap,
+> TOKEN_ENCRYPTION_KEY (mét Lisanne plannen), kennisregels admin-only. Nieuwe ❓: de
+> verjaringsteller kent geen stuiting (bouwen of als handwerk-signaal laten). Verder onveranderd:
+> mobiel-check sjabloonmenu 390×844, keuze C (ontwerpspoor kleur/leesbaarheid), menu-vragen
+> Lisanne, etiket-controle vóór fase-heropening 406.
 >
 > ✅ **S253 AFGEROND — KVK-koppeling live + werkwijze-omslag + omgeving opgeruimd.**
 > (a) KVK-sleutel (binnengekomen bij Lisanne 28-7) op prod gezet; rechtsvorm wordt nu
@@ -76,19 +95,6 @@
 > (c) CLAUDE.md 250 → 139 regels volgens het Claude 5-recept; `future-modules.md` niet
 > meer altijd geladen. (d) Drie tekstregels werden hooks: `git add -A` geblokkeerd,
 > push met rode ruff geweigerd, notificatiegeluid automatisch. Rapport: entry S253.
->
-> 🎯 **VOLGENDE (S254): de oogst — `WAARHEDEN.md` compleet maken** uit archief,
-> compliance-hart en huisregels; per kandidaat de zeef; 3-5 gevaarlijkste ⚠️'s dichtzetten
-> met een wachter per soort. Wachtrij daarna (Arsalan bepaalt volgorde): **438 KVK-opzoekingen
-> + etiket-vergelijking rechtsvorm↔etiket** (dikste ⚠️, dicht het S252-gat structureel),
-> mobiele controle sjabloonmenu 390×844 (3e sessie op rij blijven liggen), en keuze C
-> (ontwerpspoor kleur & leesbaarheid) of D (TOKEN_ENCRYPTION_KEY — mét Lisanne plannen —
-> en kennisregels admin-only). Voor Lisanne (inhoudelijk): horen 'aanmaning' en
-> 'tweede_sommatie' in menugroep 2? Bij fase-heropening 406 hoort een ETIKET-controle:
-> 105 gesloten dossiers hebben BaseNet-fasenaam "B2C" terwijl ons etiket "zakelijk" zegt.
-> Verder blijven staan: verweer-parkeerstap-voorstel, BaseNet-delisting, kostenblokje
-> (uitgesteld), opmaak-restpunt S227, S221b-rest, DMARC, 4 restjes S235, sharp-CVE's.
-> KvK-toegang: geregeld, niet meer naar vragen.
 >
 > ✅ **S252 AFGEROND — bel-labels + sjabloonmenu op de stappen + IN100077 zakelijk, LIVE.**
 > (a) De bel kende 2 van de 12 meldingstypen niet (grijs "Systeem"); tijdens de live-check

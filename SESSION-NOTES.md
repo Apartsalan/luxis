@@ -2,10 +2,89 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 30 juli 2026 (S253 — KVK-koppeling live, werkwijze-omslag: `WAARHEDEN.md` als definitie van "af", hooks + slankere CLAUDE.md).
-**Laatste feature/fix:** KVK-sleutel op prod → rechtsvorm wordt nu automatisch opgehaald (Kaandorp + Kesting Legal live geverifieerd als "Eenmanszaak"); `bash-guard.py` blokkeert `git add -A` en rode-ruff-pushes (S253).
-**Openstaand:** koersregel: GEEN nieuwbouw. **438 KVK-opzoekingen (±€9, GO gegeven) + etiket-vergelijking** = dikste ⚠️ op de waarhedenlijst. Verder: mobiel-check sjabloonmenu, keuze C (ontwerp) of D (beveiliging), menu-vragen Lisanne, etiket-controle vóór fase-heropening 406.
-**Volgende sessie:** S254 — de oogst: `WAARHEDEN.md` compleet maken + 3-5 gevaarlijkste wachters bouwen. Zie `docs/sessions/PROMPT-S254.md`.
+**Laatst bijgewerkt:** 30 juli 2026 (S254 — de oogst: `WAARHEDEN.md` compleet, 4 wachters gebouwd, één echte verzendfout gevonden en gedicht).
+**Laatste feature/fix:** Een gesloten dossier verstuurde tóch: de batch-knop én follow-up 'Uitvoeren' mailden een sommatie op een betaald dossier (rood bewezen, `emails_sent=1`). Gedeelde poort `check_case_closed_gate` + 4 wachters live (S254).
+**Openstaand:** koersregel: GEEN nieuwbouw. Waarheden: **32 ✅ / 5 ⚠️ / 2 ❓**. Dikste ⚠️ blijft **438 KVK-opzoekingen (±€9, GO gegeven) + etiket-vergelijking**. Verder: mobiel-check sjabloonmenu, keuze C (ontwerp) of D (beveiliging), menu-vragen Lisanne, etiket-controle vóór fase-heropening 406.
+**Volgende sessie:** S255 — Arsalan kiest: KVK-backfill (mét wederpartij-filter) of de resterende ⚠️'s. Zie `docs/sessions/PROMPT-S255.md`.
+
+## Sessie 254 (30 juli 2026, Fable-oogst → Opus-bouw — waarhedenlijst compleet + 4 wachters + echte verzendfout, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S254. **Modelfout aan het begin, door Arsalan gecorrigeerd:** de oogst
+(lezen/wegen/aanvullen) is denkwerk → Fable; ik was op Opus begonnen. Oogst daarna op Fable,
+wachters gebouwd op Opus.
+
+**1. De oogst — `WAARHEDEN.md` van startlijst naar compleet (`6ffdebf`).** Bronnen zelf
+gelezen (geen subagents): archief S200-S253, `SESSION-NOTES.md`, het compliance-hart,
+`breed-testen`, roadmap. **Elke status tegen de echte testbestanden gecheckt, niet gegokt.**
+13 ✅/7 ⚠️/3 ❓ → 28 ✅/9 ⚠️/2 ❓. Vijftien waarheden bleken al lang bewaakt maar stonden
+nergens (rentetabel-veroudering, fail-closed betaald-guard, dubbelklik-slot, verwijderde
+betalingen tellen nergens mee, sjabloon-sandbox, dossiernummer-hergebruik, migratie-drift).
+**Eén ✅ was onterecht en is gecorrigeerd:** "nieuwe mailroutes passeren de verzendregels" —
+er zijn per-deur-tests, maar niets betrapte een NIEUWE deur. Twee nieuwe gaten benoemd:
+afzender-regel (M1) en actualiteit griffierecht/nakosten-tarieven. Nieuwe ❓: de
+verjaringsteller kent geen stuiting (S242-meting), keuze Arsalan/Lisanne.
+
+**2. ECHTE FOUT gevonden bij het bouwen van wachter 1 (`68c9e97`).** De batch-knop
+(`batch_execute`, action generate_document) genereerde én **verstuurde** een sommatie op een
+betaald/afgesloten dossier — `emails_sent=1`, rood bewezen tegen de oude code via `git stash`.
+`execute_recommendation` (follow-up 'Uitvoeren') deed hetzelfde. Alleen de wachtrij van
+'Verstuur later' controleerde dit (S246-nacht); de twee knoppen ernaast waren toen vergeten —
+exact het zijdeur-patroon van de 14-dagenbrief-gate (S204, S224). Fix: gedeelde poort
+`check_case_closed_gate` in `collections/compliance.py`, naast de dagenbrief-gate; de twee
+bestaande eigen controles in `scheduled_service` lopen er nu ook doorheen. Handmatig mailen
+op een gesloten dossier blijft bewust toegestaan (S237: debiteur vroeg update op een
+afgewikkelde zaak).
+
+**3. Vier wachters, elk bewezen bijtend.** Niet alleen groen gemaakt maar per stuk de regel
+gesloopt om te zien of de test rood wordt:
+- `test_closed_case_never_sends.py` (9) — gedrag per route + de poort zelf.
+- M3-drift: **nieuwe verzenddeur zonder 14-dagenbrief-gate valt rood** (allowlist mét
+  motivering: gedeeld kanaal, classificatie-antwoord, factuur aan opdrachtgever).
+- M1-drift: elke verzendroute vertrekt vanaf incasso@. **Eerste versie beet niet** — die keek
+  of de instelling meegegeven werd, niet of hij AAN stond; `=False` glipte erdoor. Aangescherpt
+  naar de letterlijke `True` (of eigen `resolve_office_channel`), daarna wél rood bij sabotage.
+- `test_notification_labels.py` (2) — meldingsoorten uit de backend (AST, ook de
+  ternary-variant in de deadline-job) tegen de bel-config, én of elk icoon/kleur echt bestaat.
+  Getoetst met de échte S252-fout teruggezet (`bik_above_staffel` weg, `sparkles` weg): beide rood.
+
+### Gewijzigde bestanden
+- `WAARHEDEN.md` — oogst + 4 statussen naar ✅
+- `backend/app/collections/compliance.py` — `check_case_closed_gate` (gedeelde poort)
+- `backend/app/incasso/service.py` + `ai_agent/followup_service.py` — poort toegepast (de fix)
+- `backend/app/email/scheduled_service.py` — 2 eigen controles op dezelfde poort
+- `backend/tests/test_closed_case_never_sends.py` + `test_notification_labels.py` (nieuw)
+- `backend/tests/test_send_route_drift_guard.py` — M1 + M3 + gesloten-poort erbij
+- `docker-compose.dev.yml` — `frontend/src` alleen-lezen in de testcontainer (anders zou de
+  meldingen-natelling lokaal stil overgeslagen worden; in CI staat de hele repo naast elkaar)
+
+### Verificatie
+375 tests groen op de kruispunt-run (send/compose/followup/incasso/scheduled/notification/
+advance/dagenbrief/closed); `uvx ruff` schoon; **CI groen** op `68c9e97` (Backend Tests, lint,
+typecheck, build, security — alleen de bekende niet-blokkerende sharp-CVE-audit rood).
+Gedeployd via SSH: containers healthy, login 200, de poort aantoonbaar in de draaiende
+container (`incasso/service.py` 2×, `followup_service.py` 2×, `scheduled_service.py` 4×).
+
+### Bekende issues / lessen
+- **Twee eigen misstappen, beide gecorrigeerd:** (a) het eerste "rood bewijs" was een kapotte
+  testopzet (`title=` bestaat niet op `Case`, verkeerde argumentvolgorde) — opnieuw en echt
+  rood bewezen via `git stash`; (b) ik verklaarde CI "45 min, afwijkend" op een rekenfout —
+  het was 24 min, binnen bereik.
+- **Testgereedschap in de lokale dev-container was met de hand geïnstalleerd** (niet in het
+  bouwrecept) en verdween toen ik de container hercreëerde voor de nieuwe mount. Opnieuw
+  geïnstalleerd in `~/.local`; **verdwijnt weer bij de volgende hercreatie** — kandidaat voor
+  een dev-stage in de Dockerfile.
+- **Les herbevestigd (S246):** een afgebroken achtergrond-testrun blijft ín de container
+  doordraaien → twee pytest-runs op dezelfde testDB gaven spookfouten. Altijd `pkill -f pytest`
+  vóór een nieuwe run; volledige suite via `docker compose exec -d`.
+- Resterende ⚠️ (5): etiket vs rechtsvorm (438 KVK), griffierecht/nakosten-actualiteit,
+  sjabloonmenu per stap, TOKEN_ENCRYPTION_KEY, kennisregels admin-only.
+- Lokale volledige suite draaide bij afsluiting nog (CI dekt hem al groen af).
+
+### Volgende sessie
+S255 — Arsalan bepaalt. Sterkste kandidaat: de 438 KVK-opzoekingen (eerst het
+wederpartij-filter in `backend/scripts/kvk_backfill_legal_form.py`) + de etiket-vergelijking;
+dat dicht de dikste ⚠️. Zie `docs/sessions/PROMPT-S255.md`.
 
 ## Sessie 253 (30 juli 2026, Opus ↔ Fable — KVK live + werkwijze-omslag naar waarhedenlijst)
 
@@ -732,80 +811,3 @@ als bij een klik) + `case_activities` "E-mail verzonden naar …".
 
 ### Volgende sessie
 Eerst Fable-eindreview S246, daarna S247 AI-kennislaag. Zie `docs/sessions/PROMPT-S247.md`.
-
-## Sessie 245 (23 juli 2026, Opus-bouw → Fable-eindreview — taken+meldingen: 4 demo-punten blok 2, LIVE)
-
-### Samenvatting
-Startpunt PROMPT-S245, op Opus (klopt met de prompt: bouwen op Opus, eindreview
-op Fable). Masterplan `PLAN-DEMO-PUNTEN-S243.md` sectie S245. Vier onderdelen
-gebouwd, elk een eigen commit, daarna gedeployd en live geverifieerd.
-
-**1. Dossierinfo op taken (`3cc8c37`).** `WorkflowTaskResponse` kreeg een compact
-`case`-subobject (zaaknummer, cliëntnaam, debiteurnaam) via een before-validator
-op het al eager geladen Case-ORM (`lazy="selectin"` op WorkflowTask.case → Case.
-client/opposing_party — geen extra selectinload nodig, geen MissingGreenlet).
-Fixt beide takeneindpunten tegelijk: `/api/workflow/tasks` én
-`/api/dashboard/my-tasks` (die de Taken-pagina echt voedt — de prompt wees naar
-`wf_list_tasks`, dat is de alias in dashboard/router). Frontend toonde
-`task.case.case_number` al maar kreeg nooit data; nu ook de debiteurnaam in de
-taakregel. Debiteur = opposing_party, cliënt = client.
-
-**2. Filters op de Taken-pagina (`2517575`).** Client-side (lijst is al volledig
-geladen): vrij zoeken (zaaknummer/cliënt-/debiteurnaam/taaktitel), taaktype-
-dropdown (alleen aanwezige types, afgeleid van de volledige lijst — stabiel) en
-eigenaar (Alle/Aan mij/Zonder eigenaar). Lege-staat is filter-bewust ("Geen
-taken gevonden") + Wissen-knop.
-
-**3. Dubbel-wegklik-bug (`91d00f1`).** Oorzaak in de bron: `completeTask.isPending`
-was globaal voor álle rijen én er was geen optimistische update — de rij bleef
-tot de refetch, dus na de eerste actie was de knop alweer klikbaar → tweede klik
-(en bij herhalende taken meteen een dubbele opvolger). Fix: optimistische status-
-update in complete/skip/restore (rij verschuift/verdwijnt meteen, rollback bij
-fout, onSettled invalidate) + per-rij bezig-indicator via `mutation.variables`.
-
-**4. Mail-meldingen gelezen na antwoord (`42c6ffb`).** Nieuwe gerichte service-
-functie `mark_case_type_read` (tenant-breed, scoped op case_id + type) naast
-`mark_type_read`. Aangeroepen op het gedeelde reply-verzendpunt
-(`compose_router.send_via_provider`) wanneer een antwoord (`reply_to_message_id`)
-op een dossier verstuurd is → ongelezen `email_received`-meldingen van dat
-dossier op gelezen. Kruispunt gemeten: `reply_to_message_id` is het enige
-reply-signaal en komt alléén in compose_router voor; de S244-shell stuurt het nog
-steeds mee (frontend geverifieerd). Verse mail/doorsturen/sjablonen raken de
-meldingen niet.
-
-### Scope-keuze om te bevestigen
-Onderdeel 4 markeert **tenant-breed** (hele kantoor), niet alleen de verzender —
-omdat die mail-meldingen ook tenant-breed worden aangemaakt en de inbound na een
-antwoord voor iedereen afgehandeld is. Makkelijk te versmallen naar per-gebruiker
-als Arsalan dat liever heeft.
-
-### Gewijzigde bestanden
-Backend: `workflow/schemas.py` (TaskCaseInfo), `notifications/service.py`
-(mark_case_type_read), `email/compose_router.py` (aanroep op reply).
-Frontend: `app/(dashboard)/taken/page.tsx` (filters + debiteur in regel + per-rij
-pending), `hooks/use-workflow.ts` (case-type + optimistische updates).
-Tests (5 nieuwe wachters): `test_workflow.py` (case-info), `test_notifications_service.py`
-(scope mark_case_type_read), `test_reply_marks_mail_read.py` (2 route-wachters:
-reply wist + scoping, verse mail wist niet). Commits `3cc8c37`/`2517575`/`91d00f1`/
-`42c6ffb`/`bfd57b7`. Backend+frontend gedeployd via SSH `--force-recreate` (geen migratie — additief).
-
-### Verificatie
-121 tests groen (brede -k "workflow or task or notification"); ruff + tsc schoon;
-CI-groen niet apart afgewacht (deploy via SSH). Live-klikronde op prod (desktop +
-mobiel 390×844, screenshots bekeken): dossierinfo op elke taak, zoeken op
-debiteurnaam versmalt correct, filtercombinaties + lege-staat, één-klik-wegklik
-bewezen op een verse testtaak (2026-00006, daarna via API opgeruimd). Fable-
-eindreview: alle 6 commits gelezen + eigen visuele ronde (desktop filters/afgerond/
-dashboard + mobiel lange debiteurnaam) — **nul reparaties**. Onderdeel 4 niet
-live-gemaild (constraint geen echte debiteuren) — bewezen met de 2 route-wachters.
-
-### Bekende issues / bewust niet gedaan
-- **Onderdeel 4-scope** (tenant-breed) wacht op bevestiging Arsalan (zie boven).
-- **Cosmetisch (van vóór deze sessie):** afgeronde taak toont nog "X dagen te laat"
-  in de regel; meldingen-teller ververst pas bij de 30s-poll (niet direct na antwoord).
-- **IN100592 3e betwisting + regeling-taken IN100281/IN100537** blijven bij Lisanne.
-
-### Volgende sessie
-S246 — uitgesteld versturen (nieuwe tabel `scheduled_emails` + RLS in dezelfde
-migratie, "Verstuur later" op alle 7 verzenddeuren, scheduler met lock-patroon).
-Masterplan sectie S246. Zie `docs/sessions/PROMPT-S246.md`.

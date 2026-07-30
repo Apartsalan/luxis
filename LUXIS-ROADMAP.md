@@ -53,8 +53,38 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 29 juli 2026, S251)
+## 🎯 Huidige prioriteit (bijgewerkt 30 juli 2026, S252)
 
+> 🧭 **KOERSREGEL (Arsalan, 30 juli): GEEN nieuwe features meer — afmaken en verbeteren
+> wat er al is.** Luxis moet áf. Sessievoorstellen zijn herstel-/afmaakklussen (bugs,
+> bestaande fouten rechtzetten, beveiliging van bestaand werk, data goed zetten).
+> Nieuwbouw alleen op initiatief van Arsalan of bij echte noodzaak.
+>
+> ✅ **S252 AFGEROND — bel-labels + sjabloonmenu op de stappen + IN100077 zakelijk, LIVE.**
+> (a) De bel kende 2 van de 12 meldingstypen niet (grijs "Systeem"); tijdens de live-check
+> bleek een derde (AI-concept) om dezelfde reden grijs — icoon/kleur ontbraken in de
+> tekenkaarten. Alle 21 typen daarna machinaal nageteld: nul gaten. (b) Sjabloonmenu volgt
+> nu de pijplijnstappen 0-5: de brief "Tweede sommatie (standaard herhaling)" was intern
+> `wederom_sommatie_kort` = het anker van de DÉRDE sommatie, vandaar dat de stap niet
+> doorschoof (S251-vondst IN100602). BaseNet-brief L11 (`wederom_sommatie_inhoudelijk`)
+> weer bereikbaar — bestond, stond in geen menu. Nul backend-gedragswijziging.
+> (c) IN100077 (Kaandorp): niet de rente maar het ETIKET was fout — de import zette
+> debtor_type op b2c zodra de wederpartij een persoon was, en een eenmanszaak is precies
+> dat blinde gat. Uit de 27 dossiermails + KvK 72908475 bleek zakelijk; na GO gezet op
+> b2b + 2%/mnd + 15% (rente € 1.278 → € 6.732, kosten € 900 → € 1.878, beide nageteld;
+> terugdraai-set in `_s252_interest_backup_cases`). Rapport: entry S252 in SESSION-NOTES.
+>
+> 🎯 **VOLGENDE (S253): Arsalan kiest — C (ontwerpspoor kleur & leesbaarheid, plan ligt
+> klaar) of D (beveiligingsknopjes: aparte TOKEN_ENCRYPTION_KEY — verbreekt Lisanne's
+> mailkoppeling, moment plannen — en kennisregel-endpoints admin-only).** Eerst afvinken
+> (30 sec): mobiele controle 390×844 van het sjabloonmenu, in S252 niet gelukt door een
+> omgevallen testbrowser. Voor Lisanne (inhoudelijk): horen 'aanmaning' en 'tweede_sommatie'
+> in menugroep 2? Bij de fase-heropening van de 406 hoort voortaan een ETIKET-controle:
+> 105 gesloten dossiers hebben een BaseNet-fasenaam "B2C" terwijl ons etiket "zakelijk"
+> zegt. Verder blijven staan: verweer-parkeerstap-voorstel, BaseNet-delisting, kostenblokje
+> (uitgesteld), opmaak-restpunt S227, S221b-rest, DMARC, 4 restjes S235, sharp-CVE's.
+> KvK: niet naar vragen.
+>
 > ✅ **S251 AFGEROND — geld-audit + briefmachine-fix + 15% overal + b2c-grendel, LIVE.**
 > Vondst Arsalan (brief ≠ Financieel-tabblad) leidde tot een volledige geld-audit
 > (`docs/audits/geld-audit-2026-07-29.md`): de briefmachine negeerde de kosten-afspraak
@@ -65,19 +95,9 @@
 > percentages. Eind-natelling: 45/45 actieve dossiers tot de cent kloppend,
 > 43/43 brief == scherm. 22 nieuwe wachters, 886 tests groen, alle CI groen.
 >
-> 🎯 **VOLGENDE (S252): openstaande S251-vragen + Arsalan bepaalt de hoofdtaak.**
-> Klein en concreet klaar: (a) bel-labels voor `scheduled_email_failed` en
-> `bik_above_staffel` (2 regels, taak uit S251 die bleef liggen); (b) voorstel
-> "Verstuur later"-bedragen vers renderen bij verzending i.p.v. bevriezen bij
-> inplannen; (c) vraag Lisanne: IN100077 wettelijke i.p.v. 2%/mnd rente — bewust?
-> Beslispunten Arsalan: fase-heropening per groep (`docs/plans/BASENET-STATUS-HERSTEL.md`,
-> 406 dossiers, GO per groep; 153 daarvan met rentemeter bevroren op openingsdatum),
-> aparte TOKEN_ENCRYPTION_KEY, kennisregel-endpoints admin-only, sjabloonmenu-naamgeving
-> gelijktrekken met de 5 pijplijnstappen (S251-vondst: "Tweede sommatie (standaard
-> herhaling)" is intern de derde-sommatie-brief → stap schuift niet door). Verder
-> blijven staan: verweer-parkeerstap-voorstel, rest voorstel-lijst, BaseNet-delisting,
-> kostenblokje (uitgesteld), opmaak-restpunt S227, S221b-rest, DMARC, 4 restjes S235,
-> sharp-CVE's, ontwerpspoor kleur & leesbaarheid (ligt klaar). KvK: niet naar vragen.
+> *(De S252-vooruitblik die hier stond is afgehandeld — zie de S252-blok hierboven.
+> Fase-heropening 406 blijft open: `docs/plans/BASENET-STATUS-HERSTEL.md`, GO per groep,
+> 153 met rentemeter bevroren op openingsdatum, nu mét etiket-controle vooraf.)*
 >
 > ✅ **S250 AFGEROND — mail-conventie in de gespreksregels + 2 veegpunten, LIVE.** De
 > gespreksregel toonde één richting-pijl van het laatste bericht (na "sommatie uit →

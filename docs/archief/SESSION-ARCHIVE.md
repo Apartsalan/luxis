@@ -11583,3 +11583,89 @@ S243: Arsalan bepaalt de hoofdtaak (opruimronde met Lisanne is de sterkste
 kandidaat volgens de S241-werklastmeting — geen nieuwe bouw nodig). Zie
 `docs/sessions/PROMPT-S243.md`.
 
+## Sessie 243 (23 juli 2026, Opus (start Fable) — opruimronde + demo-puntenlijst: meting, plan, fase-vindbaarheid, 11 heropend)
+
+### Samenvatting
+Start volgens PROMPT-S243 (CI S242 nagetrokken: afzender-fix groen; signaleringen
+IN100015/IN100127 + 2 open mails doorgegeven). Arsalan koos de opruimronde en gaf
+daarna een demo-puntenlijst van 13 wensen/vragen.
+
+**1. Opruimronde (GO per categorie, elk dry-run + natelling exact):** 37
+test-taken gesloten (testdossiers 2026-00007 t/m -00019; de 18 echte bleven), 14
+test-adviezen afgewezen (8 echte bleven), 38 testmails/reclame weggedrukt, 15
+test-intakes afgewezen. Blijft voor Lisanne/Arsalan: 4 mogelijk-echte mails in de
+ongesorteerde bak (Incassocenter 7-7, eigen Factuur F2026-00001, 2× Purple
+Exchange) + 1 echte intake (Ram Charan Sukhdai, € 10.824,97).
+
+**2. Demo-puntenlijst → gemeten + 4-sessieplan.** Alle 13 punten in de bron
+gemeten (code + prod + BaseNet-export). Masterplan
+`docs/plans/PLAN-DEMO-PUNTEN-S243.md`; prompts S244 (mail-werkbank: tab-redesign,
+draad overal, Verzonden-map, lege sjabloon), S245 (taken: dossierinfo/filters/
+dubbel-wegklik + mail-meldingen weg na antwoord — besluit Arsalan), S246
+(uitgesteld versturen op alle 7 verzenddeuren), S247 (AI-kennislaag:
+placeholder-bug IN100606 + juridische kennisregels IN100458). Harde eis Arsalan:
+alles visueel testen met Playwright + screenshots.
+
+**3. Kernvraag Arsalan: "staan de export-dossiers überhaupt in Luxis?" — JA,
+bewezen:** alle 607 inccodes uit `Xml_02-07-2026_2400.zip` 1-op-1 vergeleken met
+prod: 0 ontbreken, 0 extra. Probleem was vindbaarheid: `basenet_origin_phase`
+(S207d) was niet doorzoekbaar. **Gefixt (`062ac4b`, LIVE):** zoekbalk zoekt door
+de fase + nieuw fase-filter op de dossierlijst (opties via nieuw endpoint, vóór
+de /{case_id}-route). 3 wachters; visueel bewezen op prod (filter én zoekterm
+geven exact de 11, screenshot bewaard).
+
+**4. De 11 "Akkoord dagvaarden"-dossiers heropend (prod-mutatie, dry-run + GO +
+natelling 11/11):** IN100046/077/246/252/281/294/364/419/487/509/537 → status
+in_behandeling, eigenaar Lisanne, stap "Akkoord dagvaarden", rente-bevriezing
+gewist (draaiboek-eis #9). Vooraf gecheckt: 0 doorschuifregels vanaf de stap,
+geen sjabloon (kan niets versturen), email_logs 54 vóór==ná, 0 archiefzaken
+geraakt, verjaringssommetje vroegste feb 2028 (geen ruis-meldingen). Verwacht
+effect: per dossier een follow-up-advies "handmatige beoordeling" + taak
+"Vervolg bepalen" (bedoeld). Overige 406 dichte werkvoorraad-dossiers per fase
+in beslislijst `docs/plans/BASENET-STATUS-HERSTEL.md` — heropening blijft per
+groep na GO.
+
+### Gewijzigde bestanden
+`backend/app/cases/{service,router}.py` (fase-zoek + filter + opties-endpoint),
+`frontend/src/hooks/use-cases.ts`, `frontend/src/app/(dashboard)/zaken/page.tsx`,
+`backend/tests/test_basenet_phase_filter.py` (nieuw, 3). Docs: masterplan,
+beslislijst, PROMPT-S244 t/m S247. Prod-mutaties: opruimronde (37/14/38/15) + 11
+heropend. Commit `062ac4b` + docs-commit.
+
+### Verificatie
+3 nieuwe wachters + test_cases 33 groen; ruff + tsc schoon; backend+frontend
+gedeployd via SSH `--force-recreate`, containers healthy, login 200. Visueel:
+Playwright op prod — fase-filter 11/11, zoekterm 11/11 (screenshot
+`s243-fase-filter-11-dossiers.png`). Alle prod-mutaties dry-run + natelling
+exact. Model-les: het filter-bouwwerk startte per ongeluk op Fable — door
+Arsalan gecorrigeerd, afgemaakt op Opus.
+
+### Bekende issues / bewust niet gedaan
+- 193 ongelezen meldingen: bewust laten staan (geen akkoord gevraagd/gegeven).
+- Meldingen over de nu gesloten test-taken blijven bestaan (onschadelijk).
+- CI van `062ac4b` + docs-commit liep nog bij afsluiten — natrekken bij S244.
+
+### Nagekomen (Fable-tegenlezing + herstel, parallel aan S244)
+Tegenlezing van het eigen S243-werk (read-only zolang S244 bouwde; herstel na
+GO Arsalan toen S244 klaar was):
+- **Bevestigd:** opruim-natellingen, 607-check, filter-code (routevolgorde,
+  tenant-scoping), heropening (0 mails, rente conform S207b-uitrol — IN100077
+  wettelijk want particulier), rooktest dossierpagina OK.
+- **Voorspelling bewezen:** scanner 16:14 → exact 11 adviezen 'escalate' + 11
+  taken "Vervolg bepalen". Bijvangst: 2 extra taken "Betalingsregeling
+  vastleggen" (IN100281, IN100537) — oude regelingsverzoek-mails (0.95) die nu
+  de zaak open is alsnog een bewakingstaak kregen; terecht gedrag, **inhoud voor
+  Lisanne** (IN100537-verzoek is van 22 juni!).
+- **Hersteld:** staphistorie-gat — 11 open historie-rijen toegevoegd (trigger
+  manual, notitie "Heropend uit BaseNet-fase", email_sent=false dus geen
+  scanner-effect); tijdlijn toont de stap nu (screenshot
+  `s243-herstel-tijdlijn-IN100487.png`). Zoekbalk-tekst noemt nu ook
+  factuurnummer + fase (mini-fix op Fable, gemeld).
+- **Werkwijze-les (gemaakt fout):** 2 draaiboek-checks (S195-notities,
+  rentetype) pas NÁ de heropening gedaan i.p.v. ervoor — uitkomst was schoon,
+  volgorde fout. Bij volgende fase-groepen: checks éérst.
+- **Signalering:** IN100592 (Zwartbol) mailde 23-7 opnieuw (13:21; derde
+  betwisting 16:29 zag S244 ook) — bij Lisanne.
+
+### Volgende sessie
+S244 (Opus): mail-werkbank — zie `docs/sessions/PROMPT-S244.md`.

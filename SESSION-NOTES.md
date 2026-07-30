@@ -2,10 +2,92 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 29 juli 2026 (S251 — geld-audit + briefmachine-fix + 15%-instellingen + b2c-grendel + intake-erving, alles LIVE).
-**Laatste feature/fix:** brieven rekenen met de kosten-afspraak en rente-stopdatum van het dossier (43/43 brief == scherm); intake erft de klant-afspraak; consument kan nooit meer boven de staffel (S251).
-**Openstaand:** "Verstuur later" bevriest bedragen op inplanmoment (voorstel); IN100077 wettelijke i.p.v. contractuele rente (vraag Lisanne); bel-labels 2 meldingstypen (kleine taak S251 niet gedaan); verder ongewijzigd: fase-heropening 406, TOKEN_ENCRYPTION_KEY, kennisregel-endpoints admin-only, DMARC, kostenblokje uitgesteld.
-**Volgende sessie:** S252 — zie `docs/sessions/PROMPT-S252.md` (openstaande vragen S251 + bel-labels + jouw keuze).
+**Laatst bijgewerkt:** 30 juli 2026 (S252 — bel-labels, sjabloonmenu op de stappen, IN100077 zakelijk gezet; alles LIVE + Fable-reviewed).
+**Laatste feature/fix:** sjabloonmenu volgt de pijplijnstappen 0-5 (de derde-sommatiebrief stond als "Tweede sommatie" gelabeld → stap schoof niet door) + BaseNet-brief L11 weer bereikbaar (S252).
+**Openstaand:** koersregel Arsalan: GEEN nieuwbouw, alleen afmaken/verbeteren. Menu-vragen voor Lisanne (aanmaning + tweede_sommatie in groep 2?); etiket-controle vóór fase-heropening 406; verder ongewijzigd: TOKEN_ENCRYPTION_KEY, kennisregel-endpoints admin-only, DMARC, kostenblokje.
+**Volgende sessie:** S253 — zie `docs/sessions/PROMPT-S253.md` (Arsalan kiest; C ontwerpspoor of D beveiliging).
+
+## Sessie 252 (30 juli 2026, Opus-bouw ↔ Fable-plan/review — bel-labels + sjabloonmenu + IN100077, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S252. Drie sporen: twee kleine restjes uit S251, een dossiercorrectie
+die groter bleek dan gedacht, en taak A (sjabloonmenu) volledig gepland op Fable en
+gebouwd op Opus.
+
+**1. Bel-labels (`70cf7c7` + `fe5d88c`, beide CI-groen).** De backend kent 12
+meldingstypen, de bel maar 10: `scheduled_email_failed` en `bik_above_staffel` vielen
+terug op grijs "Systeem" met info-icoon — juist de twee die moeten opvallen. Beide
+toegevoegd (rood mail-x / amber alert-triangle). **Tijdens de live-controle een tweede
+gat van dezelfde soort gevonden:** `ai_draft_ready` toonde óók het grijze vangnet,
+omdat `ICON_MAP` de sleutel `sparkles` en `COLOR_MAP` de kleur `violet` niet kenden.
+Ook gefixt (+ `tag`). Alle 21 config-typen daarna machinaal nageteld tegen beide
+kaarten: nul gaten. Live geverifieerd met twee tijdelijke echte meldingen (daarna
+verwijderd, teller terug op 56).
+
+**2. IN100077 (Kaandorp) — het etiket was fout, niet de rente.** Vraag uit S251 ("wettelijke
+i.p.v. contractuele rente, bewust?"). Arsalan: eenmanszaak, moet contractueel. Doorgevoerd,
+en toen **de tegenspraak gevonden**: het 13-juli-besluit (`revert_b2c_rente.py`, akkoord
+Arsalan) zette 79 consumentenzaken juist wég van 2%/mnd — ambtshalve toetsing Richtlijn
+93/13 vernietigt ≥1%/mnd bij consumenten, en dan vervalt zelfs de wettelijke rente.
+Direct teruggezet naar de veilige stand en voorgelegd. **Daarna de 27 dossiermails gelezen:**
+Kaandorp is zakelijk klant van Incassocenter (incasso-abonnement € 1.815/jaar voor zijn
+eenmanszaak), Incassocenter labelt het dossier zelf "(B)", het kantoor schreef in jan-2026
+"gebruikelijk in een B2B aangelegenheid", en de eerste sommatie rekende al 15%. Plus KvK
+72908475 in de dossieromschrijving. Oorzaak van het foute etiket: de import zette
+debtor_type op b2c zodra de wederpartij een PERSOON was (`scripts/basenet/mapping.py:278`)
+— een eenmanszaak is precies het blinde gat van die regel. Na GO Arsalan: b2b +
+contractueel 2%/mnd samengesteld + 15% met bodem 40. Rente € 1.277,88 → € 6.732,00,
+kosten € 900,19 → € 1.877,86 (beide onafhankelijk nageteld). Volledige terugdraai-set
+in `_s252_interest_backup_cases` mét toelichting.
+**Omvang gemeten:** slechts 3 actieve b2c-dossiers (1 = testdossier, 1 = IN100077, 1 =
+IN100345 Saltik met lopende regeling → bewust niet aangeraakt), 78 gesloten. Wél signaal
+voor later: bij 105 gesloten dossiers zegt de BaseNet-fasenaam "B2C" terwijl ons etiket
+"zakelijk" is → etiket-controle hoort in de fase-heropening van de 406.
+
+**3. Taak A — sjabloonmenu gelijkgetrokken (`c7eaf10`, CI groen).** S251-vondst op
+IN100602: de brief "Tweede sommatie (standaard herhaling)" is intern `wederom_sommatie_kort`
+= het anker van de DERDE sommatie (S234-families + `incasso_pipeline_steps.template_type`,
+allebei op prod nagemeten). De machine had gelijk, het menu loog. Menu nu 0-5 conform de
+stappen: 14-dagenbrief eigen groep bovenaan, groep 3 "Derde sommatie" nieuw, groepen 4/5
+hernoemd naar hun stapnaam. **`wederom_sommatie_inhoudelijk` (BaseNet L11) weer
+bereikbaar** — renderer bestond, stond in geen enkel menu (GO Arsalan: bij BaseNet had
+Lisanne hem wel). Alle 3 de plekken waar dit brieftype een naam krijgt gelijkgetrokken.
+Verouderde GRENS-toelichting bij `STEP_TEMPLATE_FAMILIES` bijgewerkt (noemde stappen
+zonder anker die er inmiddels wel een hebben).
+
+**Fable-review op alles (geen reparaties).** Machinaal bewezen dat de backend-hunk
+uitsluitend commentaar raakt (nul logicaregels), alle 23 menukeuzes een label én renderer
+hebben, en geen test/scherm meer naar de oude labels verwijst. Doorwerking nagelopen:
+de Word-documentenknop toont alleen de 8 échte DOCX-sjablonen die de backend aanlevert →
+naamlijst-uitbreiding kan daar niets toevoegen; Incasso-filter + documentenlijst tonen
+dezelfde brief onder de nieuwe naam (1 bestaand document, bestand onaangeraakt).
+
+### Gewijzigde bestanden
+- `frontend/src/hooks/use-notifications.ts` — 2 meldingstypen + labels
+- `frontend/src/components/layout/app-header.tsx` — ICON_MAP (sparkles, tag) + COLOR_MAP (violet)
+- `frontend/src/components/email-compose-dialog.tsx` — TEMPLATE_LABELS + TEMPLATE_GROUPS 0-5
+- `frontend/src/hooks/use-documents.ts` + `use-managed-templates.ts` — brieflabels gelijkgetrokken
+- `backend/app/incasso/service.py` — alleen toelichting bij STEP_TEMPLATE_FAMILIES
+- Data (prod): IN100077 b2b + contractueel 2% + 15%/bodem 40; back-up `_s252_interest_backup_cases`
+- Memory: `feedback_stabiliseren_boven_bouwen.md` — koersregel geen nieuwbouw (30-7)
+
+### Bekende issues / bewust niet gedaan
+- **Mobiele controle (390×844) van het sjabloonmenu niet gelukt** — het testbrowservenster
+  weigerde te verkleinen (viewport 0x0, extensie viel om). Laag risico (standaard
+  keuzelijst, geen layoutwijziging), maar formeel niet afgevinkt → 30 seconden werk S253.
+- **Voor Lisanne (inhoudelijk, niet technisch):** hoort 'aanmaning' (het prod-anker van
+  stap 2, nu onder "Overig") en de losse 'tweede_sommatie' in groep 2?
+- **"Verstuur later" met verse bedragen: GESCHRAPT** (besluit Arsalan — rente van het
+  inplanmoment is prima, scheelt nagenoeg niets en je ziet wat je verstuurt).
+- **Logregel bij rente-/typewijziging: bewust NIET gebouwd.** De app logt alleen
+  statuswissels, dus zo'n wijziging laat geen spoor in het dossier. Advies: pas bouwen bij
+  een tweede kantoor of derde gebruiker; met 2 mensen dekt de huidige werkwijze het af.
+- **Fase-heropening 406 (optie B): niet gestart** op verzoek Arsalan.
+- Kaandorp betwist alles fel (groepsrechtszaak tegen Incassocenter, FTM/BOOS) en ziet een
+  dagvaarding "met vertrouwen tegemoet" — context voor Lisanne vóór het dagvaarden.
+
+### Volgende sessie
+S253 — zie `docs/sessions/PROMPT-S253.md`.
 
 ## Sessie 251 (29 juli 2026, Fable-onderzoek → Opus-bouw → Fable-review×2 — geld-audit + 4 fixes, LIVE)
 
@@ -782,90 +864,3 @@ verzoek-mails (inhoud voor Lisanne; die van IN100537 dateert van 22 juni).
 
 ### Volgende sessie
 S245 (Opus): taken + meldingen — zie `docs/sessions/PROMPT-S245.md`.
-
-## Sessie 243 (23 juli 2026, Opus (start Fable) — opruimronde + demo-puntenlijst: meting, plan, fase-vindbaarheid, 11 heropend)
-
-### Samenvatting
-Start volgens PROMPT-S243 (CI S242 nagetrokken: afzender-fix groen; signaleringen
-IN100015/IN100127 + 2 open mails doorgegeven). Arsalan koos de opruimronde en gaf
-daarna een demo-puntenlijst van 13 wensen/vragen.
-
-**1. Opruimronde (GO per categorie, elk dry-run + natelling exact):** 37
-test-taken gesloten (testdossiers 2026-00007 t/m -00019; de 18 echte bleven), 14
-test-adviezen afgewezen (8 echte bleven), 38 testmails/reclame weggedrukt, 15
-test-intakes afgewezen. Blijft voor Lisanne/Arsalan: 4 mogelijk-echte mails in de
-ongesorteerde bak (Incassocenter 7-7, eigen Factuur F2026-00001, 2× Purple
-Exchange) + 1 echte intake (Ram Charan Sukhdai, € 10.824,97).
-
-**2. Demo-puntenlijst → gemeten + 4-sessieplan.** Alle 13 punten in de bron
-gemeten (code + prod + BaseNet-export). Masterplan
-`docs/plans/PLAN-DEMO-PUNTEN-S243.md`; prompts S244 (mail-werkbank: tab-redesign,
-draad overal, Verzonden-map, lege sjabloon), S245 (taken: dossierinfo/filters/
-dubbel-wegklik + mail-meldingen weg na antwoord — besluit Arsalan), S246
-(uitgesteld versturen op alle 7 verzenddeuren), S247 (AI-kennislaag:
-placeholder-bug IN100606 + juridische kennisregels IN100458). Harde eis Arsalan:
-alles visueel testen met Playwright + screenshots.
-
-**3. Kernvraag Arsalan: "staan de export-dossiers überhaupt in Luxis?" — JA,
-bewezen:** alle 607 inccodes uit `Xml_02-07-2026_2400.zip` 1-op-1 vergeleken met
-prod: 0 ontbreken, 0 extra. Probleem was vindbaarheid: `basenet_origin_phase`
-(S207d) was niet doorzoekbaar. **Gefixt (`062ac4b`, LIVE):** zoekbalk zoekt door
-de fase + nieuw fase-filter op de dossierlijst (opties via nieuw endpoint, vóór
-de /{case_id}-route). 3 wachters; visueel bewezen op prod (filter én zoekterm
-geven exact de 11, screenshot bewaard).
-
-**4. De 11 "Akkoord dagvaarden"-dossiers heropend (prod-mutatie, dry-run + GO +
-natelling 11/11):** IN100046/077/246/252/281/294/364/419/487/509/537 → status
-in_behandeling, eigenaar Lisanne, stap "Akkoord dagvaarden", rente-bevriezing
-gewist (draaiboek-eis #9). Vooraf gecheckt: 0 doorschuifregels vanaf de stap,
-geen sjabloon (kan niets versturen), email_logs 54 vóór==ná, 0 archiefzaken
-geraakt, verjaringssommetje vroegste feb 2028 (geen ruis-meldingen). Verwacht
-effect: per dossier een follow-up-advies "handmatige beoordeling" + taak
-"Vervolg bepalen" (bedoeld). Overige 406 dichte werkvoorraad-dossiers per fase
-in beslislijst `docs/plans/BASENET-STATUS-HERSTEL.md` — heropening blijft per
-groep na GO.
-
-### Gewijzigde bestanden
-`backend/app/cases/{service,router}.py` (fase-zoek + filter + opties-endpoint),
-`frontend/src/hooks/use-cases.ts`, `frontend/src/app/(dashboard)/zaken/page.tsx`,
-`backend/tests/test_basenet_phase_filter.py` (nieuw, 3). Docs: masterplan,
-beslislijst, PROMPT-S244 t/m S247. Prod-mutaties: opruimronde (37/14/38/15) + 11
-heropend. Commit `062ac4b` + docs-commit.
-
-### Verificatie
-3 nieuwe wachters + test_cases 33 groen; ruff + tsc schoon; backend+frontend
-gedeployd via SSH `--force-recreate`, containers healthy, login 200. Visueel:
-Playwright op prod — fase-filter 11/11, zoekterm 11/11 (screenshot
-`s243-fase-filter-11-dossiers.png`). Alle prod-mutaties dry-run + natelling
-exact. Model-les: het filter-bouwwerk startte per ongeluk op Fable — door
-Arsalan gecorrigeerd, afgemaakt op Opus.
-
-### Bekende issues / bewust niet gedaan
-- 193 ongelezen meldingen: bewust laten staan (geen akkoord gevraagd/gegeven).
-- Meldingen over de nu gesloten test-taken blijven bestaan (onschadelijk).
-- CI van `062ac4b` + docs-commit liep nog bij afsluiten — natrekken bij S244.
-
-### Nagekomen (Fable-tegenlezing + herstel, parallel aan S244)
-Tegenlezing van het eigen S243-werk (read-only zolang S244 bouwde; herstel na
-GO Arsalan toen S244 klaar was):
-- **Bevestigd:** opruim-natellingen, 607-check, filter-code (routevolgorde,
-  tenant-scoping), heropening (0 mails, rente conform S207b-uitrol — IN100077
-  wettelijk want particulier), rooktest dossierpagina OK.
-- **Voorspelling bewezen:** scanner 16:14 → exact 11 adviezen 'escalate' + 11
-  taken "Vervolg bepalen". Bijvangst: 2 extra taken "Betalingsregeling
-  vastleggen" (IN100281, IN100537) — oude regelingsverzoek-mails (0.95) die nu
-  de zaak open is alsnog een bewakingstaak kregen; terecht gedrag, **inhoud voor
-  Lisanne** (IN100537-verzoek is van 22 juni!).
-- **Hersteld:** staphistorie-gat — 11 open historie-rijen toegevoegd (trigger
-  manual, notitie "Heropend uit BaseNet-fase", email_sent=false dus geen
-  scanner-effect); tijdlijn toont de stap nu (screenshot
-  `s243-herstel-tijdlijn-IN100487.png`). Zoekbalk-tekst noemt nu ook
-  factuurnummer + fase (mini-fix op Fable, gemeld).
-- **Werkwijze-les (gemaakt fout):** 2 draaiboek-checks (S195-notities,
-  rentetype) pas NÁ de heropening gedaan i.p.v. ervoor — uitkomst was schoon,
-  volgorde fout. Bij volgende fase-groepen: checks éérst.
-- **Signalering:** IN100592 (Zwartbol) mailde 23-7 opnieuw (13:21; derde
-  betwisting 16:29 zag S244 ook) — bij Lisanne.
-
-### Volgende sessie
-S244 (Opus): mail-werkbank — zie `docs/sessions/PROMPT-S244.md`.

@@ -170,8 +170,7 @@ async def schedule_batch_send(
     briefsjabloon aanwezig, e-mailadres aanwezig, 14-dagenbrief-poort.
     """
     from app.cases.models import Case
-    from app.cases.schemas import TERMINAL_STATUSES
-    from app.collections.compliance import check_dagenbrief_gate
+    from app.collections.compliance import check_case_closed_gate, check_dagenbrief_gate
     from app.incasso.schemas import BatchActionResult
     from app.incasso.service import list_pipeline_steps
 
@@ -207,9 +206,10 @@ async def schedule_batch_send(
                 f"{case.case_number}: stap '{step.name}' gebruikt AI-concepten — niet ingepland"
             )
             continue
-        if case.status in TERMINAL_STATUSES:
+        closed_reason = check_case_closed_gate(case, case_number=case.case_number)
+        if closed_reason is not None:
             skipped += 1
-            errors.append(f"{case.case_number}: status '{case.status}' — niet ingepland")
+            errors.append(f"{closed_reason} Niet ingepland.")
             continue
         debtor_email = (
             case.opposing_party.email if case.opposing_party else None
@@ -467,10 +467,10 @@ async def _pre_send_blokkade(session: AsyncSession, row: ScheduledEmail) -> str 
     """
     if row.case_id is not None:
         from app.cases.models import Case
-        from app.cases.schemas import TERMINAL_STATUSES
+        from app.collections.compliance import check_case_closed_gate
 
         case = await session.get(Case, row.case_id)
-        if case is not None and case.status in TERMINAL_STATUSES:
+        if case is not None and check_case_closed_gate(case) is not None:
             return (
                 f"Het dossier is intussen '{case.status}' — de geplande mail is "
                 "daarom NIET verstuurd."

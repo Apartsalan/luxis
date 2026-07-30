@@ -567,6 +567,16 @@ async def execute_recommendation(
         and step.template_type
     )
     if is_generate:
+        # S254 — waarheid "een gesloten dossier verstuurt nooit meer iets". Een
+        # advies kan uren tot dagen oud zijn (goedkeuren nu, uitvoeren later);
+        # raakte het dossier intussen betaald/afgesloten, dan mag hier geen brief
+        # meer uit. Gedeelde poort, zelfde als batch en de wachtrij-bezorger.
+        from app.collections.compliance import check_case_closed_gate
+
+        closed_reason = check_case_closed_gate(case, case_number=case.case_number)
+        if closed_reason is not None:
+            raise BadRequestError(closed_reason)
+
         # S247-review — stap-anker, zelfde gat als de batch-guard dicht: sinds
         # 'Verstuur later' (S246-nacht) kan een goedgekeurd advies úren wachten
         # op uitvoering, en de stapwissel-opruiming (supersede_open_

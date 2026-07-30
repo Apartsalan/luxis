@@ -16,7 +16,9 @@
 >
 > Bijwerken: alleen bij een nieuwe vondst of nieuwe wachter — geen onderhoudsplicht per sessie.
 > *(Oogst S254 gedaan: archief S200-S253, compliance-hart, huisregels `breed-testen`,
-> roadmap — elke status hieronder is tegen de echte testbestanden gecheckt, niet gegokt.)*
+> roadmap — elke status hieronder is tegen de echte testbestanden gecheckt, niet gegokt.
+> Vier wachters gebouwd in S254; elk is bewezen rood gemaakt door de regel te slopen,
+> want een wachter die niet kan bijten is geen wachter.)*
 
 ## Geld (het duurste om fout te hebben)
 
@@ -38,14 +40,14 @@
 ## Brieven & verzending (naar buiten = onomkeerbaar)
 
 - ✅ De vijf bestaande verzenddeuren passeren de 14-dagenbrief-gate — `test_compose_dagenbrief_gate.py` (compose, document, .eml) + batch/follow-up-tests
-- ⚠️ Een NIEUWE verzenddeur wordt automatisch betrapt als hij de 14-dagenbrief-gate mist — bestaat niet; precies dit gat beet twee keer (S204: twee zijdeuren, S224: de Outlook-knop)
+- ✅ Een NIEUWE verzenddeur zonder 14-dagenbrief-gate valt automatisch rood — `test_send_route_drift_guard.py::test_elke_verzendroute_passeert_de_dagenbrief_gate` (S254; uitzonderingen alleen mét motivering op de allowlist)
 - ✅ Een consument krijgt eerst de 14-dagenbrief met het juiste bedrag, anders geen kosten claimen; de klok loopt vanaf échte verzending — gate + tests
 - ✅ De rentebijlage gaat mee bij privé-aansprakelijke wederpartijen en niet bij BV/NV/stichting, op álle routes — `test_rente_bijlage_verzendpaden.py` + besluit A/B-tests
 - ✅ Elke verzendroute laat het drieluik achter (vindbaar op Mail, dossier én tijdlijn) en draagt het huisonderwerp; een nieuwe route zonder valt automatisch rood — `test_send_route_drift_guard.py` (leest de broncode zelf uit)
-- ⚠️ Elke dossier-mail vertrekt vanaf het kantooradres (incasso@), nooit vanaf een persoonlijk account — twee keer misgegaan (S220 verstuurknop, S224 classificatie-route), geen wachter voor de soort
+- ✅ Elke dossier-mail vertrekt vanaf het kantooradres (incasso@), nooit vanaf een persoonlijk account — `test_send_route_drift_guard.py::test_elke_verzendroute_gebruikt_het_kantooradres` (S254; toetst dat de instelling AAN staat, niet alleen dat hij meegegeven is)
 - ✅ Alleen een stap-brief schuift de zaak precies één stap door; een antwoord of vrij bericht nooit; gesloten zaak, verweer of consument-naar-zakelijke-stap blokkeert — `test_advance_after_send_routes.py` (guard-matrix)
 - ✅ Een geplande mail ("verstuur later") controleert de wereld opnieuw op het verzendmoment (betaald/gesloten/stap gewisseld = blokkade + melding) en verstuurt nooit stil dubbel — `test_scheduled_emails.py` (24 wachters)
-- ⚠️ Een gesloten dossier verstuurt nooit meer automatisch iets — deels gedekt (geplande mail, doorschuif-guard, concept-/advies-opruiming bij sluiten) maar er is geen wachter die álle automatische verzenders langs een gesloten zaak haalt
+- ✅ Een gesloten dossier verstuurt nooit meer automatisch iets — `test_closed_case_never_sends.py` (gedrag per route) + `test_send_route_drift_guard.py::test_automatische_verzenders_controleren_of_het_dossier_dicht_is` (soort). **S254 vond hier een echte fout:** de batch-knop verstuurde wél een sommatie op een betaald dossier (`emails_sent=1`, rood bewezen) en de follow-up-knop 'Uitvoeren' ook; beide nu dicht via de gedeelde poort `check_case_closed_gate`. Handmatig mailen op een gesloten dossier blijft bewust toegestaan.
 - ⚠️ Het sjabloonmenu biedt per pijplijnstap de juiste brief aan (stap schuift correct door) — S252 met de hand gefixt, geen wachter
 - ❓ Horen 'aanmaning' en 'tweede_sommatie' in menugroep 2? — inhoudelijke keuze **Lisanne**
 
@@ -66,7 +68,7 @@
 - ✅ De test-database kan niet stil afwijken van de échte database — `test_migration_timestamp_defaults.py` leest álle migraties (S246: prod-crash die de tests niet zagen)
 - ✅ Een dossiernummer wordt nooit hergebruikt (anders plakt oude mail aan een nieuw dossier) — `test_cases.py::test_generate_case_number_does_not_reuse_soft_deleted`
 - ✅ Een eigen verstuurde mail komt nooit als "ontvangen post" terug, en een genegeerde mail blijft genegeerd — `test_email_sync.py` + `test_s241_sync_kruispunten.py`
-- ⚠️ Elke meldingsoort in het systeem heeft een label/kleur op de bel (nieuw type zonder label = grijs vangnet) — S253 met de hand nageteld, geen automatische natelling
+- ✅ Elke meldingsoort heeft een label, icoon én kleur op de bel (nieuw type = geen grijs vangnet meer) — `test_notification_labels.py` (S254; telt de backend-soorten na tegen de bel-config én controleert dat elk icoon/kleur echt bestaat — de drie S252-vondsten in beide smaken)
 - ❓ De verjaringsbewaking kent geen stuiting: het is een kaal sommetje (opeisbaar + 5 jaar), terwijl Luxis' eigen sommaties wél een stuitingsclausule bevatten (S242-meting, IN100015). Keuze **Arsalan/Lisanne**: stuitingsdatum op het dossier bouwen, of de melding als handwerk-signaal beschouwen.
 
 ## Waar, geen hek nodig (bewust)

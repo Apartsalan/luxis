@@ -1,4 +1,4 @@
-"""Wachters M2 + M4 (S224, skill breed-testen) — verzendroute-drift-guards.
+"""Wachters M1 + M2 + M3 + M4 (S224/S254, skill breed-testen) — verzendroute-drift-guards.
 
 Fouten wonen op kruispunten: één gedrag (mail versturen) is via meerdere routes
 bereikbaar en één route mist de huisregel. Deze wachters enumereren de routes
@@ -12,6 +12,17 @@ mist hier automatisch rood valt — het patroon van test_auth_drift_guard.py.
 - M4 (onderwerp-bouwer): elke verzend-aanroep bouwt zijn onderwerp via
   build_email_subject/build_reply_subject, of staat mét motivering op de
   allowlist. Een nieuwe route zonder bouwer maakt deze test rood.
+- M1 (afzender, S254): elke verzendroute vertrekt vanaf het kantooradres —
+  `send_as_tenant_account=True` of zelf `resolve_office_channel`. Ging twee keer
+  mis (S220 verstuurknop, S224 classificatie-route); toen per geval gefixt,
+  nu bewaakt als soort.
+- M3 (14-dagenbrief-gate, S254): elke verzendroute die een verse sommatie kan
+  versturen passeert de gate, of staat mét motivering op de allowlist. Ging óók
+  twee keer mis (S204: follow-up + AI-concept, S224: de .eml-knop).
+- Gesloten dossier (S254): elke AUTOMATISCHE verzender controleert of het dossier
+  intussen betaald/afgesloten is. Handmatige routes staan gemotiveerd op de
+  allowlist — een mens die bewust op een gesloten dossier mailt is legitiem
+  (bv. antwoord op een vraag over een afgewikkelde zaak).
 
 Een regel hier weghalen mag alleen samen met de fix die hem overbodig maakt.
 """
@@ -72,6 +83,50 @@ SUBJECT_ALLOWLIST = {
 }
 
 SUBJECT_BUILDERS = {"build_email_subject", "build_reply_subject"}
+
+# ── M1: routes die de kantoor-afzender NIET zelf zetten — elk mét motivering ──
+
+# (leeg) — elke verzendroute zet incasso@ zelf, via de kwarg of via
+# resolve_office_channel. Een regel hier betekent: deze route mag bewust vanaf
+# een ander account vertrekken. Dat was juist de S220-N1-fout, dus motiveer goed.
+SENDER_ALLOWLIST: set[tuple[str, str]] = set()
+
+OFFICE_CHANNEL_RESOLVER = "resolve_office_channel"
+
+# ── M3: verzendroutes zonder 14-dagenbrief-gate — elk mét motivering ─────────
+
+GATE_ALLOWLIST = {
+    # HET gedeelde kanaal: kent het dossier niet, de aanroepende route gate't.
+    ("app/email/send_service.py", "send_with_attachment"),
+    # Antwoord op een binnengekomen debiteurenmail (goedgekeurde classificatie) —
+    # geen verse BIK-claimende sommatie, dus de gate hoort hier niet te vuren
+    # (zelfde redenering als de reply-uitzondering op compose/send, S205).
+    ("app/ai_agent/service.py", "execute_classification"),
+    # Factuur aan de OPDRACHTGEVER, niet aan de debiteur — art. 6:96 lid 6 BW
+    # gaat over consumenten-incassokosten en raakt deze mail niet.
+    ("app/invoices/service.py", "send_invoice"),
+}
+
+GATE_FUNCTIONS = {"check_dagenbrief_gate", "check_dagenbrief_gate_for_case"}
+
+# ── Gesloten dossier: routes zonder de poort — elk mét motivering ────────────
+
+CLOSED_GATE_ALLOWLIST = {
+    # HET gedeelde kanaal: kent het dossier niet, de aanroepende route poort't.
+    ("app/email/send_service.py", "send_with_attachment"),
+    # HANDMATIG: de gebruiker stelt zelf een mail op vanuit een dossier dat hij
+    # voor zich heeft. Mailen over een afgewikkelde zaak is legitiem (S237:
+    # debiteur vroeg een update op een gesloten dossier) — een mens beslist.
+    ("app/email/compose_router.py", "perform_compose_send"),
+    ("app/documents/router.py", "send_document"),
+    # ANTWOORD op een binnengekomen mail; ook op een gesloten dossier hoort een
+    # vraag beantwoord te worden.
+    ("app/ai_agent/service.py", "execute_classification"),
+    # Factuur aan de opdrachtgever — die volgt juist NÁ het afsluiten.
+    ("app/invoices/service.py", "send_invoice"),
+}
+
+CLOSED_GATE_FUNCTION = "check_case_closed_gate"
 
 
 # ── AST-hulpjes ──────────────────────────────────────────────────────────────
@@ -209,6 +264,118 @@ def test_onderwerp_komt_uit_de_gedeelde_bouwer():
         f"(huisregel M4): {sorted(violations)} — gebruik build_email_subject/"
         "build_reply_subject of voeg een gemotiveerde allowlist-regel toe."
     )
+
+
+# ── Gedeelde route-inventaris voor M1/M3/gesloten-dossier ───────────────────
+
+
+def _send_routes() -> dict[tuple[str, str], list[ast.Call]]:
+    """Elke functie die een mail de deur uit doet, met zijn verzend-aanroepen.
+
+    Eén enumeratie voor drie huisregels — komt er een verzendroute bij, dan
+    beoordelen alle drie de wachters hem automatisch."""
+    routes: dict[tuple[str, str], list[ast.Call]] = {}
+    for rel, tree in _modules():
+        if rel.startswith("app/email/providers/") or rel == "app/email/service.py":
+            continue
+        for fname, call in _walk_calls(tree):
+            if _called_name(call) in ("send_with_attachment", "send_message"):
+                routes.setdefault((rel, fname), []).append(call)
+    return routes
+
+
+def _calls_in(rel: str, target_fn: str) -> set[str]:
+    tree = ast.parse((APP_DIR.parent / rel).read_text(encoding="utf-8"))
+    return {
+        _called_name(call) for fname, call in _walk_calls(tree) if fname == target_fn
+    }
+
+
+# ── M1: afzender-wachter ─────────────────────────────────────────────────────
+
+
+def test_elke_verzendroute_gebruikt_het_kantooradres():
+    """Een dossier-mail vertrekt vanaf incasso@, nooit vanaf het persoonlijke
+    account van wie toevallig klikt: óf `send_as_tenant_account=True` meegeven,
+    óf zelf het kantoorkanaal kiezen. Ging mis op de verstuurknop (S220 N1) en
+    de classificatie-route (S224) — die twee losse fixes staan hier nu als soort."""
+    violations = set()
+    for (rel, fname), calls in _send_routes().items():
+        if (rel, fname) in SENDER_ALLOWLIST:
+            continue
+        # Niet "is de kwarg meegegeven" maar "staat hij aantoonbaar AAN" — met
+        # send_as_tenant_account=False vertrekt de mail alsnog persoonlijk.
+        # ponytail: alleen de letterlijke True telt; een variabele als waarde is
+        # niet statisch te beoordelen en hoort dus gemotiveerd op de allowlist.
+        aan = all(
+            isinstance(_kwarg(c, "send_as_tenant_account"), ast.Constant)
+            and _kwarg(c, "send_as_tenant_account").value is True
+            for c in calls
+        )
+        if aan or OFFICE_CHANNEL_RESOLVER in _calls_in(rel, fname):
+            continue
+        violations.add((rel, fname))
+    assert not violations, (
+        "Verzendroute(s) kunnen vanaf een persoonlijk account vertrekken "
+        f"(huisregel M1): {sorted(violations)} — geef send_as_tenant_account=True "
+        "mee of roep resolve_office_channel aan."
+    )
+
+
+# ── M3: 14-dagenbrief-wachter ────────────────────────────────────────────────
+
+
+def test_elke_verzendroute_passeert_de_dagenbrief_gate():
+    """Art. 6:96 lid 6 BW: bij een consument mag geen BIK-claimende sommatie de
+    deur uit vóór de 14-dagenbrief. De gate stond al op elke bekende deur, maar
+    niets betrapte een NIEUWE deur — precies zo ontstonden de zijdeuren van S204
+    (follow-up + AI-concept) en S224 (.eml). Nieuw = rood of gemotiveerd."""
+    violations = set()
+    for (rel, fname), _calls in _send_routes().items():
+        if (rel, fname) in GATE_ALLOWLIST:
+            continue
+        if _calls_in(rel, fname) & GATE_FUNCTIONS:
+            continue
+        violations.add((rel, fname))
+    assert not violations, (
+        "Verzendroute(s) zonder 14-dagenbrief-gate (huisregel M3): "
+        f"{sorted(violations)} — roep check_dagenbrief_gate(_for_case) aan of "
+        "voeg een gemotiveerde allowlist-regel toe."
+    )
+
+
+# ── Gesloten dossier: poort-wachter ──────────────────────────────────────────
+
+
+def test_automatische_verzenders_controleren_of_het_dossier_dicht_is():
+    """Waarheid S254: een gesloten dossier verstuurt nooit meer automatisch iets.
+    Handmatige routes staan gemotiveerd op de allowlist; alles wat zonder mens
+    aan de knop verstuurt moet `check_case_closed_gate` aanroepen."""
+    violations = set()
+    for (rel, fname), _calls in _send_routes().items():
+        if (rel, fname) in CLOSED_GATE_ALLOWLIST:
+            continue
+        if CLOSED_GATE_FUNCTION in _calls_in(rel, fname):
+            continue
+        violations.add((rel, fname))
+    assert not violations, (
+        "Automatische verzendroute(s) zonder gesloten-dossier-poort: "
+        f"{sorted(violations)} — roep check_case_closed_gate aan, of motiveer "
+        "waarom deze route handmatig is (CLOSED_GATE_ALLOWLIST)."
+    )
+
+
+def test_nieuwe_allowlists_bevatten_geen_dode_regels():
+    """Zelfde eerlijkheidseis als hieronder: een route die verdwijnt of alsnog
+    de regel krijgt, hoort uit de allowlist — anders dekt de lijst niets meer."""
+    live = set(_send_routes())
+    for naam, lijst in (
+        ("SENDER_ALLOWLIST", SENDER_ALLOWLIST),
+        ("GATE_ALLOWLIST", GATE_ALLOWLIST),
+        ("CLOSED_GATE_ALLOWLIST", CLOSED_GATE_ALLOWLIST),
+    ):
+        dood = lijst - live
+        assert not dood, f"{naam} bevat regels zonder verzend-aanroep: {sorted(dood)}"
 
 
 def test_allowlist_bevat_geen_dode_regels():

@@ -168,6 +168,32 @@ async def check_dagenbrief_gate(
     return None
 
 
+def check_case_closed_gate(case, *, case_number: str | None = None) -> str | None:
+    """Waarheid S254 — een gesloten dossier verstuurt nooit meer automatisch iets.
+
+    Geeft een blokkade-REDEN (str) terug als er bij dit dossier niets meer de deur
+    uit mag, anders None. Eén gedeelde bron voor álle automatische verzenders
+    (batch, follow-up 'Uitvoeren', de wachtrij van 'Verstuur later' en zijn
+    bezorger) zodat de regel niet per route uit elkaar loopt — zelfde patroon als
+    `check_dagenbrief_gate`.
+
+    Waarom dit een eigen poort verdient: een sommatie naar iemand die al betaald
+    heeft is de duurste soort fout die dit systeem kan maken (reputatie + een
+    boze debiteur + Lisannes naam eronder). De wachtrij had deze controle sinds
+    S246-nacht; de batch- en follow-up-knop niet — dezelfde zijdeur-fout als de
+    14-dagenbrief-gate twee keer maakte (S204, S224).
+    """
+    from app.cases.schemas import TERMINAL_STATUSES
+
+    status = getattr(case, "status", None)
+    if status not in TERMINAL_STATUSES:
+        return None
+    prefix = f"{case_number}: " if case_number else ""
+    return (
+        f"{prefix}het dossier staat op '{status}' — er gaat niets meer de deur uit."
+    )
+
+
 # Stap-categorieën die BIK/incassokosten claimen (sommaties + gerechtelijk). Alleen
 # op deze stappen geldt de 14-dagenbrief-gate voor het losse verzendpad; op
 # administratieve/regeling-stappen (bv. 'Opvragen stukken', 'Treffen van regeling')

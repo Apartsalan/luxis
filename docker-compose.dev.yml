@@ -27,6 +27,11 @@ services:
       - ./backend/tests:/app/tests
       - ./templates:/app/templates
       - ./scripts:/app/scripts
+      # Alleen-lezen, alleen voor de meldingen-natelling (S254): die wachter legt
+      # de meldingsoorten van de backend naast de labels/kleuren van de bel. In CI
+      # staat de hele repo naast elkaar; in de container niet — zonder deze mount
+      # zou de wachter lokaal stil overgeslagen worden.
+      - ./frontend/src:/app/frontend_src:ro
     environment:
       # Route all SMTP into Mailpit (local sink — mail never leaves the machine)
       SMTP_HOST: mailpit

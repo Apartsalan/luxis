@@ -1539,6 +1539,18 @@ async def batch_execute(
         step_map = {s.id: s for s in steps}
 
         for case in cases:
+            # S254 — waarheid "een gesloten dossier verstuurt nooit meer iets".
+            # De wachtrij van 'Verstuur later' controleerde dit al (S246-nacht),
+            # deze knop niet: een betaald dossier in de selectie kreeg gewoon een
+            # sommatie. Zelfde gedeelde poort, zodat de regel niet uit elkaar loopt.
+            from app.collections.compliance import check_case_closed_gate
+
+            closed_reason = check_case_closed_gate(case, case_number=case.case_number)
+            if closed_reason is not None:
+                skipped += 1
+                errors.append(closed_reason)
+                continue
+
             if not case.incasso_step_id:
                 skipped += 1
                 errors.append(f"{case.case_number}: geen pipeline stap — overgeslagen")

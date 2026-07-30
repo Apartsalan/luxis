@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { LogOut, User, Bell, Search, Menu, Check, CheckCheck, Clock, AlertTriangle, FileText, Mail, ArrowRight, Info } from "lucide-react";
+import { LogOut, User, Bell, Search, Menu, Check, CheckCheck, Clock, AlertTriangle, FileText, Mail, ArrowRight, Info, Sparkles, Tag } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -45,6 +45,8 @@ const ICON_MAP: Record<string, typeof Clock> = {
   mail: Mail,
   "mail-x": Mail,
   "alert-circle": AlertTriangle,
+  sparkles: Sparkles,
+  tag: Tag,
   info: Info,
 };
 
@@ -54,6 +56,7 @@ const COLOR_MAP: Record<string, string> = {
   blue: "bg-blue-50 text-blue-600",
   emerald: "bg-emerald-50 text-emerald-600",
   indigo: "bg-indigo-50 text-indigo-600",
+  violet: "bg-violet-50 text-violet-600",
   gray: "bg-gray-50 text-gray-600",
 };
 

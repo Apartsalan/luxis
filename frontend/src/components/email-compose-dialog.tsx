@@ -115,7 +115,9 @@ const TEMPLATE_LABELS: Record<string, string> = {
   sommatie_eerste_opgave: "Eerste opgave (aan deurwaarder/derde)",
   // ─── Tweede sommatie (NL) ────────────────────────────────
   sommatie_na_reactie: "Tweede sommatie (na reactie debiteur)",
-  wederom_sommatie_kort: "Tweede sommatie (standaard herhaling)",
+  // ─── Derde sommatie (NL) — BaseNet L11/L12, stap-anker wederom_sommatie_kort ──
+  wederom_sommatie_kort: "Derde sommatie (standaard herhaling)",
+  wederom_sommatie_inhoudelijk: "Derde sommatie (met inhoudelijke reactie)",
   // ─── Niet-nakoming regeling (NL) ──────────────────────────
   niet_voldaan_regeling: "Niet voldaan aan regeling — sommatie",
   // ─── Schikking & regeling (NL) ────────────────────────────
@@ -141,20 +143,33 @@ const TEMPLATE_LABELS: Record<string, string> = {
 // Alle keys moeten bestaan als _RENDERERS entry in backend/app/email/
 // incasso_templates.py — anders mislukt render_template_preview.
 const TEMPLATE_GROUPS: { label: string; keys: string[] }[] = [
+  // Groepen 0-5 spiegelen de pijplijnstappen (incasso_pipeline_steps, sort_order
+  // 0-5) en de brief-families in backend/app/incasso/service.py — de brief die je
+  // hier onder een stapnummer kiest, schuift die stap ook echt door (S252-fix:
+  // wederom_sommatie_kort stond als "Tweede sommatie" gelabeld maar is het anker
+  // van de dérde sommatie, waardoor de stap niet doorschoof).
+  {
+    label: "0. 14-dagenbrief (consument)",
+    keys: ["14_dagenbrief"],
+  },
   {
     label: "1. Eerste sommatie",
     keys: ["sommatie_drukte"],
   },
   {
     label: "2. Tweede sommatie",
-    keys: ["sommatie_na_reactie", "wederom_sommatie_kort"],
+    keys: ["sommatie_na_reactie"],
   },
   {
-    label: "3. Aankondiging faillissement",
+    label: "3. Derde sommatie",
+    keys: ["wederom_sommatie_kort", "wederom_sommatie_inhoudelijk"],
+  },
+  {
+    label: "4. Sommatie laatste mogelijkheid",
     keys: ["sommatie_laatste_voor_fai"],
   },
   {
-    label: "4. Faillissement",
+    label: "5. Verzoekschrift faillissement",
     keys: ["faillissement_dreigbrief"],
   },
   {
@@ -167,7 +182,7 @@ const TEMPLATE_GROUPS: { label: string; keys: string[] }[] = [
   },
   {
     label: "Overig",
-    keys: ["vrij_bericht", "herinnering", "aanmaning", "14_dagenbrief", "sommatie_eerste_opgave"],
+    keys: ["vrij_bericht", "herinnering", "aanmaning", "sommatie_eerste_opgave"],
   },
   {
     label: "English",

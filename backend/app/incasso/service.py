@@ -742,13 +742,16 @@ async def mark_current_step_communication_sent(
 # na een verstuurde sjabloon-mail. Een verse mail aan de debiteur met een brief uit
 # dezelfde familie als de template_type van de huidige stap schuift die stap door.
 # Meerdere leden per familie omdat één stap meerdere brief-varianten kent (de tweede
-# sommatie heeft een 'na reactie'- en een 'standaard herhaling'-variant, plus het oude
-# 'aanmaning' waar de stap in prod aan hangt). Bewust op template_type i.p.v.
-# stap-naam/UUID: dat is de enige tenant-stabiele sleutel.
+# sommatie heeft een 'na reactie'-variant plus het oude 'aanmaning' waar de stap in
+# prod aan hangt; de derde sommatie een korte en een inhoudelijke variant — S252: de
+# korte heette in het menu lang "Tweede sommatie (standaard herhaling)", vandaar dat
+# hij daar verkeerd gekozen werd). Bewust op template_type i.p.v. stap-naam/UUID:
+# dat is de enige tenant-stabiele sleutel.
 #
-# GRENS (S234-stappensessie): stappen zónder template_type (Derde sommatie / Sommatie
-# laatste mogelijkheid in prod) schuiven niet door — er is geen brief aan gekoppeld om
-# tegen te matchen. Zodra die koppeling er is, werkt dit zonder codewijziging mee.
+# GRENS (S234-stappensessie): een stap zónder template_type schuift niet door — er is
+# geen brief aan gekoppeld om tegen te matchen. (Destijds gold dat in prod voor Derde
+# sommatie en Sommatie laatste mogelijkheid; die hebben hun anker inmiddels — gemeten
+# S252 — dus dit is nu alleen nog het vangnet voor eventuele nieuwe stappen.)
 #
 # S234: de derde sommatie kreeg een eigen familie. `wederom_sommatie_kort` /
 # `wederom_sommatie_inhoudelijk` zijn de herhaal-sommatie ná de tweede — die horen bij

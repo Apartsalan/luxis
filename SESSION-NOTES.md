@@ -2,10 +2,81 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 30 juli 2026 (S252 — bel-labels, sjabloonmenu op de stappen, IN100077 zakelijk gezet; alles LIVE + Fable-reviewed).
-**Laatste feature/fix:** sjabloonmenu volgt de pijplijnstappen 0-5 (de derde-sommatiebrief stond als "Tweede sommatie" gelabeld → stap schoof niet door) + BaseNet-brief L11 weer bereikbaar (S252).
-**Openstaand:** koersregel Arsalan: GEEN nieuwbouw, alleen afmaken/verbeteren. Menu-vragen voor Lisanne (aanmaning + tweede_sommatie in groep 2?); etiket-controle vóór fase-heropening 406; verder ongewijzigd: TOKEN_ENCRYPTION_KEY, kennisregel-endpoints admin-only, DMARC, kostenblokje.
-**Volgende sessie:** S253 — zie `docs/sessions/PROMPT-S253.md` (Arsalan kiest; C ontwerpspoor of D beveiliging).
+**Laatst bijgewerkt:** 30 juli 2026 (S253 — KVK-koppeling live, werkwijze-omslag: `WAARHEDEN.md` als definitie van "af", hooks + slankere CLAUDE.md).
+**Laatste feature/fix:** KVK-sleutel op prod → rechtsvorm wordt nu automatisch opgehaald (Kaandorp + Kesting Legal live geverifieerd als "Eenmanszaak"); `bash-guard.py` blokkeert `git add -A` en rode-ruff-pushes (S253).
+**Openstaand:** koersregel: GEEN nieuwbouw. **438 KVK-opzoekingen (±€9, GO gegeven) + etiket-vergelijking** = dikste ⚠️ op de waarhedenlijst. Verder: mobiel-check sjabloonmenu, keuze C (ontwerp) of D (beveiliging), menu-vragen Lisanne, etiket-controle vóór fase-heropening 406.
+**Volgende sessie:** S254 — de oogst: `WAARHEDEN.md` compleet maken + 3-5 gevaarlijkste wachters bouwen. Zie `docs/sessions/PROMPT-S254.md`.
+
+## Sessie 253 (30 juli 2026, Opus ↔ Fable — KVK live + werkwijze-omslag naar waarhedenlijst)
+
+### Samenvatting
+Geen bouwsessie in de klassieke zin: één koppeling live gezet, daarna de manier van
+werken zelf aangepakt naar aanleiding van Arsalans vraag "duurt het niet veel te lang,
+klopt mijn manier van werken wel?".
+
+**1. KVK-koppeling live (`fb0235b`, CI groen).** De sleutel kwam binnen bij Lisanne
+(mail 28-7). Eerst rechtstreeks bij KVK getest met het eigen KvK-nummer (88601536 → 200),
+daarna `KVK_API_KEY` doorgegeven aan de backend-container en de sleutel in `.env` op de VPS.
+Vanuit de applicatie geverifieerd: Kesting Legal → "Eenmanszaak", Kaandorp (72908475) →
+"Eenmanszaak" — precies wat S252 handmatig uit 27 dossiermails afleidde. Login 200.
+**Omvang gemeten voor de backfill:** 726 relaties met KvK-nummer en lege rechtsvorm, maar
+slechts **438 zijn wederpartij** (33 op open dossiers, 405 op gesloten) — de overige 288
+zijn opdrachtgevers e.d. Arsalan corrigeerde de eerste telling terecht; advies werd 438
+(±€9) i.p.v. 726, GO gegeven maar bewust uitgesteld. **Script mist nog het
+wederpartij-filter** (`backend/scripts/kvk_backfill_legal_form.py` loopt nu álle contacts af).
+
+**2. Onderzoek `/last30days` (nieuwe skill geïnstalleerd) — twee vragen.**
+*(a) Zijn grote CLAUDE.md-bestanden nog relevant bij Claude 5?* Anthropic schrapte 24-7
+ruim 80% van Claude Code's systeemprompt zonder eval-verlies; advies verschoof naar korte,
+altijd-ware instructies + echte valkuilen, gedrags-coaching eruit, situationeel werk naar
+skills. *(b) Klopt de bouwwijze (test → fix → test)?* De "vibe cycle" is de bekende valkuil;
+92% dagelijkse AI-adoptie tegenover 29% vertrouwen; de aanbevolen uitweg is ontdekkingen
+vastleggen als blijvende afspraken + wachters (60-80% minder regressies gemeld).
+Ruwe rapporten: `~/Documents/Last30Days/*.md`.
+
+**3. CLAUDE.md naar het nieuwe recept (`e15e7b8`).** 250 → 139 regels. Eruit: generieke
+coaching (verifieer alles, geen aannames, elegantie) en afleidbare stack-opsommingen.
+Behouden: álle harde regels, de S183-securityregels, quirks, koersregel toegevoegd.
+`future-modules.md` (9,5 KB) niet meer elke sessie geladen; dode `@DECISIONS.md` weg.
+
+**4. Drie tekstregels → echte sloten (`4190830`).** `.claude/hooks/bash-guard.py`:
+blokkeert `git add -A`/`git add .` (S203-oorzaak) en weigert `git push` als ruff rood staat
+— maar alleen als er Python onder `backend/app/` wijzigde (0,2 s als er niets te linten valt).
+Notificatiegeluid nu automatisch via hooks bij vragen/plan-modus en beurt-einde.
+5 testgevallen: `-A` en `.` blokkeren, expliciete paden en `./pad` gaan door.
+
+**5. Werkwijze-omslag: `WAARHEDEN.md` als definitie van "af" (`d53f809`).** Startlijst met
+13 ✅ bewaakt / 7 ⚠️ onbewaakt / 3 ❓ open, met een bewuste zeef (alleen geld, reputatie of
+juridische fouten verdienen een wachter). Vier werkafspraken in `WERKWIJZE.md`; harde regel
+in CLAUDE.md (fout = waarheid + wachter). "Af" = lijst zonder ⚠️/❓ + twee weken gebruik
+zonder nieuwe schending.
+
+**6. Omgeving opgeruimd (`/doctor`, buiten de repo).** 59 ongebruikte marketing-skills +
+12 agents naar een uit-map (±7.500 tokens/sessie), Telegram-plugin uit, 6 dode
+MCP-verbindingen gewist (reservekopie: `~/.claude.json.doctor-backup`), oude WinGet-installatie
+2.1.49 verwijderd, auto-modus als standaard. Nieuw: contextmeter in de statusregel
+(`~/.claude/statusline.ps1`, balk + percentage + kleur).
+
+### Gewijzigde bestanden
+- `docker-compose.prod.yml` — `KVK_API_KEY` doorgeven aan de backend
+- `CLAUDE.md` — 250 → 139 regels, waarheden-regel, hook-blok
+- `WAARHEDEN.md` (nieuw), `WERKWIJZE.md` — nieuwe werkmethode
+- `.claude/hooks/bash-guard.py` (nieuw), `.claude/settings.json` — hooks
+- `docs/sessions/PROMPT-S254.md` (nieuw)
+- Buiten de repo: `~/.claude/settings.json`, `~/.claude/statusline.ps1`, skills/agents-uit
+
+### Bekende issues
+- **438 KVK-opzoekingen nog niet gedraaid** (GO er wél); backfill-script mist het
+  wederpartij-filter — eerst inbouwen, anders draait hij 726 keer (±€6 te veel).
+- Mobiele controle sjabloonmenu (390×844) nog steeds niet gelukt/gedaan (3e sessie op rij).
+- ⚠️-punten uit `WAARHEDEN.md` (gesloten dossier verstuurt niets, meldingstypen-natelling,
+  TOKEN_ENCRYPTION_KEY, kennisregels admin-only) staan open.
+- Hooks + statusregel werken pas vanaf een NIEUWE sessie.
+
+### Volgende sessie
+S254 — de oogst: `WAARHEDEN.md` compleet maken uit archief/compliance/huisregels, per
+kandidaat de zeef, 3-5 gevaarlijkste ⚠️'s dichtzetten met een wachter per soort. Wachtrij
+(438 KVK + etiket-vergelijking, mobiel-check, keuze C/D) staat in `docs/sessions/PROMPT-S254.md`.
 
 ## Sessie 252 (30 juli 2026, Opus-bouw ↔ Fable-plan/review — bel-labels + sjabloonmenu + IN100077, LIVE)
 
@@ -738,129 +809,3 @@ live-gemaild (constraint geen echte debiteuren) — bewezen met de 2 route-wacht
 S246 — uitgesteld versturen (nieuwe tabel `scheduled_emails` + RLS in dezelfde
 migratie, "Verstuur later" op alle 7 verzenddeuren, scheduler met lock-patroon).
 Masterplan sectie S246. Zie `docs/sessions/PROMPT-S246.md`.
-
-## Sessie 244 (23 juli 2026, Opus-bouw — mail-werkbank: 4 demo-punten blok 1, LIVE)
-
-### Samenvatting
-Startpunt PROMPT-S244, op Opus (klopt met de prompt). Sessie-start: CI S243
-nagetrokken (feature-commit + docs-commit + Deploys groen). Referentie-onderzoek
-kort: Gmail/Outlook = conversation-lijst + leesvenster; Clio heeft juist een plat
-logboek (precies wat onwerkbaar bleek) — Gmail/Outlook als model. Plan
-voorgelegd, GO Arsalan ("ga gewoon door"), daarna 4 onderdelen gebouwd, elk een
-eigen commit:
-
-**1. Correspondentie-tab draad-gegroepeerd (`ed11d7a`).** De platte maillijst op
-het dossier is nu een gesprekkenlijst (compacte rij: richting-pijl, afzender,
-onderwerp + aantal, datum, ongelezen-vet, Review-badge, paperclip). Klik opent
-het gesprek in het leesvenster: berichten chronologisch, nieuwste open, oudere
-ingeklapt en lazy geladen; per bericht volledige kop, AI-beoordeling
-(ClassificationCard), bijlagen (download + opslaan in dossier) en acties
-(AI-antwoord/Beantwoorden/Doorsturen). Verzend-logboekregels (SMTP-brieven)
-staan als compacte regel in het gesprek (inhoud staat in Documenten).
-
-**2. Draad overal (`02ab4d9`).** (a) Mail-leesvenster (beide tabs): eerdere
-mailtjes van dezelfde draad onder de geopende mail (MailThreadPanel met nieuwe
-hideSource-vlag; alleen dossier-gekoppelde mail). (b) AI-concept-/opsteldialoog:
-op lg+ wordt het paneel breder (max-w-5xl) met de draad als rechterkolom (380px)
-naast het concept; onder lg blijft de S233-strook onderin (mobiel gestapeld).
-
-**3. Verzonden-map (`dec2c2a`).** direction-parameter (inbound/outbound,
-patroon-gevalideerd) op `/api/email/all` + schakelaar Alles / Postvak IN /
-Verzonden binnen "Alle e-mails". Server-side, dus zoeken + "meer laden" werken
-erdoorheen. Wachter dekt beide richtingen, geen-filter en 422.
-
-**4. Vrij bericht + nette beantwoorden (`a8e4cba`).** Renderer `vrij_bericht`:
-aanhef "Geachte heer, mevrouw," (huisconventie van álle sjablonen — prompt zei
-"heer/mevrouw", bewust afgeweken voor consistentie) + lege romp + bestaande
-huisstijl/handtekening/schuldhulpblok via render_plain_branded; in de dropdown
-onder "Overig". "Beantwoorden" op dossier-mail prefillt voortaan deze shell met
-het geciteerde origineel onderaan (nieuw optioneel quoted_html-veld op
-render-template); de shell is al aangekleed → defaultBodyBranded-vlag voorkomt
-dubbele aankleding. Zonder dossier: kale reply, huisstijl komt bij verzenden
-(bestaand gedrag). Kruispunt-check verzendroute: vrij_bericht kan nooit
-doorschuiven (geen stap-sjabloon), krijgt geen auto-bijlagen, reply-pad slaat
-sjabloon-afleiding over. 2 wachters (shell-inhoud, citaat-afbakening).
-
-**5. Klikronde-vondst → fix (`206def8`, LIVE).** Het antwoord van 13:18 op
-IN100592 stond los van zijn gesprek: de provider gaf het een nieuw
-conversation-id. In de bron gemeten: maar 7 van de 47 provider-threads op
-dossier-mails dragen >1 bericht, terwijl 1472 onderwerp-groepen dat wél doen
-(BaseNet-import heeft geen bruikbare thread-ids). Groepering nu op
-genormaliseerd onderwerp (Re:/Fwd: eraf; leeg onderwerp → thread-id → eigen id);
-MailThreadPanel matcht op onderwerp óf thread-id. Na de fix: het
-Verweer-gesprek is één draad met 3 berichten.
-
-### Gewijzigde bestanden
-Frontend: `zaken/[id]/components/CorrespondentieTab.tsx` (herschreven),
-`components/mail-thread-panel.tsx`, `components/email-compose-dialog.tsx`,
-`correspondentie/page.tsx`, `zaken/[id]/page.tsx`, `lib/email-reply.ts`,
-`hooks/use-email-sync.ts`. Backend: `email/{sync_service,sync_router,
-compose_router,incasso_templates}.py`. Tests: `test_email_sync.py` (+1 helper-
-param, +1 wachter), `test_email_branding.py` (+2 wachters). Commits `ed11d7a`,
-`02ab4d9`, `dec2c2a`, `a8e4cba`, `206def8`; 2× deploy via SSH `--force-recreate`
-(geen migratie).
-
-### Verificatie
-Brede run compose/send/template/branding 200 groen + test_email_sync 37 groen;
-ruff + tsc schoon na elk onderdeel. Playwright-klikronde op prod als Lisanne,
-desktop 1440×900 + mobiel 390×844, 11 screenshots bewaard (`~/s244-01` t/m
-`-11`): draadlijst, gesprek met 3 berichten (nieuwste open, ouder uitklappen met
-lazy-load + beoordeling), Beantwoorden-shell (aanhef/handtekening/betreft/citaat
-in de editor gemeten), Verzonden-map (3393 uit / 3137 in, rijen 200/0 en 0/200),
-leesvenster-draad "(2)", AI-concept naast draad (dialoog 1024px, kolom 380px;
-mobiel gestapeld, geen h-scroll). Login 200, containers healthy, 0 echte
-consolefouten. Testspoor opgeruimd: eigen testconcept discarded (natelling:
-alleen de automatische systeemdraft + taak van 16:36 blijft — echt werk).
-CI: `ed11d7a` + `a8e4cba` + S243-docs-run groen; `02ab4d9`/`dec2c2a`/`206def8`
-liepen nog bij schrijven — natrekken bij S245-start.
-
-### Bekende issues / bewust niet gedaan
-- **Verzonden-map toont alleen gesynchte mail** — oude SMTP-brieven (email_logs
-  zonder synced-spiegel) staan er niet in; die blijven zichtbaar op het dossier.
-- Onderwerp-groepering kan binnen één dossier mails van verschillende afzenders
-  met identiek onderwerp samenvoegen (bewust: zelfde partijen, zelfde gesprek).
-- Reply-shell + gebruiker wist álles in de editor → mail vertrekt zonder
-  huisstijl (randgeval; already_branded staat dan al vast).
-- Draadpaneel in het Mail-leesvenster alleen voor dossier-gekoppelde mail.
-- **Signalering (rolverdeling S240): derde betwistingsmail IN100592 binnengekomen
-  23-7 16:29** + automatische concept-draft/nakijk-taak van 16:36 — inhoudelijk
-  oppakken is aan Lisanne/Arsalan.
-
-### Nagekomen — Fable-eindreview (modelwissel door Arsalan, "grondig, ook visueel")
-Tegenlezing van alle S244-commits + de screenshots daadwerkelijk bekeken +
-verse klikronde op prod. **4 vondsten, alle 4 direct gefixt + gedeployd:**
-1. **Encoding-schade Mail-pagina (`d2aef7c`, de zwaarste):** op de Verzonden-
-   screenshot stond letterlijk "3393 e-mails â€" 200 getoond" — de PowerShell-
-   herschrijfstap van onderdeel 4 las het bestand als ANSI en schreef het als
-   UTF-8 terug; élk niet-ASCII-teken (em-dash, ë, ·) stond dubbel gecodeerd
-   op prod. Hersteld via omgekeerde cp1252-roundtrip; grep 0 restanten; live
-   nagemeten ("6534 e-mails — 200 getoond", 0 mojibake). **Les: bronbestanden
-   nooit met PowerShell Get/Set-Content herschrijven — Edit-tool gebruiken.**
-2. **Beantwoorden op eigen uitgaande mail vulde Aan = onszelf (`5b7d7e2`):**
-   reply pakt de afzender, en op een uitgaande mail zijn wij dat; de
-   gespreksweergave zet nu op élk bericht een Beantwoorden-knop, dus de val
-   was makkelijk te raken. Nu: uitgaand → ontvanger. Live bewezen (Aan =
-   ad@on-bevreesd.nl op de sommatie van 12:32).
-3. **Lijstrijen onleesbaar in smalle stand (`5b7d7e2` + `f612b54`):** met een
-   geopend gesprek (kolom 2/5) én op telefoonbreedte drukte de één-regel-rij
-   het onderwerp volledig weg. Smal = twee regels (afzender+datum /
-   onderwerp+badges); breed één regel. Beide live + visueel bewezen.
-4. **Eerlijkheidscorrectie op de eigen Opus-verificatie:** de 2 "mobiele"
-   screenshots van de eerste ronde toonden alleen de bovenkant van de pagina
-   (boven de vouw) — mobiel was gestructureerd gemeten maar niet écht gezien.
-   Overgedaan mét scroll: lijst, gesprek en Verzonden-map nu echt vastgelegd
-   (`s244-12` t/m `-16`).
-Verder gecheckt, géén fout: vrij-bericht in de dropdown (visueel), shell +
-citaat in de editor, logo-met-lege-src in de editor is vóórbestaand (zelfde
-bij het Herinnering-sjabloon; verzendpad plakt het logo er wél in — bewezen
-door de 7 sommaties van 22-7). **CI eindstand: álle S244-runs groen** (5
-bouw-commits + 3 review-fixes + docs); de ene rode Deploy-run (15:17) was de
-bekende race met de handmatige SSH-deploy — latere Deploys groen, prod
-nagemeten op de laatste commit, containers healthy, login 200. Parallel kwam
-`9808e3f` binnen (S243-tegenlezing andere terminal): natellingen bevestigd,
-11 tijdlijn-rijen op prod hersteld, zoekbalk-tekstfix (met deze deploys mee
-live), en 2 nieuwe signaleringen — regeling-taken IN100281/IN100537 uit oude
-verzoek-mails (inhoud voor Lisanne; die van IN100537 dateert van 22 juni).
-
-### Volgende sessie
-S245 (Opus): taken + meldingen — zie `docs/sessions/PROMPT-S245.md`.

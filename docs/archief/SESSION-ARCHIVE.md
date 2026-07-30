@@ -11669,3 +11669,129 @@ GO Arsalan toen S244 klaar was):
 
 ### Volgende sessie
 S244 (Opus): mail-werkbank — zie `docs/sessions/PROMPT-S244.md`.
+
+## Sessie 244 (23 juli 2026, Opus-bouw — mail-werkbank: 4 demo-punten blok 1, LIVE)
+
+### Samenvatting
+Startpunt PROMPT-S244, op Opus (klopt met de prompt). Sessie-start: CI S243
+nagetrokken (feature-commit + docs-commit + Deploys groen). Referentie-onderzoek
+kort: Gmail/Outlook = conversation-lijst + leesvenster; Clio heeft juist een plat
+logboek (precies wat onwerkbaar bleek) — Gmail/Outlook als model. Plan
+voorgelegd, GO Arsalan ("ga gewoon door"), daarna 4 onderdelen gebouwd, elk een
+eigen commit:
+
+**1. Correspondentie-tab draad-gegroepeerd (`ed11d7a`).** De platte maillijst op
+het dossier is nu een gesprekkenlijst (compacte rij: richting-pijl, afzender,
+onderwerp + aantal, datum, ongelezen-vet, Review-badge, paperclip). Klik opent
+het gesprek in het leesvenster: berichten chronologisch, nieuwste open, oudere
+ingeklapt en lazy geladen; per bericht volledige kop, AI-beoordeling
+(ClassificationCard), bijlagen (download + opslaan in dossier) en acties
+(AI-antwoord/Beantwoorden/Doorsturen). Verzend-logboekregels (SMTP-brieven)
+staan als compacte regel in het gesprek (inhoud staat in Documenten).
+
+**2. Draad overal (`02ab4d9`).** (a) Mail-leesvenster (beide tabs): eerdere
+mailtjes van dezelfde draad onder de geopende mail (MailThreadPanel met nieuwe
+hideSource-vlag; alleen dossier-gekoppelde mail). (b) AI-concept-/opsteldialoog:
+op lg+ wordt het paneel breder (max-w-5xl) met de draad als rechterkolom (380px)
+naast het concept; onder lg blijft de S233-strook onderin (mobiel gestapeld).
+
+**3. Verzonden-map (`dec2c2a`).** direction-parameter (inbound/outbound,
+patroon-gevalideerd) op `/api/email/all` + schakelaar Alles / Postvak IN /
+Verzonden binnen "Alle e-mails". Server-side, dus zoeken + "meer laden" werken
+erdoorheen. Wachter dekt beide richtingen, geen-filter en 422.
+
+**4. Vrij bericht + nette beantwoorden (`a8e4cba`).** Renderer `vrij_bericht`:
+aanhef "Geachte heer, mevrouw," (huisconventie van álle sjablonen — prompt zei
+"heer/mevrouw", bewust afgeweken voor consistentie) + lege romp + bestaande
+huisstijl/handtekening/schuldhulpblok via render_plain_branded; in de dropdown
+onder "Overig". "Beantwoorden" op dossier-mail prefillt voortaan deze shell met
+het geciteerde origineel onderaan (nieuw optioneel quoted_html-veld op
+render-template); de shell is al aangekleed → defaultBodyBranded-vlag voorkomt
+dubbele aankleding. Zonder dossier: kale reply, huisstijl komt bij verzenden
+(bestaand gedrag). Kruispunt-check verzendroute: vrij_bericht kan nooit
+doorschuiven (geen stap-sjabloon), krijgt geen auto-bijlagen, reply-pad slaat
+sjabloon-afleiding over. 2 wachters (shell-inhoud, citaat-afbakening).
+
+**5. Klikronde-vondst → fix (`206def8`, LIVE).** Het antwoord van 13:18 op
+IN100592 stond los van zijn gesprek: de provider gaf het een nieuw
+conversation-id. In de bron gemeten: maar 7 van de 47 provider-threads op
+dossier-mails dragen >1 bericht, terwijl 1472 onderwerp-groepen dat wél doen
+(BaseNet-import heeft geen bruikbare thread-ids). Groepering nu op
+genormaliseerd onderwerp (Re:/Fwd: eraf; leeg onderwerp → thread-id → eigen id);
+MailThreadPanel matcht op onderwerp óf thread-id. Na de fix: het
+Verweer-gesprek is één draad met 3 berichten.
+
+### Gewijzigde bestanden
+Frontend: `zaken/[id]/components/CorrespondentieTab.tsx` (herschreven),
+`components/mail-thread-panel.tsx`, `components/email-compose-dialog.tsx`,
+`correspondentie/page.tsx`, `zaken/[id]/page.tsx`, `lib/email-reply.ts`,
+`hooks/use-email-sync.ts`. Backend: `email/{sync_service,sync_router,
+compose_router,incasso_templates}.py`. Tests: `test_email_sync.py` (+1 helper-
+param, +1 wachter), `test_email_branding.py` (+2 wachters). Commits `ed11d7a`,
+`02ab4d9`, `dec2c2a`, `a8e4cba`, `206def8`; 2× deploy via SSH `--force-recreate`
+(geen migratie).
+
+### Verificatie
+Brede run compose/send/template/branding 200 groen + test_email_sync 37 groen;
+ruff + tsc schoon na elk onderdeel. Playwright-klikronde op prod als Lisanne,
+desktop 1440×900 + mobiel 390×844, 11 screenshots bewaard (`~/s244-01` t/m
+`-11`): draadlijst, gesprek met 3 berichten (nieuwste open, ouder uitklappen met
+lazy-load + beoordeling), Beantwoorden-shell (aanhef/handtekening/betreft/citaat
+in de editor gemeten), Verzonden-map (3393 uit / 3137 in, rijen 200/0 en 0/200),
+leesvenster-draad "(2)", AI-concept naast draad (dialoog 1024px, kolom 380px;
+mobiel gestapeld, geen h-scroll). Login 200, containers healthy, 0 echte
+consolefouten. Testspoor opgeruimd: eigen testconcept discarded (natelling:
+alleen de automatische systeemdraft + taak van 16:36 blijft — echt werk).
+CI: `ed11d7a` + `a8e4cba` + S243-docs-run groen; `02ab4d9`/`dec2c2a`/`206def8`
+liepen nog bij schrijven — natrekken bij S245-start.
+
+### Bekende issues / bewust niet gedaan
+- **Verzonden-map toont alleen gesynchte mail** — oude SMTP-brieven (email_logs
+  zonder synced-spiegel) staan er niet in; die blijven zichtbaar op het dossier.
+- Onderwerp-groepering kan binnen één dossier mails van verschillende afzenders
+  met identiek onderwerp samenvoegen (bewust: zelfde partijen, zelfde gesprek).
+- Reply-shell + gebruiker wist álles in de editor → mail vertrekt zonder
+  huisstijl (randgeval; already_branded staat dan al vast).
+- Draadpaneel in het Mail-leesvenster alleen voor dossier-gekoppelde mail.
+- **Signalering (rolverdeling S240): derde betwistingsmail IN100592 binnengekomen
+  23-7 16:29** + automatische concept-draft/nakijk-taak van 16:36 — inhoudelijk
+  oppakken is aan Lisanne/Arsalan.
+
+### Nagekomen — Fable-eindreview (modelwissel door Arsalan, "grondig, ook visueel")
+Tegenlezing van alle S244-commits + de screenshots daadwerkelijk bekeken +
+verse klikronde op prod. **4 vondsten, alle 4 direct gefixt + gedeployd:**
+1. **Encoding-schade Mail-pagina (`d2aef7c`, de zwaarste):** op de Verzonden-
+   screenshot stond letterlijk "3393 e-mails â€" 200 getoond" — de PowerShell-
+   herschrijfstap van onderdeel 4 las het bestand als ANSI en schreef het als
+   UTF-8 terug; élk niet-ASCII-teken (em-dash, ë, ·) stond dubbel gecodeerd
+   op prod. Hersteld via omgekeerde cp1252-roundtrip; grep 0 restanten; live
+   nagemeten ("6534 e-mails — 200 getoond", 0 mojibake). **Les: bronbestanden
+   nooit met PowerShell Get/Set-Content herschrijven — Edit-tool gebruiken.**
+2. **Beantwoorden op eigen uitgaande mail vulde Aan = onszelf (`5b7d7e2`):**
+   reply pakt de afzender, en op een uitgaande mail zijn wij dat; de
+   gespreksweergave zet nu op élk bericht een Beantwoorden-knop, dus de val
+   was makkelijk te raken. Nu: uitgaand → ontvanger. Live bewezen (Aan =
+   ad@on-bevreesd.nl op de sommatie van 12:32).
+3. **Lijstrijen onleesbaar in smalle stand (`5b7d7e2` + `f612b54`):** met een
+   geopend gesprek (kolom 2/5) én op telefoonbreedte drukte de één-regel-rij
+   het onderwerp volledig weg. Smal = twee regels (afzender+datum /
+   onderwerp+badges); breed één regel. Beide live + visueel bewezen.
+4. **Eerlijkheidscorrectie op de eigen Opus-verificatie:** de 2 "mobiele"
+   screenshots van de eerste ronde toonden alleen de bovenkant van de pagina
+   (boven de vouw) — mobiel was gestructureerd gemeten maar niet écht gezien.
+   Overgedaan mét scroll: lijst, gesprek en Verzonden-map nu echt vastgelegd
+   (`s244-12` t/m `-16`).
+Verder gecheckt, géén fout: vrij-bericht in de dropdown (visueel), shell +
+citaat in de editor, logo-met-lege-src in de editor is vóórbestaand (zelfde
+bij het Herinnering-sjabloon; verzendpad plakt het logo er wél in — bewezen
+door de 7 sommaties van 22-7). **CI eindstand: álle S244-runs groen** (5
+bouw-commits + 3 review-fixes + docs); de ene rode Deploy-run (15:17) was de
+bekende race met de handmatige SSH-deploy — latere Deploys groen, prod
+nagemeten op de laatste commit, containers healthy, login 200. Parallel kwam
+`9808e3f` binnen (S243-tegenlezing andere terminal): natellingen bevestigd,
+11 tijdlijn-rijen op prod hersteld, zoekbalk-tekstfix (met deze deploys mee
+live), en 2 nieuwe signaleringen — regeling-taken IN100281/IN100537 uit oude
+verzoek-mails (inhoud voor Lisanne; die van IN100537 dateert van 22 juni).
+
+### Volgende sessie
+S245 (Opus): taken + meldingen — zie `docs/sessions/PROMPT-S245.md`.

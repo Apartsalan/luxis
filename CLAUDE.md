@@ -4,23 +4,10 @@ Practice management system for Dutch law firms. First client: Kesting Legal (1 l
 
 **Dutch UI, English code.**
 
-> 🆕 **Nieuwe computer of nieuw account? LEES EERST `HANDOVER-NIEUWE-MACHINE.md`** — wat er
-> automatisch meekomt, wat je moet installeren (Ponytail, Playwright, dev-tools) en wat je
-> bewust weglaat. Daarna:
+> 🆕 **Nieuwe computer of nieuw account? LEES EERST `HANDOVER-NIEUWE-MACHINE.md`.** Daarna:
 > 📌 **`WERKWIJZE.md`** — hoe er aan Luxis gewerkt wordt: communicatiestijl (gewoon Nederlands,
-> geen jargon — harde regel), werkdiscipline (meet in de bron, spreek jezelf tegen, blijf
-> binnen de opdracht, rond netjes af) en veiligheidsregels. Geldt voor iedere Claude Code die
-> in deze map werkt, ongeacht account of computer.
-
-## Commands
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up   # Dev with hot reload
-docker compose exec backend pytest tests/ -v                         # Tests
-docker compose exec backend ruff check app/                          # Lint
-docker compose exec backend python -m alembic upgrade head           # Migrations
-docker compose exec backend python -m alembic revision --autogenerate -m "desc"  # New migration
-```
+> geen jargon — harde regel), werkdiscipline en veiligheidsregels. Geldt voor iedere Claude Code
+> die in deze map werkt.
 
 ## Notificatiegeluid (HARDE REGEL)
 
@@ -38,148 +25,115 @@ Deze gelden ALTIJD, ook zonder dat de opdracht ze noemt. Ze bestaan omdat de aud
 bewees dat ze wegdriften zodra iemand ze vergeet.
 
 - **Nieuwe tabel met `tenant_id` → RLS in DEZELFDE migratie.** Roep `apply_rls(op.get_bind())`
-  aan (idempotent, dekt de nieuwe tabel). Vergeet je het, dan blokkeert de opstartcontrole
-  (`app.main.lifespan`, faalt dicht in productie) + de drift-guard-test
-  (`tests/test_rls_isolation.py::test_drift_guard_flags_tenant_table_without_rls`) de deploy.
-  `learned_answers` ontsnapte hier ooit aan (S183-1). Enige uitzondering: `users` (zie
-  `app/security/rls.py`).
+  aan (idempotent). Vergeet je het, dan blokkeert de opstartcontrole (`app.main.lifespan`) +
+  de drift-guard-test de deploy. Enige uitzondering: `users` (zie `app/security/rls.py`).
 - **Nieuwe route → auth verplicht.** `Depends(get_current_user)` (of `require_role(...)`),
   tenzij het echt publiek moet (login/OAuth-callback) — dan expliciet + rate-limit.
-- **Geld/tenant-mutatie na een `db.commit()` binnen één request:** de tenant + rol worden
-  automatisch her-toegepast (`after_begin`-event, S183-2) — vertrouw daar niet blind op,
-  filter altijd óók op `tenant_id` in de query zelf.
-- **Nooit secrets/sleutels in code.** Alleen uit env (`app/config.py`). Sleutels van
-  gebruikers (OAuth) versleuteld opslaan. Geen `NEXT_PUBLIC_*` met secrets — sleutels blijven
-  server-side (alle AI/externe calls lopen via de backend).
-- **Uploads:** alleen via de bestaande gevalideerde helpers (extensie-whitelist + grootte-cap
-  + magic-byte-check). Geen rauwe bestandsopslag.
-- **Rollen-matrix:** zie `docs/security/rollen.md` (wat admin/advocaat/medewerker mogen).
+- **Geld/tenant-mutatie na een `db.commit()` binnen één request:** tenant + rol worden
+  her-toegepast (`after_begin`-event, S183-2) — vertrouw daar niet blind op, filter altijd
+  óók op `tenant_id` in de query zelf.
+- **Nooit secrets/sleutels in code.** Alleen uit env (`app/config.py`). OAuth-sleutels
+  versleuteld opslaan. Geen `NEXT_PUBLIC_*` met secrets — alle AI/externe calls via backend.
+- **Uploads:** alleen via de bestaande gevalideerde helpers (whitelist + grootte-cap +
+  magic-byte-check).
+- **Rollen-matrix:** `docs/security/rollen.md`.
 
-## Architecture
+## Architecture (niet-afleidbare keuzes)
 
-- **Backend:** FastAPI 3.12 + SQLAlchemy 2.0 + Alembic | Module: `router.py`, `service.py`, `models.py`, `schemas.py`
-- **Frontend:** Next.js 15 (React 19, App Router) + shadcn/ui + Tailwind | `@/*` = `src/*`
-- **Auth:** PyJWT + bcrypt (NOT passlib) | **Docs:** docxtpl + WeasyPrint | **Queue:** Celery + Redis
-- **API:** `/api/` prefix, snake_case JSON, pagination `?page=1&per_page=20`, errors `{"detail": "msg"}`
+- Backend-module: `router.py` (dun) → `service.py` (businesslogica) → `models.py` → `schemas.py`
+- **Auth: PyJWT + direct bcrypt — NIET passlib** (bcrypt 5.x incompatible)
+- API: `/api/` prefix, snake_case JSON, pagination `?page=1&per_page=20`, errors `{"detail": "msg"}`
+- Frontend: `@/*` = `src/*`; details in `frontend/CLAUDE.md` en `backend/CLAUDE.md`
 
 ## Design & UX
 
-Modern, professioneel (Gmail/HubSpot-stijl). Data-dense, niet overweldigend. Sidebar met collapse. UI: Nederlands.
+Modern, professioneel (Gmail/HubSpot-stijl). Data-dense, niet overweldigend. UI: Nederlands.
+Luxis is een **PRODUCT**: incasso-specifiek ALLEEN in de incassomodule. Bij elk scherm:
+"zou een willekeurig advocatenkantoor dit willen?"
 
-Luxis is een **PRODUCT**. Clean, modern, geen jargon buiten vakmodules. Incasso-specifiek ALLEEN in incassomodule. Bij elk scherm: "zou een willekeurig advocatenkantoor dit willen?"
+## Werkwijze
 
-## Werkwijze bij nieuwe features
+**KOERSREGEL (Arsalan, 30-7):** geen nieuwe features — afmaken en verbeteren. Nieuwbouw
+alleen op expliciete vraag. Twijfel → adviseer "niets doen".
 
-**Onderzoek eerst, bouw daarna.** 4 stappen:
+**Nieuwe features (als er tóch om gevraagd wordt), 4 stappen:** (1) onderzoek hoe
+concurrenten (Clio, Basenet, Legalsense, e.a.) het oplossen, denk vanuit Lisanne;
+(2) plan presenteren + pre-mortem, **wacht op goedkeuring**; (3) bouwen; (4) verificatie-loop.
 
-### Stap 1: Onderzoek
-Zoek hoe concurrenten (Clio, Basenet, Legalsense, Urios, PracticePanther, Smokeball) + beste SaaS-apps dit oplossen. Analyseer: standaard workflow, essentiële velden, minimale clicks. Denk vanuit Lisanne (advocaat, geen techneut).
+**Verificatie-loop (elke taak):** build check (`tsc --noEmit`/`pytest`) → visuele check →
+functionele check → **kruispunt-check via skill `breed-testen` (HARD, S223)**: raakt de taak
+een gedeeld effect (mail, stapwissel, geld, zaak sluiten)? → route×huisregel-matrix, elke
+gevonden fout krijgt een wachter-test voor zijn SOORT. Pas "done" als alles groen, met bewijs —
+geskipte records/tests melden, niet verbergen.
 
-### Stap 2: Plan presenteren
-Samenvatting onderzoek + hoe je het bouwt + welke schermen. **Wacht op goedkeuring.**
+**Bugs:** EERST rode test → fix → groen (triviale bugs direct). Root cause, geen workaround.
+**Regressies:** zoek in git-historie/SESSION-NOTES wanneer het werkte en welke commit het brak;
+fix chirurgisch — nooit features of security breed terugdraaien voor één symptoom.
 
-**Pre-mortem (bij elk niet-triviaal plan):** 3 faalredenen + waarom toch juiste aanpak. Niet bij triviale fixes.
-
-**Strategische premortem:** Bij positionering/pricing/architectuur die toekomst bepaalt → draai `/premortem` automatisch.
-
-### Stap 3: Bouwen
-Na goedkeuring.
-
-### Stap 4: Verificatie-loop
-1. Build check — `tsc --noEmit` of `pytest`. Rood → fix → opnieuw.
-2. Visuele check — preview/screenshot.
-3. Functionele check — klik door flow.
-4. **Kruispunt-check — skill `breed-testen` (HARD, S223):** raakt de taak een
-   gedeeld effect (mail versturen, stap wisselen, concept maken, geld, zaak
-   sluiten)? → loop de route×huisregel-matrix af; elke gevonden fout krijgt een
-   wachter-test voor zijn SOORT, niet één test voor het geval.
-5. Pas "done" als alles groen. NOOIT doorgaan met kapotte taak.
+**Plan Mode** bij niet-triviale taken (features, multi-file, architectuur, UI/UX). Triviale
+fixes mogen direct.
 
 ## Working Agreements
 
-- **Agent-laag-compatibel bouwen (besluit Arsalan 22-7, S237):** nieuwe businesslogica
-  altijd in de service-laag (router dun). De slapende agent-laag (`ai_agent/tools/`)
-  wordt later gebouwd op pydantic-ai; elke service-functie moet dan direct als
-  tool-handler kunnen dienen. Toekomst-adopties + triggers: `docs/TOEKOMST-REPOS.md` —
-  **raakt een sessie zo'n trigger, meld het bij Arsalan vóór het bouwen.**
-- **Rolverdeling (Arsalan 23-7, S240):** deze sessies BOUWEN; Lisanne doet het
-  inhoudelijke werk in het systeem (mails beantwoorden, dossierbeslissingen).
-  Inhoudelijke vondsten signaleren in het verslag — niet aanbieden om concepten
-  te schrijven of ze zelf af te handelen, tenzij Arsalan er expliciet om vraagt.
-- Zelfstandig werken, geen toestemming (behalve destructieve acties)
-- Nieuwe features: altijd 4-stappen werkwijze
+- **Agent-laag-compatibel bouwen (S237):** businesslogica in de service-laag, router dun.
+  Toekomst-triggers: `docs/TOEKOMST-REPOS.md` — raakt een sessie zo'n trigger, meld het vóór
+  het bouwen.
+- **Rolverdeling (S240):** deze sessies BOUWEN; Lisanne doet inhoudelijk werk (mails,
+  dossierbeslissingen). Inhoudelijke vondsten signaleren, niet zelf oppakken.
+- Zelfstandig werken, geen toestemming vragen (behalve destructieve acties)
 - Juridische twijfel: flaggen, niet stoppen
-- Correcties: CLAUDE.md of memory updaten
+- Correcties van Arsalan: CLAUDE.md of memory updaten
 - Conventional commits: `feat(module):`, `fix(module):`, etc.
-
-**Plan Mode:** ALTIJD bij niet-triviale taken (features, multi-file, architectuur, UI/UX). Verken → ontwerp → presenteer → goedkeuring → bouw. Misgaat → STOP en herplan. Triviale fixes mogen direct.
-
-## Kwaliteitsstandaard
-
-- Nooit "done" zonder bewijs (build/test/handmatige check). "Migration completed" is fout als records geskipt zijn. "Tests pass" is fout als tests geskipt zijn. Surface uncertainty, niet verbergen.
-- Bugs: EERST rode test → fix → groen. Triviale bugs direct.
-- Elegantie overwegen bij non-triviale changes, niet over-engineeren
-- Conflicterende patronen niet middelen — kies één (recentste/meest getest), licht toe waarom, flag andere voor cleanup.
-- Na correctie: les noteren in CLAUDE.md of memory
-- Minimale impact, root causes fixen, geen workarounds
-
-## Geen aannames — eerst zeker weten (HARDE REGEL)
-
-- **Maak GEEN aannames.** Verifieer alles met de code, git-historie, logs of database vóór je iets aanpast. Twijfel je → eerst onderzoeken, nooit gokken.
-- **Bij regressies** (iets dat eerder werkte, nu niet): zoek in git-historie/SESSION-NOTES wánneer het werkte en wélke commit het brak. Vergelijk oude vs huidige code.
-- **Fix chirurgisch:** alleen de kapotte regressie herstellen. NOOIT features of security-verbeteringen breed terugdraaien om één los symptoom te fixen.
-- **Presenteer bevindingen + voorgestelde fix vóór je wijzigt** (Plan Mode); pas aan na bevestiging.
 
 ## Gedragsregels
 
 - "Documenteer/sla op in md" = ALLEEN markdown, geen code
-- "Sla checks over" = geen lint/tests/build
-- Geen lint/tests/build draaien tenzij expliciet gevraagd of in workflow
+- "Sla checks over" = geen lint/tests/build; geen lint/tests/build draaien tenzij gevraagd
+  of in workflow
 - Geen git worktrees tenzij gebruiker "worktree" zegt
-- `LUXIS-ROADMAP.md` = enige source of truth; levende docs klein houden: SESSION-NOTES max 10 entries, roadmap één prioriteit-sectie, historie → `docs/archief/` (verplaatsen, nooit weggooien — archief-regels in `/sessie-einde`)
+- `LUXIS-ROADMAP.md` = enige source of truth; SESSION-NOTES max 10 entries; historie →
+  `docs/archief/` (verplaatsen, nooit weggooien — regels in `/sessie-einde`)
 - Scripts/commands altijd in voorgrond
 - Commit + push na elke taak. **Na ELKE commit ALTIJD `git push origin main`.**
-- **NOOIT `git add -A` of `git add .`** — stage altijd expliciete paden. De repo bevat bewust-untracked
-  bestanden (bank-CSV, AV-PDF's, `.agents/`, tmp-SQL); één `git add -A` veegde ze in S203 mee de
-  historie in (history-rewrite nodig om het bankafschrift te wissen). Zie `.gitignore`.
-- Bij parallelle terminals: **ALTIJD kant-en-klare prompts meegeven**
+- **NOOIT `git add -A` of `git add .`** — stage expliciete paden. De repo bevat
+  bewust-untracked bestanden (bank-CSV, AV-PDF's, tmp-SQL); één `git add -A` veegde ze in
+  S203 de historie in (history-rewrite nodig). Zie `.gitignore`.
+- Bij parallelle terminals: ALTIJD kant-en-klare prompts meegeven
 
-**Deploy:** Na commit+push → deploy automatisch via SSH. Details in skill `deploy-regels`.
+**Deploy:** na commit+push → deploy automatisch via SSH. Details in skill `deploy-regels`.
+**Sessie-einde:** SESSION-NOTES.md + LUXIS-ROADMAP.md updaten + git tag — zie `/sessie-einde`.
+**Sessie-prompt:** LEAN (<50KB), 1 hoofdtaak.
 
-**Sessie-einde:** SESSION-NOTES.md + LUXIS-ROADMAP.md updaten + git tag. Details in `/sessie-einde` command.
+## Commands
 
-**Sessie-prompt:** LEAN (<50KB), 1 hoofdtaak, format in `/sessie-einde` command.
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up   # Dev with hot reload
+docker compose exec backend pytest tests/ -v                         # Tests
+docker compose exec backend ruff check app/                          # Lint
+docker compose exec backend python -m alembic upgrade head           # Migrations
+```
 
 ## Context Management
 
-- Gebruik `luxis-researcher` subagent voor grote docs (roadmap, session notes)
-- Skills laden on-demand (incasso-workflow, deploy-regels, template-systeem, bekende-fouten)
-- `/clear` tussen onafhankelijke taken
-- `/compact` met focus als context vol raakt
-- Delegeer onderzoek naar subagents
-- **`/effort max` aan begin van elke sessie** voor maximale reasoning
-
-### Subagents
-- **luxis-researcher** — leest grote docs, geeft compacte samenvattingen
-- **code-reviewer** — checkt financial precision, multi-tenant, async, URLs
-
-### Skills (on-demand)
-- **incasso-workflow** — pipeline, batch, deadlines
-- **deploy-regels** — VPS deploy, disk-pressure, valkuilen
-- **template-systeem** — DOCX rendering, ManagedTemplate
-- **bekende-fouten** — valkuilen uit 32 sessies (LEES bij niet-triviale taken)
+- `luxis-researcher` subagent voor grote docs (roadmap, session notes); onderzoek delegeren
+- Skills on-demand: **incasso-workflow** (pipeline/batch/deadlines), **deploy-regels** (VPS,
+  valkuilen), **template-systeem** (DOCX rendering), **bekende-fouten** (valkuilen uit 32
+  sessies — LEES bij niet-triviale taken)
+- `/effort max` aan het begin van elke sessie
+- `/clear` tussen onafhankelijke taken; `/compact` met focus als context vol raakt
 
 ## Known Quirks
 
 - Git Bash: `MSYS_NO_PATHCONV=1` prefix bij `docker exec`
-- Container: `python -m alembic` niet bare `alembic`
+- Container: `python -m alembic`, niet bare `alembic`
 - asyncpg: Python `date` objects, geen strings
-- bcrypt 5.x: passlib incompatible, direct bcrypt
 - Docker commands ALTIJD vanuit hoofdrepo (`C:\Users\arsal\Documents\luxis`)
 - Falende tests: check eerst stale DB / ontbrekende migraties
+- Compound interest year runs from **verzuimdatum**, NOT January 1
+- `alembic stamp head` voor pre-existing databases, niet `upgrade head`
 
 ## References
 
-- @DECISIONS.md — tech stack | @backend/CLAUDE.md — backend | @frontend/CLAUDE.md — frontend
+- @backend/CLAUDE.md — backend | @frontend/CLAUDE.md — frontend
 - @docs/dutch-legal-rules.md — wettelijke rente, WIK, art. 6:44 BW
-- @docs/qa/ — QA checklists | @docs/research/ — UX research | @docs/future-modules.md — M365, AI, migratie
+- docs/qa/ — QA checklists | docs/research/ — UX research | docs/future-modules.md — M365, AI, migratie (op afroep lezen, niet meer altijd geladen)

@@ -15,38 +15,65 @@
 > "ik denk dat we er zijn" een gevoel, geen feit.
 >
 > Bijwerken: alleen bij een nieuwe vondst of nieuwe wachter — geen onderhoudsplicht per sessie.
+> *(Oogst S254 gedaan: archief S200-S253, compliance-hart, huisregels `breed-testen`,
+> roadmap — elke status hieronder is tegen de echte testbestanden gecheckt, niet gegokt.)*
 
 ## Geld (het duurste om fout te hebben)
 
 - ✅ Een brief toont exact dezelfde bedragen als het scherm — `test_brief_bedragen_gelijk_aan_scherm.py`
-- ✅ Een consument (b2c) krijgt nooit meer kosten dan de wettelijke staffel — `test_b2c_kosten_grendel.py` + gedeelde grendel op aanmaak- én wijzigpad
-- ✅ De kostenstaffel klopt over de hele bedragenreeks — `test_bik_staffel_sweep.py`
+- ✅ Een consument (b2c) krijgt nooit meer kosten dan de wettelijke staffel — `test_b2c_kosten_grendel.py` + gedeelde grendel op aanmaak-, wijzig- én intake-pad
+- ✅ De kostenstaffel rekent goed over de hele bedragenreeks — `test_wik.py` + `test_wik_edge_cases.py`
+- ✅ Een dagelijkse veegronde betrapt B2C-kosten boven de staffel die búiten de app binnenkwamen (import, direct in de database) — `test_bik_staffel_sweep.py` + dagelijkse job
 - ✅ Rente en kosten rekenen op de cent nauwkeurig (Decimal, nooit float) — financiële testsuite
-- ✅ Samengestelde rente kapitaliseert op de verzuimdatum, niet op 1 januari — rente-tests
+- ✅ Samengestelde rente kapitaliseert op de verzuimdatum, niet op 1 januari — rente-tests (gouden ijkzaak IN100197 op de cent)
+- ✅ De rentetabellen (wettelijke + handelsrente) kunnen niet stil verouderen — `test_interest_rate_freshness_guard.py` (ouder dan 7 maanden = rood)
 - ✅ Deelbetalingen worden verdeeld volgens de wet: eerst kosten, dan rente, dan hoofdsom — verdelings-tests
-- ⚠️ Het etiket zakelijk/consument klopt met de werkelijke rechtsvorm van de wederpartij — vergelijking bestaat nog niet (S252: Kaandorp stond fout, €6.300 verschil; komt na de 438 KVK-opzoekingen)
+- ✅ Een zaak kan nooit stil op "betaald" komen door een rekenfout — fail-closed-tests in `test_cases.py` + `test_incasso_pipeline.py`
+- ✅ Een betaling op een volbetaalde zaak wordt geweigerd, en een dubbelklik/tweede tab boekt nooit dubbel — `test_collections_router.py` + `test_payment_double_submit.py`
+- ✅ Verwijderde betalingen tellen nergens meer mee (Geïnd-cijfer, provisie op de cliëntfactuur) — `test_dashboard.py` (AUDIT-H3) + `test_incasso_invoice_preview.py`
+- ✅ Derdengelden-boekingen (storting, verrekening, storno) zijn test-bewaakt — `test_trust_funds*.py`
+- ⚠️ Het etiket zakelijk/consument klopt met de werkelijke rechtsvorm van de wederpartij — vergelijking bestaat nog niet (S252: Kaandorp stond fout, €6.300 verschil; komt na de 438 KVK-opzoekingen). Let op: de import-regel "persoon = consument" staat nog onveranderd in `scripts/basenet/mapping.py` — een volgende import herhaalt de fout.
+- ⚠️ Griffierechten en nakosten-tarieven zijn actueel — de berekening is getest (`test_nakosten.py`, `test_griffierechten.py`) maar pint de tarieven van nu; een wetswijziging valt niet vanzelf rood (de rente heeft zo'n actualiteitswachter wél)
 
 ## Brieven & verzending (naar buiten = onomkeerbaar)
 
-- ✅ Nieuwe brief-/mailroutes passeren de gedeelde verzendregels (14-dagenbrief-gate, WIK-bijlage) — compliance-tests
-- ✅ Een consument krijgt eerst de 14-dagenbrief met het juiste bedrag, anders geen kosten claimen — gate + tests
-- ✅ De rentebijlage gaat mee bij privé-aansprakelijke wederpartijen en niet bij BV/NV/stichting — besluit A/B-tests
-- ⚠️ Een gesloten dossier verstuurt nooit meer automatisch iets — aanname, nooit als wachter vastgelegd
+- ✅ De vijf bestaande verzenddeuren passeren de 14-dagenbrief-gate — `test_compose_dagenbrief_gate.py` (compose, document, .eml) + batch/follow-up-tests
+- ⚠️ Een NIEUWE verzenddeur wordt automatisch betrapt als hij de 14-dagenbrief-gate mist — bestaat niet; precies dit gat beet twee keer (S204: twee zijdeuren, S224: de Outlook-knop)
+- ✅ Een consument krijgt eerst de 14-dagenbrief met het juiste bedrag, anders geen kosten claimen; de klok loopt vanaf échte verzending — gate + tests
+- ✅ De rentebijlage gaat mee bij privé-aansprakelijke wederpartijen en niet bij BV/NV/stichting, op álle routes — `test_rente_bijlage_verzendpaden.py` + besluit A/B-tests
+- ✅ Elke verzendroute laat het drieluik achter (vindbaar op Mail, dossier én tijdlijn) en draagt het huisonderwerp; een nieuwe route zonder valt automatisch rood — `test_send_route_drift_guard.py` (leest de broncode zelf uit)
+- ⚠️ Elke dossier-mail vertrekt vanaf het kantooradres (incasso@), nooit vanaf een persoonlijk account — twee keer misgegaan (S220 verstuurknop, S224 classificatie-route), geen wachter voor de soort
+- ✅ Alleen een stap-brief schuift de zaak precies één stap door; een antwoord of vrij bericht nooit; gesloten zaak, verweer of consument-naar-zakelijke-stap blokkeert — `test_advance_after_send_routes.py` (guard-matrix)
+- ✅ Een geplande mail ("verstuur later") controleert de wereld opnieuw op het verzendmoment (betaald/gesloten/stap gewisseld = blokkade + melding) en verstuurt nooit stil dubbel — `test_scheduled_emails.py` (24 wachters)
+- ⚠️ Een gesloten dossier verstuurt nooit meer automatisch iets — deels gedekt (geplande mail, doorschuif-guard, concept-/advies-opruiming bij sluiten) maar er is geen wachter die álle automatische verzenders langs een gesloten zaak haalt
 - ⚠️ Het sjabloonmenu biedt per pijplijnstap de juiste brief aan (stap schuift correct door) — S252 met de hand gefixt, geen wachter
-- ❓ Horen 'aanmaning' en 'tweede_sommatie' in menugroep 2? — inhoudelijke keuze Lisanne
+- ❓ Horen 'aanmaning' en 'tweede_sommatie' in menugroep 2? — inhoudelijke keuze **Lisanne**
 
 ## Beveiliging & gegevens
 
 - ✅ Elk kantoor ziet alleen zijn eigen gegevens; nieuwe tabel zonder schot blokkeert de start — RLS-opstartcontrole + drift-guard-test
-- ✅ Elke route vereist inloggen (behalve bewust-publieke) — router-tests
-- ⚠️ Mailkoppeling-sleutels versleuteld met eigen sleutel (TOKEN_ENCRYPTION_KEY) — bekend restpunt Kimi-scan, gepland met Lisanne
+- ✅ Elke route vereist inloggen (behalve bewust-publieke) — `test_auth_drift_guard.py`
+- ✅ Een geüpload sjabloon kan geen code uitvoeren op de server (sandbox) — `test_docx_sandbox.py` (SEC-25)
+- ✅ De inlog-keten is dicht: token-hergebruik trekt alles in, lockout overleeft een herstart, wachtwoordwijziging logt overal uit, een geschorst kantoor komt er niet in — `test_refresh_token_rotation.py`, `test_auth_lockout.py`, `test_auth_token_revocation.py`, `test_tenant_active_guard.py`
+- ✅ Mailserver-instellingen kunnen niet naar interne adressen wijzen (SSRF) — `test_imap_ssrf_guard.py`
+- ✅ Secrets komen alleen uit de omgeving, nooit uit code — `test_secret_key_guard.py`
+- ⚠️ Mailkoppeling-sleutels versleuteld met eigen sleutel (TOKEN_ENCRYPTION_KEY) — bekend restpunt Kimi-scan, mét Lisanne plannen (verbreekt haar mailkoppeling)
 - ⚠️ Kennisregel-beheer alleen voor admin — bekend restpunt Kimi-scan
 
 ## Werking (het dagelijkse vertrouwen)
 
 - ✅ De pijplijn verspringt alleen volgens de toegestane stap-overgangen — workflow-tests
+- ✅ De test-database kan niet stil afwijken van de échte database — `test_migration_timestamp_defaults.py` leest álle migraties (S246: prod-crash die de tests niet zagen)
+- ✅ Een dossiernummer wordt nooit hergebruikt (anders plakt oude mail aan een nieuw dossier) — `test_cases.py::test_generate_case_number_does_not_reuse_soft_deleted`
+- ✅ Een eigen verstuurde mail komt nooit als "ontvangen post" terug, en een genegeerde mail blijft genegeerd — `test_email_sync.py` + `test_s241_sync_kruispunten.py`
 - ⚠️ Elke meldingsoort in het systeem heeft een label/kleur op de bel (nieuw type zonder label = grijs vangnet) — S253 met de hand nageteld, geen automatische natelling
-- ❓ Wat is de afgesproken volgorde/timing van de belroutes en verstuur-later-bedragen? — S252-restpunten, wachten op keuze
+- ❓ De verjaringsbewaking kent geen stuiting: het is een kaal sommetje (opeisbaar + 5 jaar), terwijl Luxis' eigen sommaties wél een stuitingsclausule bevatten (S242-meting, IN100015). Keuze **Arsalan/Lisanne**: stuitingsdatum op het dossier bouwen, of de melding als handwerk-signaal beschouwen.
 
-*(Deze lijst is de start — de oogst-sessie (S254-voorstel) loopt alle sessienotities, huisregels
-en het compliance-hart na en vult hem aan. Daarna geldt: elke nieuwe vondst = nieuwe regel hier.)*
+## Waar, geen hek nodig (bewust)
+
+- De bel-labels-natelling S252 (21/21) en het besluit "verstuur-later houdt de bedragen
+  van het inplanmoment" (S252) zijn afgehandeld — geen open vraag meer.
+- Cosmetische restjes (S235-formulier, dubbele naam in testdraad, e.d.) halen de zeef niet.
+
+*(Eerste oogst gedaan in S254. Vanaf nu geldt: elke nieuwe vondst = nieuwe regel hier,
+elke gebouwde wachter = ⚠️ → ✅ met testnaam.)*

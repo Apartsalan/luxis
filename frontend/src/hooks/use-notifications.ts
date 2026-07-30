@@ -40,6 +40,8 @@ export type NotificationType =
   | "installment_overdue"
   | "case_closed_invoice"
   | "email_unsorted"
+  | "scheduled_email_failed"
+  | "bik_above_staffel"
   | "system";
 
 export const NOTIFICATION_TYPE_CONFIG: Record<
@@ -64,6 +66,8 @@ export const NOTIFICATION_TYPE_CONFIG: Record<
   installment_overdue: { label: "Termijn gemist", icon: "alert-triangle", color: "red" },
   case_closed_invoice: { label: "Dossier afgesloten", icon: "check-circle", color: "emerald" },
   email_unsorted: { label: "Ongesorteerde mail", icon: "mail", color: "amber" },
+  scheduled_email_failed: { label: "Geplande mail mislukt", icon: "mail-x", color: "red" },
+  bik_above_staffel: { label: "Kosten boven staffel", icon: "alert-triangle", color: "amber" },
   system: { label: "Systeem", icon: "info", color: "gray" },
 };
 

@@ -61,6 +61,24 @@ Nederlands"). Neem hem serieus.
 - Geef instructies aan de gebruiker in één keer, niet stap-voor-stap met losse vragen.
 - Bij een keuze: geef één aanbeveling, geen catalogus met opties.
 
+## Klaar is een lijst, geen gevoel (vanaf S254)
+
+Luxis zit in de afmaakfase. De maat voor "af" is `WAARHEDEN.md`: de lijst van alles wat
+altijd waar hoort te zijn, met per regel of er iets over waakt. De werkafspraken:
+
+1. **Elke gevonden fout wordt een waarheid + wachter.** Een fout is pas "gefixt" als de
+   regel die geschonden werd op de lijst staat én een automatische controle heeft die
+   de hele fout-sóórt afdekt (kruispunt-aanpak). Anders komt dezelfde fout terug.
+2. **Meldingen van Lisanne zijn waarheden, geen losse bugs.** Bij elke melding is de
+   eerste vraag: welke regel was geschonden? Die regel gaat op de lijst. Zo vindt zij
+   elke fout maar één keer — daarna waakt de machine.
+3. **De zeef:** alleen schendingen die geld, reputatie of juridische fouten kosten
+   verdienen een wachter. Cosmetiek krijgt geen hek. Soms is "geen wachter nodig" het
+   juiste antwoord.
+4. **"Zijn we er nu?" heeft een echt antwoord:** de lijst zonder ⚠️/❓ plus twee weken
+   echt gebruik zonder nieuwe geschonden waarheid. Tot die tijd is het antwoord "nog
+   niet, en dít staat er nog open" — nooit een gevoel.
+
 ## Vaste projectregels
 
 Zie `CLAUDE.md` in deze map voor de techniek: geld altijd als Decimal, multi-tenant + RLS,

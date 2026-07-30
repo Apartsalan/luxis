@@ -69,6 +69,8 @@ gevonden fout krijgt een wachter-test voor zijn SOORT. Pas "done" als alles groe
 geskipte records/tests melden, niet verbergen.
 
 **Bugs:** EERST rode test → fix → groen (triviale bugs direct). Root cause, geen workaround.
+**Waarheden (afmaakfase, S253):** elke gevonden fout = regel in `WAARHEDEN.md` + wachter
+voor zijn SOORT (zeef: alleen geld/reputatie/juridisch). "Af" = die lijst zonder ⚠️/❓.
 **Regressies:** zoek in git-historie/SESSION-NOTES wanneer het werkte en welke commit het brak;
 fix chirurgisch — nooit features of security breed terugdraaien voor één symptoom.
 

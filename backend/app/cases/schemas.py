@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, computed_field, field_validator
 
 # Valid case types and statuses
 CASE_TYPES = ("incasso", "dossier", "advies")
@@ -220,6 +220,24 @@ class ContactBrief(BaseModel):
     contact_type: str
     name: str
     email: str | None
+    # S255: rechtsvorm uit het Handelsregister, plus de juridische duiding ervan.
+    # `beperkt_aansprakelijk` wordt hier afgeleid uit dezelfde constante als de
+    # rentebijlage-beslissing (EXCLUDED_LEGAL_FORM_KEYWORDS), zodat de kleur van
+    # het etiket op het dossier niet uit een eigen kopie van die lijst komt —
+    # een tweede lijst in TypeScript zou stil uit de pas kunnen lopen.
+    # None = rechtsvorm onbekend; dan geldt besluit B (bijlage gaat vóór de
+    # zekerheid wél mee) en toont het scherm "Zakelijk" zonder harde kleur.
+    legal_form: str | None = None
+
+    @computed_field
+    @property
+    def beperkt_aansprakelijk(self) -> bool | None:
+        from app.collections.compliance import EXCLUDED_LEGAL_FORM_KEYWORDS
+
+        if not self.legal_form:
+            return None
+        vorm = self.legal_form.lower()
+        return any(kw in vorm for kw in EXCLUDED_LEGAL_FORM_KEYWORDS)
 
     model_config = {"from_attributes": True}
 

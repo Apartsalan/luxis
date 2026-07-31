@@ -134,7 +134,75 @@ export const STEP_CATEGORY_STYLES: Record<string, string> = {
 export const DEBTOR_TYPE_BADGE: Record<string, string> = {
   b2b: "bg-indigo-50 text-indigo-700 ring-indigo-600/20",
   b2c: "bg-pink-50 text-pink-700 ring-pink-600/20",
+  onbekend: "bg-muted text-muted-foreground ring-border",
 };
+
+// --- S255: één etiket dat zegt wát de wederpartij is, in gewone taal ---
+//
+// Vervangt "B2B"/"B2C" in de dossierkop. B2B/B2C zegt niets over waar het écht
+// om draait: is iemand privé aansprakelijk (dan gaat het renteoverzicht mee als
+// bijlage) of niet. Sinds S255 staat van 437 wederpartijen de echte rechtsvorm
+// uit het Handelsregister in Luxis, dus dat kan nu getoond worden.
+//
+// De KLEUR komt NIET uit een lijst hier: de backend rekent
+// `beperkt_aansprakelijk` uit met dezelfde constante als de bijlage-beslissing
+// (EXCLUDED_LEGAL_FORM_KEYWORDS in collections/compliance.py). Een tweede
+// keywordlijst in TypeScript zou stil uit de pas kunnen lopen met de regel die
+// bepaalt of er een bijlage meegaat.
+
+// Alleen verkorting voor de leesbaarheid — geen juridische betekenis. Wat er
+// niet in staat, wordt voluit getoond.
+const RECHTSVORM_KORT: Record<string, string> = {
+  "besloten vennootschap": "BV",
+  "naamloze vennootschap": "NV",
+  "vennootschap onder firma": "VOF",
+  "commanditaire vennootschap": "CV",
+  "vereniging van eigenaars": "VvE",
+};
+
+export type PartijEtiket = { label: string; badge: string; title: string };
+
+export function partijEtiket(
+  debtorType: string | null | undefined,
+  legalForm: string | null | undefined,
+  beperktAansprakelijk: boolean | null | undefined,
+): PartijEtiket | null {
+  if (!debtorType) return null;
+
+  // Een consument heeft geen rechtsvorm en is altijd privé aansprakelijk.
+  // Dit gaat vóór de rechtsvorm: staat er tóch een rechtsvorm op een
+  // b2c-dossier, dan is het etiket fout — daar slaat de nachtelijke controle
+  // op aan (find_debtor_type_mismatch), niet dit label.
+  if (debtorType === "b2c") {
+    return {
+      label: "Consument",
+      badge: DEBTOR_TYPE_BADGE.b2c,
+      title: "Consument — wettelijke kostenstaffel geldt, renteoverzicht gaat mee",
+    };
+  }
+
+  if (!legalForm) {
+    return {
+      label: "Zakelijk",
+      badge: DEBTOR_TYPE_BADGE.onbekend,
+      title:
+        "Zakelijk, rechtsvorm nog onbekend — het renteoverzicht gaat voor de zekerheid wél mee",
+    };
+  }
+
+  const kort = RECHTSVORM_KORT[legalForm.toLowerCase()] ?? legalForm;
+  return beperktAansprakelijk
+    ? {
+        label: kort,
+        badge: DEBTOR_TYPE_BADGE.b2b,
+        title: `${legalForm} — beperkt aansprakelijk, renteoverzicht gaat niet mee`,
+      }
+    : {
+        label: kort,
+        badge: DEBTOR_TYPE_BADGE.b2c,
+        title: `${legalForm} — privé aansprakelijk, renteoverzicht gaat mee`,
+      };
+}
 
 // --- Task statuses (workflow tasks) ---
 

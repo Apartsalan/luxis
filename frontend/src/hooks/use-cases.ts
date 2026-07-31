@@ -28,7 +28,17 @@ export interface CaseSummary {
   bik_minimum_fee: number | null;
   provisie_base: string;
   client: { id: string; name: string; email?: string | null } | null;
-  opposing_party: { id: string; name: string; email?: string | null } | null;
+  // S255: legal_form + beperkt_aansprakelijk komen mee uit ContactBrief, zodat de
+  // dossierkop kan tonen wát de wederpartij is (BV, Eenmanszaak, ...) i.p.v. B2B.
+  // beperkt_aansprakelijk is door de backend berekend uit dezelfde constante als
+  // de rentebijlage-beslissing; null = rechtsvorm onbekend.
+  opposing_party: {
+    id: string;
+    name: string;
+    email?: string | null;
+    legal_form?: string | null;
+    beperkt_aansprakelijk?: boolean | null;
+  } | null;
   created_at: string;
   // S207c: originele BaseNet-status bij import. Lopend/Wacht = nog te heropenen;
   // Gereed/Geannuleerd/Offerte = in BaseNet al afgehandeld; null = in Luxis gemaakt.

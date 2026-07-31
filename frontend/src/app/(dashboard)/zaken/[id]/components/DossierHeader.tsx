@@ -28,7 +28,7 @@ import {
 import { formatCurrency, formatDate, formatDateShort } from "@/lib/utils";
 import { useWorkflowTasks } from "@/hooks/use-workflow";
 import { useTimeEntrySummary } from "@/hooks/use-time-entries";
-import { CASE_STATUS_BADGE_FALLBACK, DEBTOR_TYPE_BADGE } from "@/lib/status-constants";
+import { CASE_STATUS_BADGE_FALLBACK, partijEtiket } from "@/lib/status-constants";
 import { TONES } from "@/lib/tones";
 import { RenteoverzichtDialog } from "./RenteoverzichtDialog";
 import { BackButton } from "@/components/back-button";
@@ -235,6 +235,14 @@ export default function DossierHeader({
         .sort((a: PipelineStep, b: PipelineStep) => a.sort_order - b.sort_order)[0]
     : undefined;
 
+  // S255: één etiket i.p.v. "B2B"/"B2C" — het zegt wát de wederpartij is
+  // (Consument, Eenmanszaak, BV) en kleurt naar privé-aansprakelijkheid.
+  const etiket = partijEtiket(
+    zaak.debtor_type,
+    zaak.opposing_party?.legal_form,
+    zaak.opposing_party?.beperkt_aansprakelijk,
+  );
+
   return (
     <>
       {/* Header */}
@@ -257,15 +265,12 @@ export default function DossierHeader({
               >
                 {STATUS_LABELS[zaak.status] ?? zaak.status}
               </span>
-              {zaak.debtor_type && (
+              {etiket && (
                 <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
-                    zaak.debtor_type === "b2b"
-                      ? DEBTOR_TYPE_BADGE.b2b
-                      : DEBTOR_TYPE_BADGE.b2c
-                  }`}
+                  title={etiket.title}
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${etiket.badge}`}
                 >
-                  {zaak.debtor_type === "b2b" ? "B2B" : "B2C"}
+                  {etiket.label}
                 </span>
               )}
               {isIncasso && (

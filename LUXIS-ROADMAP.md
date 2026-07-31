@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 30 juli 2026 (S254 — de oogst: `WAARHEDEN.md` compleet (32 ✅ / 5 ⚠️ / 2 ❓), 4 wachters gebouwd en één echte verzendfout gedicht). Rapport: entry S254 in `SESSION-NOTES.md`. **Volgende = S255 (`docs/sessions/PROMPT-S255.md`).**
+**Laatst bijgewerkt:** 31 juli 2026 (S255 — 438 KVK-opzoekingen gedaan, etiket-wachter beide richtingen, 8 Next.js-CVE's gedicht, rechtsvorm zichtbaar op dossier + lijst; **34 ✅ / 4 ⚠️ / 2 ❓**). Rapport: entry S255 in `SESSION-NOTES.md`. **Volgende = S256 (`docs/sessions/PROMPT-S256.md`).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,7 +53,7 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 30 juli 2026, S254)
+## 🎯 Huidige prioriteit (bijgewerkt 31 juli 2026, S255)
 
 > 🧭 **KOERSREGEL (Arsalan, 30 juli): GEEN nieuwe features meer — afmaken en verbeteren
 > wat er al is.** Luxis moet áf. Sessievoorstellen zijn herstel-/afmaakklussen (bugs,
@@ -65,7 +65,7 @@
 > geld, reputatie of juridische fouten verdienen een wachter. Elke gevonden fout wordt
 > voortaan een waarheid + wachter voor zijn SOORT. Luxis is AF wanneer de lijst geen ⚠️/❓
 > meer heeft én twee weken echt gebruik geen nieuwe schending oplevert. Werkafspraken:
-> `WERKWIJZE.md` → "Klaar is een lijst, geen gevoel". Stand na de S254-oogst: **32 ✅ / 5 ⚠️ / 2 ❓**.
+> `WERKWIJZE.md` → "Klaar is een lijst, geen gevoel". Stand na S255: **34 ✅ / 4 ⚠️ / 2 ❓**.
 >
 > ✅ **S254 AFGEROND — de oogst + 4 wachters + één echte verzendfout gedicht.**
 > (a) `WAARHEDEN.md` van startlijst naar compleet: 13✅/7⚠️/3❓ → **32 ✅ / 5 ⚠️ / 2 ❓**, elke
@@ -77,14 +77,32 @@
 > te slopen: gesloten dossier (gedrag + soort), 14-dagenbrief-gate op nieuwe deuren, afzender
 > altijd incasso@, meldingsoort heeft label/icoon/kleur. 375 tests groen, CI groen, live.
 >
-> 🎯 **VOLGENDE (S255): Arsalan bepaalt.** Sterkste kandidaat = de **438 KVK-opzoekingen**
-> (±€9, GO al gegeven) — eerst het wederpartij-filter in `backend/scripts/kvk_backfill_legal_form.py`,
-> daarna de **etiket-vergelijking** rechtsvorm↔zakelijk/consument; dat dicht de dikste ⚠️.
-> Overige ⚠️ (4): actualiteit griffierecht-/nakosten-tarieven, sjabloonmenu per stap,
-> TOKEN_ENCRYPTION_KEY (mét Lisanne plannen), kennisregels admin-only. Nieuwe ❓: de
-> verjaringsteller kent geen stuiting (bouwen of als handwerk-signaal laten). Verder onveranderd:
-> mobiel-check sjabloonmenu 390×844, keuze C (ontwerpspoor kleur/leesbaarheid), menu-vragen
-> Lisanne, etiket-controle vóór fase-heropening 406.
+> ✅ **S255 AFGEROND — de dikste ⚠️ dicht + een verborgen beveiligingsachterstand opgeruimd.**
+> (a) **438 KVK-opzoekingen gedaan** (filter op wederpartij eerst, 726 → 438): 437 rechtsvormen
+> gevuld (223 eenmanszaak, 172 BV, 35 VOF, rest klein), 1 leeg. **175 wederpartijen krijgen de
+> rentebijlage niet meer, waarvan 20 op lopende dossiers** — end-to-end geverifieerd op echte
+> prod-dossiers. (b) **Etiket-wachter, beide richtingen** (`find_debtor_type_mismatch` + dagelijkse
+> veegronde + melding): richting 1 (consument-etiket op onderneming, de Kaandorp-fout van €6.300)
+> = 0 treffers; **richting 2 kwam er pas bij na zelfkritiek** — zakelijk etiket zonder énig bewijs
+> is de gevaarlijkere kant, want b2c-grendel én staffel-veegronde filteren allebei op b2c en lieten
+> dit door (1 treffer: IN100077). Import-regel bewust ongewijzigd: het BaseNet-persoonsrecord bevat
+> géén KvK-veld (nagemeten op de echte export). (c) **Beveiliging:** de frontend-audit stond maanden
+> "bekend rood" en werd daarom niet gelezen — er zaten **8 échte Next.js-adviezen** in (DoS, SSRF,
+> cache-confusion, endpoint-disclosure). Next 15.5.20 → 15.5.22, dompurify + sharp bij; audit nu
+> **blokkerend, alleen runtime, en groen**. (d) **Rechtsvorm zichtbaar** op dossierkop, zijbalk én
+> incassolijst i.p.v. "B2B/B2C", uit één gedeelde bron (kleur = privé aansprakelijk = rentebijlage
+> gaat mee). (e) **Taalwachter** die de frontend-broncode leest; eerst rood bewezen tegen de kapotte
+> code, en de sabotage-proef vond twéé gaten in de wachter zelf. 10 commits, CI groen, live,
+> visueel gecontroleerd op prod.
+>
+> 🎯 **VOLGENDE (S256): Arsalan bepaalt.** Resterende ⚠️ (4): actualiteit griffierecht-/nakosten-
+> tarieven (de rente heeft zo'n verouderingsalarm wél, deze niet), sjabloonmenu per stap,
+> TOKEN_ENCRYPTION_KEY (mét Lisanne plannen — verbreekt haar mailkoppeling), kennisregels
+> admin-only. ❓ (2): verjaringsteller kent geen stuiting (bouwen of als handwerk-signaal laten,
+> keuze Arsalan/Lisanne) en de menuvraag voor Lisanne. Verder onveranderd: mobiel-check
+> sjabloonmenu 390×844, keuze C (ontwerpspoor kleur/leesbaarheid), etiket-controle vóór
+> fase-heropening 406. **Voor Lisanne:** KvK-nummer 72908475 op de contactkaart van Kaandorp
+> (IN100077) — staat als melding op de bel.
 >
 > ✅ **S253 AFGEROND — KVK-koppeling live + werkwijze-omslag + omgeving opgeruimd.**
 > (a) KVK-sleutel (binnengekomen bij Lisanne 28-7) op prod gezet; rechtsvorm wordt nu

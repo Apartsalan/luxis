@@ -2,10 +2,104 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 30 juli 2026 (S254 — de oogst: `WAARHEDEN.md` compleet, 4 wachters gebouwd, één echte verzendfout gevonden en gedicht).
-**Laatste feature/fix:** Een gesloten dossier verstuurde tóch: de batch-knop én follow-up 'Uitvoeren' mailden een sommatie op een betaald dossier (rood bewezen, `emails_sent=1`). Gedeelde poort `check_case_closed_gate` + 4 wachters live (S254).
-**Openstaand:** koersregel: GEEN nieuwbouw. Waarheden: **32 ✅ / 5 ⚠️ / 2 ❓**. Dikste ⚠️ blijft **438 KVK-opzoekingen (±€9, GO gegeven) + etiket-vergelijking**. Verder: mobiel-check sjabloonmenu, keuze C (ontwerp) of D (beveiliging), menu-vragen Lisanne, etiket-controle vóór fase-heropening 406.
-**Volgende sessie:** S255 — Arsalan kiest: KVK-backfill (mét wederpartij-filter) of de resterende ⚠️'s. Zie `docs/sessions/PROMPT-S255.md`.
+**Laatst bijgewerkt:** 31 juli 2026 (S255 — 438 KVK-opzoekingen gedaan, etiket-wachter beide richtingen, 8 Next.js-CVE's gedicht, rechtsvorm zichtbaar op dossier + lijst).
+**Laatste feature/fix:** De schermen toonden "B2B/B2C" terwijl het juridisch om privé-aansprakelijkheid gaat; dossierkop, zijbalk en incassolijst tonen nu de rechtsvorm uit één gedeelde bron, met wachter tegen nieuwe eigen vertalingen (S255).
+**Openstaand:** koersregel: GEEN nieuwbouw. Waarheden: **34 ✅ / 4 ⚠️ / 2 ❓**. Resterend: griffierecht/nakosten-actualiteit, sjabloonmenu per stap, TOKEN_ENCRYPTION_KEY (mét Lisanne), kennisregels admin-only. Verder: mobiel-check sjabloonmenu, verjaring/stuiting (keuze Arsalan/Lisanne), menu-vragen Lisanne, etiket-controle vóór fase-heropening 406.
+**Volgende sessie:** S256 — Arsalan kiest uit de 4 resterende ⚠️'s of keuze C (ontwerp). Zie `docs/sessions/PROMPT-S256.md`.
+
+## Sessie 255 (31 juli 2026, Opus-bouw ↔ Fable-onderzoek/review — KVK-backfill + etiket-keten + beveiligingsachterstand, LIVE)
+
+### Samenvatting
+
+**1. De 438 KVK-opzoekingen (`2ada81a`).** Script liep álle 726 contacts af; filter toegevoegd
+op "is wederpartij op minstens één zaak". Op prod nagemeten vóór de bouw: 726 → **438**
+(33 met lopende zaak, 405 alleen afgesloten). Droogloop → echte run: **437 rechtsvormen
+gevuld**, 1 leeg (Kroon Vleeswaren B.V., KvK gaf niets terug → besluit B, wél bijlage).
+Verdeling: 223 eenmanszaak, 172 BV, 35 VOF, 2 stichting, 2 maatschap, 1 VvE, 1 NV, 1 CV.
+**Effect: 175 wederpartijen krijgen de rentebijlage niet meer (20 lopende dossiers)** —
+end-to-end geverifieerd door `should_attach_rente_bijlage` op echte prod-dossiers te draaien
+(IN100527 BV → False, IN100077 eenmanszaak → True).
+
+**2. Etiket-wachter, beide richtingen (`ec4eae9` + `67f4961`).** `find_debtor_type_mismatch`
++ dagelijkse veegronde 06:50 + samenvattende melding. Richting 1 (b2c-etiket op een
+onderneming, te wéínig gevorderd — de Kaandorp-fout van €6.300): 0 treffers. **Richting 2
+kwam er pas bij na zelfkritiek:** b2b-etiket op een persoon zonder KvK én zonder rechtsvorm
+is de gevaarlijkere kant (kosten boven de dwingende staffel), en de b2c-grendel én de
+staffel-veegronde filteren allebei op `debtor_type='b2c'` — die lieten dit dus door.
+1 treffer op prod (IN100077, kaart mist het KvK-nummer). 8 tests, 4× bewezen bijtend.
+**Import-regel bewust ongewijzigd:** het `rela.person`-record in de BaseNet-export bevat
+géén KvK-veld (nagemeten op het echte XML-bestand), dus op importmoment is het niet te weten.
+
+**3. Beveiligingsachterstand (`667f756`).** De frontend-audit stond op `continue-on-error`
+én audit'te dev-deps mee → permanent rood, door iedereen genegeerd. Daarin verstopt: **acht
+échte Next.js-adviezen** (DoS in Server Actions, SSRF via rewrites, cache-confusion van
+response bodies, ongeauth. disclosure van Server Function endpoints). 15.5.20 → **15.5.22**
+lost alle acht op. dompurify 3.3.3 → 3.4.12 (lek zit in `CUSTOM_ELEMENT_HANDLING`, dat wij
+niet gebruiken — nagekeken in `lib/sanitize.ts`). sharp-override `^0.35.3` (Next trekt ^0.34.3
+mee voor `next/image`, dat nergens gebruikt wordt). **NIET via `npm audit fix --force`: dat zet
+Next terug naar 14.** CI: runtime-audit (`--omit=dev`) nu BLOKKEREND en groen; bouwgereedschap
+in een eigen informatieve stap (brace-expansion blijft daar rood, alleen te dichten door heel
+eslint te forceren).
+
+**4. Rechtsvorm zichtbaar (`390cce5` + `ec45a1a` + `2d6b973`).** "B2B/B2C" zegt niets over
+waar het juridisch om draait. Eén etiket op dezelfde plek: Consument (roze) / Eenmanszaak,
+VOF, CV (roze) / BV, NV, Stichting (blauw) / Zakelijk (grijs = rechtsvorm onbekend, besluit B
+dus bewust géén blauw). Kleur komt uit `ContactBrief.beperkt_aansprakelijk`, berekend met
+`is_beperkt_aansprakelijk()` — dezelfde constante als de bijlage-beslissing, dus géén tweede
+keywordlijst in TypeScript. Visuele controle ving twee dingen: de zijbalk zei nog "B2B" naast
+een kop die "BV" zei, en de incassolijst deed hetzelfde.
+
+**5. Taalwachter (`2d6b973`), gebouwd vólgens de nieuwe werkwijze.** Eerst de wachter, rood
+bewezen tegen de ONgefixte code (wees exact de 2 regels aan), pas daarna gefixt. De
+sabotage-proef vond **twee gaten in de wachter zelf**: (a) `debtor_type.toUpperCase()` zet ook
+"B2B" op het scherm zonder die letters te bevatten — patroon toegevoegd én het echte geval
+(stap-bereik) gefixt; (b) de eerste regex eiste `>B2B<` en liet `>B2B (bedrijf)<` door, precies
+de keuzemenu-tekst — die fix stond dus onbewaakt. Ook: blokcommentaar wordt weggestreept,
+anders rekent de wachter zijn eigen uitleg aan als overtreding.
+
+### Gewijzigde bestanden
+- `backend/scripts/kvk_backfill_legal_form.py` — wederpartij-filter
+- `backend/app/collections/compliance.py` — `find_debtor_type_mismatch` + `is_beperkt_aansprakelijk`
+- `backend/app/workflow/scheduler.py` — `daily_debtor_type_check` (06:50 UTC)
+- `backend/app/notifications/service.py` — `debtor_type_mismatch`-melding
+- `backend/app/cases/schemas.py` + `incasso/{schemas,service}.py` — rechtsvorm + aansprakelijkheid in de API
+- `backend/tests/test_debtor_type_mismatch.py`, `test_partij_etiket.py`, `test_debtor_type_display_guard.py` (nieuw)
+- `frontend/src/lib/status-constants.ts` — `partijEtiket()` + `DEBTOR_SCOPE_LABELS`
+- `frontend/src/app/(dashboard)/zaken/[id]/components/{DossierHeader,DossierSidebar}.tsx`, `incasso/page.tsx`, `zaken/nieuw/page.tsx`, `components/cases/wizard/Step1Zaakgegevens.tsx`
+- `frontend/package.json` + lock, `.github/workflows/ci.yml`
+- `WAARHEDEN.md` — 32/5/2 → **34 ✅ / 4 ⚠️ / 2 ❓**
+
+### Verificatie
+100 tests groen op de kruispunt-run; `uvx ruff` schoon; `tsc --noEmit` schoon; `next build`
+compleet. **CI groen op alle 10 commits**, inclusief de nu-blokkerende frontend-audit.
+Gedeployd via SSH, containers healthy, prod draait aantoonbaar op `2d6b973` en Next 15.5.22.
+Visueel gecontroleerd op prod (eigen account, token in localStorage — géén wachtwoord getypt,
+géén inlog als Lisanne): dossierkop + zijbalk op 4 dossiers (BV / Eenmanszaak / onbekend /
+consument), incassolijst, stappenscherm, de melding op de bel, en de relatiekaart.
+
+### Bekende issues / lessen
+- **Een wachter die niet rood kán worden is geen wachter.** Twee keer vandaag bleek de eerste
+  versie niet te bijten (de afzender-les uit S254 herhaalde zich letterlijk). De sabotage-proef
+  is geen formaliteit — hij vond in beide gevallen een echt gat.
+- **"Bekend rood" is de gevaarlijkste toestand.** De npm-audit stond maanden rood en werd
+  daarom niet gelezen; er zaten 8 echte adviezen in. Een niet-blokkerende controle die nooit
+  groen is, is dood gewicht — beter scherp instellen (alleen runtime) én laten blokkeren.
+- **Twee schermen over hetzelfde gegeven lopen uit elkaar.** Kop zei "BV", zijbalk "B2B",
+  lijst ook "B2B" — alleen de visuele controle ving dat; geen enkele test keek ernaar.
+  Daarom nu één functie + een broncode-wachter voor de SOORT.
+- **Reviewvondst in mijn eigen commentaar:** ik had `npm audit --exclude` als ontsnappingsroute
+  gedocumenteerd; die optie bestaat niet. Gecorrigeerd naar `overrides` (`3713a30`).
+- Openstaand voor **Lisanne**: KvK-nummer 72908475 op de contactkaart van Kaandorp (IN100077).
+  Staat als melding op de bel; bewust niet zelf ingevuld (dossierwerk).
+- **VvE** krijgt de rentebijlage (leden zijn voor hun aandeel aansprakelijk). 1 wederpartij,
+  0 lopende zaken — verdedigbaar, niet aangepast.
+- **Roze = privé aansprakelijk**, dus een eenmanszaak krijgt dezelfde kleur als een consument.
+  Bewust; hover-tekst legt het verschil uit. In de praktijk bij Lisanne toetsen.
+
+### Volgende sessie
+S256 — Arsalan kiest uit de 4 resterende ⚠️'s (griffierecht/nakosten-actualiteit,
+sjabloonmenu per stap, TOKEN_ENCRYPTION_KEY, kennisregels admin-only) of keuze C (ontwerp).
+Zie `docs/sessions/PROMPT-S256.md`.
 
 ## Sessie 254 (30 juli 2026, Fable-oogst → Opus-bouw — waarhedenlijst compleet + 4 wachters + echte verzendfout, LIVE)
 
@@ -729,87 +823,3 @@ en wachtrij-blok bekeken; beide live-verzendingen in de database nagetrokken
 
 ### Volgende sessie
 S247: verse-ogen-review nachtdiff → AI-kennislaag. Zie `docs/sessions/PROMPT-S247.md`.
-
-## Sessie 246 (23 juli 2026, Fable-plan → Opus-bouw — uitgesteld versturen, LIVE + live-bewijs)
-
-### Samenvatting
-Startpunt PROMPT-S246. **Modelfout aan het begin:** Opus deed zelf het onderzoek én
-het plan; Arsalan greep in ("plan = Fable"). Plan daarna opnieuw gemaakt op Fable,
-gebouwd op Opus. Les vastgelegd in memory `feedback_model_choice` — "Bouwen → Opus"
-in een sessieprompt slaat op de BOUWfase, niet op de plan- en reviewfase.
-
-**Twee scope-besluiten van Arsalan vooraf.** (1) "Verstuur later" nu alleen op de
-mails die je zelf opstelt (antwoord, AI-concept, gewone mail, sjabloon, vanuit
-dossier) — die lopen állemaal via één deur (`/api/email/compose/send`). De twee
-lopende-band-knoppen (incassostap/opvolging over meerdere dossiers) zijn bewust
-uitgesteld: daar zit doc-generatie + doorschuiven in de CALLER, niet in de gedeelde
-verzendfunctie, dus "later versturen" is daar een aparte, grotere klus met een eigen
-keuze (schuift de zaak bij het inplannen door of pas bij verzending?). (2) Meldingen-
-scope uit S245 blijft tenant-breed → nul codewijziging.
-
-**Gebouwd.** `perform_compose_send` afgesplitst van het endpoint (inhoud ongewijzigd)
-zodat de wachtrij-bezorger exact dezelfde machine draait — afzender (incasso@),
-huisstijl, bijlagen, renteoverzicht, drieluik-logging, meldingen opruimen en
-doorschuiven zijn identiek aan een directe verzending. Nieuwe tabel `scheduled_emails`
-(TenantBase, `apply_rls` in dezelfde migratie). Minuut-job in APScheduler. Knop
-"Verstuur later" met presets (Morgen 09:00 / 15:00 / eigen tijdstip) op de compose-
-dialoog — dus meteen op álle vijf de routes van Arsalans lijstje. Geplande mails
-zichtbaar op dossier + Mail-pagina, annuleerbaar.
-
-**Bewust NIET verhuisd naar een nieuw servicebestand:** een drift-wachter en ~6
-testbestanden prikken op `app.email.compose_router.*`; verplaatsen zou die stil
-breken. Splitsing binnen hetzelfde bestand levert hetzelfde resultaat met de kleinste
-kans op schade. De drift-wachter zag de verplaatste provider-uitgang correct en is
-bijgewerkt (`send_via_provider` → `perform_compose_send`).
-
-**Twee echte bugs gevangen.**
-1. *Dubbelverzendrisico.* De claim (pending→sending) draaide bij een fout mee terug,
-   dus een crash tussen claimen en versturen zette de rij weer op "wachtend" → de
-   volgende ronde zou een mogelijk al verstuurde mail nógmaals sturen. Fix: claim
-   METEEN vastleggen vóór de provider-aanroep. Blijft hij hangen, dan meldt
-   `_fail_stuck_claims` na 10 min dat het ONZEKER is — nooit stil opnieuw sturen.
-   Gevonden door de eigen wachter (attempts bleef 0).
-2. *Migratie-drift (live op prod).* `created_at/updated_at` not-null zonder
-   `server_default`; TimestampMixin vult die niet in Python. Inplannen crashte met 500.
-   De tests zagen het niet: testDB komt uit de MODELLEN (create_all), prod uit de
-   MIGRATIE. Fix s246 + s246b (idempotent) + nieuwe wachter
-   `test_migration_timestamp_defaults.py` die álle migraties leest — rood bewezen op
-   de echte fout, daarna groen.
-
-### Gewijzigde bestanden
-Backend: `email/scheduled_models.py`, `email/scheduled_service.py`,
-`email/scheduled_router.py` (nieuw), `email/compose_router.py` (splitsing +
-`scheduled_at`/`advance_draft_id`), `incasso/service.py`
-(`complete_ai_draft_after_send` naar service-laag), `incasso/router.py` (dun),
-`workflow/scheduler.py` (minuut-job), `main.py`, `alembic/env.py`, migraties
-`s246_scheduled_emails.py` + `s246b_sched_ts.py`.
-Frontend: `email-compose-dialog.tsx` (knop + presets + eigen tijdstip),
-`scheduled-emails-panel.tsx` + `use-scheduled-emails.ts` (nieuw),
-`correspondentie/page.tsx`, `zaken/[id]/page.tsx`.
-Tests: `test_scheduled_emails.py` (12 wachters), `test_migration_timestamp_defaults.py`,
-`test_send_route_drift_guard.py` (bijgewerkt), `conftest.py`.
-Commits `9197f66`→`4269592`.
-
-### Verificatie
-131 tests groen over send/compose/mail/incasso/workflow (basislijn zonder deze
-sessie óók gemeten om vervuiling uit te sluiten); ruff + tsc schoon; migratie mét
-RLS geverifieerd op prod (FORCE + policy); login 200; bezorger-hartslag zonder fout.
-Visueel op prod (desktop + mobiel 390×844, screenshots bekeken): knop + presets,
-inplannen zonder te versturen, lijst op het dossier, annuleren.
-**Live-bewijs (GO Arsalan):** mail ingepland op 23:25, automatisch vertrokken om
-23:25:12 (1 poging), aangekomen in zijn gmail — bevestigd door Arsalan. Spoor klopt:
-`synced_emails` outbound met afzender **incasso@kestinglegal.nl** (kantoorkanaal, net
-als bij een klik) + `case_activities` "E-mail verzonden naar …".
-**Testlessen:** twee pytest-runs tegelijk op dezelfde testDB gaven 68 spookfouten —
-één run tegelijk (huisregel bevestigd).
-
-### Bekende issues / bewust niet gedaan
-- **Lopende band (batch/follow-up) heeft géén "Verstuur later"** — besluit Arsalan;
-  vereist eerst een keuze over het moment van doorschuiven.
-- **Fable-eindreview van S246 is nog niet gedraaid** (verplicht: dit raakt alle
-  verzendroutes) — eerste taak van de volgende sessie.
-- AI-concept-nazorg bij een geplande mail is via wachters bewezen, niet live gedraaid
-  (er stond geen echt AI-concept klaar op het testdossier).
-
-### Volgende sessie
-Eerst Fable-eindreview S246, daarna S247 AI-kennislaag. Zie `docs/sessions/PROMPT-S247.md`.

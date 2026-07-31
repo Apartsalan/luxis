@@ -11872,3 +11872,87 @@ live-gemaild (constraint geen echte debiteuren) — bewezen met de 2 route-wacht
 S246 — uitgesteld versturen (nieuwe tabel `scheduled_emails` + RLS in dezelfde
 migratie, "Verstuur later" op alle 7 verzenddeuren, scheduler met lock-patroon).
 Masterplan sectie S246. Zie `docs/sessions/PROMPT-S246.md`.
+
+## Sessie 246 (23 juli 2026, Fable-plan → Opus-bouw — uitgesteld versturen, LIVE + live-bewijs)
+
+### Samenvatting
+Startpunt PROMPT-S246. **Modelfout aan het begin:** Opus deed zelf het onderzoek én
+het plan; Arsalan greep in ("plan = Fable"). Plan daarna opnieuw gemaakt op Fable,
+gebouwd op Opus. Les vastgelegd in memory `feedback_model_choice` — "Bouwen → Opus"
+in een sessieprompt slaat op de BOUWfase, niet op de plan- en reviewfase.
+
+**Twee scope-besluiten van Arsalan vooraf.** (1) "Verstuur later" nu alleen op de
+mails die je zelf opstelt (antwoord, AI-concept, gewone mail, sjabloon, vanuit
+dossier) — die lopen állemaal via één deur (`/api/email/compose/send`). De twee
+lopende-band-knoppen (incassostap/opvolging over meerdere dossiers) zijn bewust
+uitgesteld: daar zit doc-generatie + doorschuiven in de CALLER, niet in de gedeelde
+verzendfunctie, dus "later versturen" is daar een aparte, grotere klus met een eigen
+keuze (schuift de zaak bij het inplannen door of pas bij verzending?). (2) Meldingen-
+scope uit S245 blijft tenant-breed → nul codewijziging.
+
+**Gebouwd.** `perform_compose_send` afgesplitst van het endpoint (inhoud ongewijzigd)
+zodat de wachtrij-bezorger exact dezelfde machine draait — afzender (incasso@),
+huisstijl, bijlagen, renteoverzicht, drieluik-logging, meldingen opruimen en
+doorschuiven zijn identiek aan een directe verzending. Nieuwe tabel `scheduled_emails`
+(TenantBase, `apply_rls` in dezelfde migratie). Minuut-job in APScheduler. Knop
+"Verstuur later" met presets (Morgen 09:00 / 15:00 / eigen tijdstip) op de compose-
+dialoog — dus meteen op álle vijf de routes van Arsalans lijstje. Geplande mails
+zichtbaar op dossier + Mail-pagina, annuleerbaar.
+
+**Bewust NIET verhuisd naar een nieuw servicebestand:** een drift-wachter en ~6
+testbestanden prikken op `app.email.compose_router.*`; verplaatsen zou die stil
+breken. Splitsing binnen hetzelfde bestand levert hetzelfde resultaat met de kleinste
+kans op schade. De drift-wachter zag de verplaatste provider-uitgang correct en is
+bijgewerkt (`send_via_provider` → `perform_compose_send`).
+
+**Twee echte bugs gevangen.**
+1. *Dubbelverzendrisico.* De claim (pending→sending) draaide bij een fout mee terug,
+   dus een crash tussen claimen en versturen zette de rij weer op "wachtend" → de
+   volgende ronde zou een mogelijk al verstuurde mail nógmaals sturen. Fix: claim
+   METEEN vastleggen vóór de provider-aanroep. Blijft hij hangen, dan meldt
+   `_fail_stuck_claims` na 10 min dat het ONZEKER is — nooit stil opnieuw sturen.
+   Gevonden door de eigen wachter (attempts bleef 0).
+2. *Migratie-drift (live op prod).* `created_at/updated_at` not-null zonder
+   `server_default`; TimestampMixin vult die niet in Python. Inplannen crashte met 500.
+   De tests zagen het niet: testDB komt uit de MODELLEN (create_all), prod uit de
+   MIGRATIE. Fix s246 + s246b (idempotent) + nieuwe wachter
+   `test_migration_timestamp_defaults.py` die álle migraties leest — rood bewezen op
+   de echte fout, daarna groen.
+
+### Gewijzigde bestanden
+Backend: `email/scheduled_models.py`, `email/scheduled_service.py`,
+`email/scheduled_router.py` (nieuw), `email/compose_router.py` (splitsing +
+`scheduled_at`/`advance_draft_id`), `incasso/service.py`
+(`complete_ai_draft_after_send` naar service-laag), `incasso/router.py` (dun),
+`workflow/scheduler.py` (minuut-job), `main.py`, `alembic/env.py`, migraties
+`s246_scheduled_emails.py` + `s246b_sched_ts.py`.
+Frontend: `email-compose-dialog.tsx` (knop + presets + eigen tijdstip),
+`scheduled-emails-panel.tsx` + `use-scheduled-emails.ts` (nieuw),
+`correspondentie/page.tsx`, `zaken/[id]/page.tsx`.
+Tests: `test_scheduled_emails.py` (12 wachters), `test_migration_timestamp_defaults.py`,
+`test_send_route_drift_guard.py` (bijgewerkt), `conftest.py`.
+Commits `9197f66`→`4269592`.
+
+### Verificatie
+131 tests groen over send/compose/mail/incasso/workflow (basislijn zonder deze
+sessie óók gemeten om vervuiling uit te sluiten); ruff + tsc schoon; migratie mét
+RLS geverifieerd op prod (FORCE + policy); login 200; bezorger-hartslag zonder fout.
+Visueel op prod (desktop + mobiel 390×844, screenshots bekeken): knop + presets,
+inplannen zonder te versturen, lijst op het dossier, annuleren.
+**Live-bewijs (GO Arsalan):** mail ingepland op 23:25, automatisch vertrokken om
+23:25:12 (1 poging), aangekomen in zijn gmail — bevestigd door Arsalan. Spoor klopt:
+`synced_emails` outbound met afzender **incasso@kestinglegal.nl** (kantoorkanaal, net
+als bij een klik) + `case_activities` "E-mail verzonden naar …".
+**Testlessen:** twee pytest-runs tegelijk op dezelfde testDB gaven 68 spookfouten —
+één run tegelijk (huisregel bevestigd).
+
+### Bekende issues / bewust niet gedaan
+- **Lopende band (batch/follow-up) heeft géén "Verstuur later"** — besluit Arsalan;
+  vereist eerst een keuze over het moment van doorschuiven.
+- **Fable-eindreview van S246 is nog niet gedraaid** (verplicht: dit raakt alle
+  verzendroutes) — eerste taak van de volgende sessie.
+- AI-concept-nazorg bij een geplande mail is via wachters bewezen, niet live gedraaid
+  (er stond geen echt AI-concept klaar op het testdossier).
+
+### Volgende sessie
+Eerst Fable-eindreview S246, daarna S247 AI-kennislaag. Zie `docs/sessions/PROMPT-S247.md`.

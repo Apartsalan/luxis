@@ -14,6 +14,8 @@
 > gebruik geen nieuwe geschonden waarheid oplevert. Tot die twee dingen waar zijn, is
 > "ik denk dat we er zijn" een gevoel, geen feit.
 >
+> Stand: **33 ✅ / 4 ⚠️ / 2 ❓** (S255).
+>
 > Bijwerken: alleen bij een nieuwe vondst of nieuwe wachter — geen onderhoudsplicht per sessie.
 > *(Oogst S254 gedaan: archief S200-S253, compliance-hart, huisregels `breed-testen`,
 > roadmap — elke status hieronder is tegen de echte testbestanden gecheckt, niet gegokt.
@@ -34,7 +36,7 @@
 - ✅ Een betaling op een volbetaalde zaak wordt geweigerd, en een dubbelklik/tweede tab boekt nooit dubbel — `test_collections_router.py` + `test_payment_double_submit.py`
 - ✅ Verwijderde betalingen tellen nergens meer mee (Geïnd-cijfer, provisie op de cliëntfactuur) — `test_dashboard.py` (AUDIT-H3) + `test_incasso_invoice_preview.py`
 - ✅ Derdengelden-boekingen (storting, verrekening, storno) zijn test-bewaakt — `test_trust_funds*.py`
-- ⚠️ Het etiket zakelijk/consument klopt met de werkelijke rechtsvorm van de wederpartij — vergelijking bestaat nog niet (S252: Kaandorp stond fout, €6.300 verschil; komt na de 438 KVK-opzoekingen). Let op: de import-regel "persoon = consument" staat nog onveranderd in `scripts/basenet/mapping.py` — een volgende import herhaalt de fout.
+- ✅ Het etiket zakelijk/consument klopt met de werkelijke rechtsvorm van de wederpartij — `test_debtor_type_mismatch.py` + dagelijkse veegronde (S255; meldt elk consument-dossier waarvan de wederpartij een rechtsvorm óf een KvK-nummer heeft). S252: Kaandorp stond fout, €6.300 verschil. De import-regel "persoon = consument" (`scripts/basenet/mapping.py`) blijft bewust staan: het persoonsrecord in de BaseNet-export bevat géén KvK-nummer of bedrijfsveld (S255 nagemeten op de echte export), dus op importmoment is het niet te weten — de veegronde vangt het zodra de contactkaart het wél verraadt. Stand na de KVK-backfill: 0 treffers op 627 dossiers.
 - ⚠️ Griffierechten en nakosten-tarieven zijn actueel — de berekening is getest (`test_nakosten.py`, `test_griffierechten.py`) maar pint de tarieven van nu; een wetswijziging valt niet vanzelf rood (de rente heeft zo'n actualiteitswachter wél)
 
 ## Brieven & verzending (naar buiten = onomkeerbaar)
@@ -42,7 +44,7 @@
 - ✅ De vijf bestaande verzenddeuren passeren de 14-dagenbrief-gate — `test_compose_dagenbrief_gate.py` (compose, document, .eml) + batch/follow-up-tests
 - ✅ Een NIEUWE verzenddeur zonder 14-dagenbrief-gate valt automatisch rood — `test_send_route_drift_guard.py::test_elke_verzendroute_passeert_de_dagenbrief_gate` (S254; uitzonderingen alleen mét motivering op de allowlist)
 - ✅ Een consument krijgt eerst de 14-dagenbrief met het juiste bedrag, anders geen kosten claimen; de klok loopt vanaf échte verzending — gate + tests
-- ✅ De rentebijlage gaat mee bij privé-aansprakelijke wederpartijen en niet bij BV/NV/stichting, op álle routes — `test_rente_bijlage_verzendpaden.py` + besluit A/B-tests
+- ✅ De rentebijlage gaat mee bij privé-aansprakelijke wederpartijen en niet bij BV/NV/stichting, op álle routes — `test_rente_bijlage_verzendpaden.py` + besluit A/B-tests. **S255: draait nu op echte gegevens** — 437 van de 438 wederpartijen hebben hun rechtsvorm uit het KvK-Handelsregister (223 eenmanszaak, 172 BV, 35 VOF, 2 stichting, 2 maatschap, 1 VvE, 1 NV, 1 CV), waardoor 175 wederpartijen de bijlage niet meer krijgen (20 lopende dossiers). Eén nummer (Kroon Vleeswaren B.V., KvK 01062787) gaf geen rechtsvorm terug → blijft leeg → besluit B: wél bijlage.
 - ✅ Elke verzendroute laat het drieluik achter (vindbaar op Mail, dossier én tijdlijn) en draagt het huisonderwerp; een nieuwe route zonder valt automatisch rood — `test_send_route_drift_guard.py` (leest de broncode zelf uit)
 - ✅ Elke dossier-mail vertrekt vanaf het kantooradres (incasso@), nooit vanaf een persoonlijk account — `test_send_route_drift_guard.py::test_elke_verzendroute_gebruikt_het_kantooradres` (S254; toetst dat de instelling AAN staat, niet alleen dat hij meegegeven is)
 - ✅ Alleen een stap-brief schuift de zaak precies één stap door; een antwoord of vrij bericht nooit; gesloten zaak, verweer of consument-naar-zakelijke-stap blokkeert — `test_advance_after_send_routes.py` (guard-matrix)

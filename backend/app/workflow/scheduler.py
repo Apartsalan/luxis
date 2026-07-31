@@ -800,17 +800,24 @@ async def daily_debtor_type_check() -> None:
                 if not treffers:
                     continue
                 lopend = sum(1 for t in treffers if not t["afgesloten"])
+                op_onderneming = sum(
+                    1 for t in treffers if t["soort"] == "consument_op_onderneming"
+                )
                 logger.warning(
-                    "Scheduler: debtor-type — %d dossiers met consument-etiket op een "
-                    "onderneming (%d lopend)",
+                    "Scheduler: debtor-type — %d dossiers met een twijfelachtig etiket "
+                    "(%d lopend, %d consument-op-onderneming, %d zakelijk-zonder-bewijs)",
                     len(treffers),
                     lopend,
+                    op_onderneming,
+                    len(treffers) - op_onderneming,
                 )
                 await create_debtor_type_mismatch_notification(
                     session,
                     tenant.id,
                     aantal=len(treffers),
                     aantal_lopend=lopend,
+                    aantal_op_onderneming=op_onderneming,
+                    aantal_zonder_bewijs=len(treffers) - op_onderneming,
                     voorbeeld_case_number=treffers[0]["case_number"],
                     dedup_days=7,
                 )

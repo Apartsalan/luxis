@@ -86,6 +86,7 @@ async def test_consument_etiket_met_rechtsvorm_wordt_gevonden(
     assert len(treffers) == 1
     assert treffers[0]["case_number"] == "2026-95001"
     assert treffers[0]["legal_form"] == "Eenmanszaak"
+    assert treffers[0]["soort"] == "consument_op_onderneming"
     assert treffers[0]["afgesloten"] is False
 
 
@@ -144,6 +145,50 @@ async def test_zakelijk_etiket_op_onderneming_is_correct(
         contact_type="company",
         legal_form="Besloten Vennootschap",
         kvk_number="88601536",
+    )
+
+    assert await find_debtor_type_mismatch(db, test_tenant.id) == []
+
+
+@pytest.mark.asyncio
+async def test_zakelijk_etiket_zonder_enig_bewijs_wordt_gevonden(
+    db: AsyncSession, test_tenant: Tenant
+):
+    """De gevaarlijke kant: b2b-etiket op een persoon zonder KvK of rechtsvorm.
+
+    Is het tóch een consument, dan gaan er kosten boven de dwingende WIK-staffel
+    de deur uit. De b2c-grendel én de staffel-veegronde kijken allebei alleen
+    naar b2c-dossiers en laten dit dus door — deze wachter is de enige die het ziet.
+    """
+    await _case_met_wederpartij(
+        db,
+        test_tenant.id,
+        case_number="2026-95008",
+        debtor_type="b2b",
+        contact_type="person",
+    )
+
+    treffers = await find_debtor_type_mismatch(db, test_tenant.id)
+
+    assert [t["case_number"] for t in treffers] == ["2026-95008"]
+    assert treffers[0]["soort"] == "zakelijk_zonder_bewijs"
+
+
+@pytest.mark.asyncio
+async def test_bedrijfskaart_zonder_kvk_telt_niet_als_onbewezen(
+    db: AsyncSession, test_tenant: Tenant
+):
+    """Een bedrijfs-kaart is op zichzelf al een onderbouwing van het b2b-etiket.
+
+    Op prod staan 91 zulke wederpartijen; zonder deze grens zou de wachter die
+    allemaal melden en daarmee onbruikbaar worden.
+    """
+    await _case_met_wederpartij(
+        db,
+        test_tenant.id,
+        case_number="2026-95009",
+        debtor_type="b2b",
+        contact_type="company",
     )
 
     assert await find_debtor_type_mismatch(db, test_tenant.id) == []

@@ -387,8 +387,8 @@ async def find_bik_above_staffel(
 async def find_debtor_type_mismatch(
     db: AsyncSession, tenant_id: uuid.UUID
 ) -> list[dict]:
-    """Alle dossiers met een CONSUMENT-etiket waarvan de wederpartij aantoonbaar
-    een onderneming is (S255-wachter).
+    """Alle dossiers waarvan het etiket zakelijk/consument niet strookt met wat
+    de contactkaart van de wederpartij zegt (S255-wachter). Beide richtingen.
 
     Waarom een sweep en niet een controle op het moment van handelen: het etiket
     komt uit de BaseNet-import, die `debtor_type` op b2c zet zodra de wederpartij
@@ -399,16 +399,38 @@ async def find_debtor_type_mismatch(
     De fout wordt pas zichtbaar zodra iemand later een KvK-nummer of rechtsvorm
     op de contactkaart zet — precies wat deze sweep afvangt.
 
-    Kost geld: IN100077 (Kaandorp) stond fout op b2c en scheelde € 6.300 (S252),
-    omdat de dwingende WIK-staffel alleen voor echte consumenten geldt.
+    Twee soorten, allebei duur maar op een andere manier:
 
-    Twee signalen, allebei bewijs van een onderneming:
-    - de wederpartij heeft een rechtsvorm (een consument heeft er geen);
-    - de wederpartij heeft een KvK-nummer (idem).
-    Beide worden gemeld, ook als de rechtsvorm nog leeg is — anders zou de
-    wachter pas bijten ná een KvK-bevraging.
+    - `consument_op_onderneming` — b2c-etiket, maar de wederpartij heeft een
+      rechtsvorm óf een KvK-nummer (een consument heeft geen van beide). Er wordt
+      dan te WEINIG gevorderd: de dwingende WIK-staffel geldt alleen voor echte
+      consumenten. IN100077 (Kaandorp) scheelde zo € 6.300 (S252). Beide signalen
+      tellen, ook zonder rechtsvorm — anders beet de wachter pas ná een
+      KvK-bevraging.
+    - `zakelijk_zonder_bewijs` — b2b-etiket, maar de wederpartij staat als
+      persoon op de kaart zonder KvK-nummer én zonder rechtsvorm. Niets bewijst
+      hier een onderneming. Dit is de gevaarlijkere kant: is het tóch een
+      consument, dan gaan er kosten boven de dwingende staffel de deur uit
+      (art. 6:96 BW) — de b2c-grendel en de staffel-veegronde kijken allebei
+      alleen naar b2c-dossiers en laten dit dus door. Een bedrijfs-kaart zonder
+      KvK-nummer telt bewust NIET mee (91 op prod): dat de kaart een bedrijf is,
+      is op zichzelf al een onderbouwing.
     """
     from app.relations.models import Contact
+
+    consument_op_onderneming = and_(
+        Case.debtor_type == "b2c",
+        or_(
+            Contact.legal_form.isnot(None),
+            and_(Contact.kvk_number.isnot(None), Contact.kvk_number != ""),
+        ),
+    )
+    zakelijk_zonder_bewijs = and_(
+        Case.debtor_type == "b2b",
+        Contact.contact_type == "person",
+        Contact.legal_form.is_(None),
+        or_(Contact.kvk_number.is_(None), Contact.kvk_number == ""),
+    )
 
     rows = (
         await db.execute(
@@ -416,14 +438,7 @@ async def find_debtor_type_mismatch(
             .join(Contact, Contact.id == Case.opposing_party_id)
             .where(
                 Case.tenant_id == tenant_id,
-                Case.debtor_type == "b2c",
-                or_(
-                    Contact.legal_form.isnot(None),
-                    and_(
-                        Contact.kvk_number.isnot(None),
-                        Contact.kvk_number != "",
-                    ),
-                ),
+                or_(consument_op_onderneming, zakelijk_zonder_bewijs),
             )
         )
     ).all()
@@ -435,6 +450,11 @@ async def find_debtor_type_mismatch(
             "wederpartij": contact.name,
             "legal_form": contact.legal_form,
             "kvk_number": contact.kvk_number,
+            "soort": (
+                "consument_op_onderneming"
+                if case.debtor_type == "b2c"
+                else "zakelijk_zonder_bewijs"
+            ),
             # Zelfde onderscheid als de staffel-sweep: alleen bij een lopend
             # dossier gaat er nú nog een verkeerd bedrag de deur uit.
             "afgesloten": case.status == "afgesloten",

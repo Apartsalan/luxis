@@ -777,31 +777,44 @@ async def create_debtor_type_mismatch_notification(
     *,
     aantal: int,
     aantal_lopend: int,
+    aantal_op_onderneming: int,
+    aantal_zonder_bewijs: int,
     voorbeeld_case_number: str | None,
     dedup_days: int,
 ) -> int:
-    """S255: meld dossiers met een consument-etiket waarvan de wederpartij een
-    onderneming blijkt (rechtsvorm of KvK-nummer op de contactkaart).
+    """S255: meld dossiers waarvan het etiket zakelijk/consument niet strookt met
+    de contactkaart van de wederpartij.
 
     Eén samenvattende melding per kantoor, net als de staffel-melding: het is een
     controleklus met een lijst. Het etiket zelf wordt NIET automatisch omgezet —
     daar hangt de hele geldberekening aan (rente + kosten opnieuw), dus dat blijft
     een beslissing per dossier (S252: IN100077 handmatig, met terugrekening).
     """
-    title = f"Consument-etiket op een onderneming: {aantal} dossier(s)"
+    title = f"Etiket zakelijk/consument nakijken: {aantal} dossier(s)"
     verdeling = (
         f"{aantal_lopend} lopend, {aantal - aantal_lopend} archief"
         if aantal_lopend < aantal
         else f"{aantal} lopend"
     )
+    delen = []
+    if aantal_op_onderneming:
+        delen.append(
+            f"{aantal_op_onderneming} met een consument-etiket terwijl de "
+            "wederpartij een rechtsvorm of KvK-nummer heeft (dan geldt de "
+            "wettelijke kostenstaffel niet en mag er méér gevorderd worden)"
+        )
+    if aantal_zonder_bewijs:
+        delen.append(
+            f"{aantal_zonder_bewijs} met een zakelijk etiket terwijl er geen "
+            "KvK-nummer of rechtsvorm op de kaart staat (is het tóch een "
+            "consument, dan gaan er te hoge kosten de deur uit)"
+        )
     message = (
-        f"Bij {aantal} dossier(s) ({verdeling}) staat het etiket op consument, "
-        f"terwijl de wederpartij een rechtsvorm of KvK-nummer heeft en dus een "
-        f"onderneming is"
-        + (f", bijvoorbeeld {voorbeeld_case_number}" if voorbeeld_case_number else "")
-        + ". Controleer het etiket: bij een onderneming geldt de wettelijke "
-        "kostenstaffel niet en mag er meer gevorderd worden. Zet het etiket "
-        "alleen om na controle — rente en kosten worden dan opnieuw berekend."
+        f"Bij {aantal} dossier(s) ({verdeling}) klopt het etiket mogelijk niet: "
+        + "; ".join(delen)
+        + (f". Bijvoorbeeld {voorbeeld_case_number}" if voorbeeld_case_number else "")
+        + ". Vul het KvK-nummer op de contactkaart in, of pas het etiket aan — "
+        "let op: rente en kosten worden dan opnieuw berekend."
     )
     return await _notify_all_tenant_users(
         db,

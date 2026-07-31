@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case, CaseActivity
+from app.collections.compliance import is_beperkt_aansprakelijk
 from app.documents.docx_service import build_base_context, render_docx
 from app.documents.models import GeneratedDocument
 from app.documents.pdf_service import docx_to_pdf
@@ -1109,6 +1110,12 @@ def _case_to_pipeline_item(
         incasso_step_id=case.incasso_step_id,
         step_name=step.name if step else None,
         debtor_type=case.debtor_type,
+        opposing_party_legal_form=(
+            case.opposing_party.legal_form if case.opposing_party else None
+        ),
+        opposing_party_beperkt_aansprakelijk=is_beperkt_aansprakelijk(
+            case.opposing_party.legal_form if case.opposing_party else None
+        ),
         has_verweer=case.has_verweer,
         status=case.status,
         date_opened=case.date_opened.isoformat(),

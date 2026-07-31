@@ -38,7 +38,7 @@ import {
   Coins,
 } from "lucide-react";
 import { toast } from "sonner";
-import { STEP_CATEGORY_STYLES } from "@/lib/status-constants";
+import { STEP_CATEGORY_STYLES, DEBTOR_SCOPE_LABELS, partijEtiket } from "@/lib/status-constants";
 import { CHECKBOX_COLOR, TONES } from "@/lib/tones";
 import {
   useIncassoPipelineSteps,
@@ -378,11 +378,11 @@ function StappenTab() {
                       className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20"
                     >
                       <option value="both">Beide</option>
-                      <option value="b2b">B2B</option>
-                      <option value="b2c">B2C</option>
+                      <option value="b2b">Zakelijk</option>
+                      <option value="b2c">Consument</option>
                     </select>
                   ) : (
-                    <span className="text-xs text-muted-foreground">{step.debtor_type === "both" ? "Beide" : step.debtor_type.toUpperCase()}</span>
+                    <span className="text-xs text-muted-foreground">{DEBTOR_SCOPE_LABELS[step.debtor_type] ?? step.debtor_type}</span>
                   )}
                 </td>
                 <td className="px-3 py-2.5">
@@ -611,8 +611,8 @@ function StappenTab() {
                 <td className="px-3 py-2.5">
                   <select value={newStep.debtor_type} onChange={(e) => setNewStep((f) => ({ ...f, debtor_type: e.target.value }))} className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20">
                     <option value="both">Beide</option>
-                    <option value="b2b">B2B</option>
-                    <option value="b2c">B2C</option>
+                    <option value="b2b">Zakelijk</option>
+                    <option value="b2c">Consument</option>
                   </select>
                 </td>
                 <td className="px-3 py-2.5">
@@ -1338,7 +1338,11 @@ function WerkstroomTab() {
                         ) : (
                           <span className="text-[10px] text-muted-foreground">Geen stap</span>
                         )}
-                        <span className="text-[10px] text-muted-foreground">{c.debtor_type === "b2b" ? "B2B" : c.debtor_type === "b2c" ? "B2C" : ""}</span>
+                        {(() => {
+                          // S255: zelfde etiket als de dossierkop — geen eigen vertaling.
+                          const e = partijEtiket(c.debtor_type, c.opposing_party_legal_form, c.opposing_party_beperkt_aansprakelijk);
+                          return e ? <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium ring-1 ring-inset ${e.badge}`} title={e.title}>{e.label}</span> : null;
+                        })()}
                         <span className="ml-auto font-mono text-xs">
                           <span className={openstaandDisplay(c.outstanding).className}>{openstaandDisplay(c.outstanding).text}</span>
                         </span>
@@ -1439,7 +1443,11 @@ function WerkstroomTab() {
                         )}
                       </td>
                       <td className="px-3 py-2">
-                        <span className="text-xs text-muted-foreground">{c.debtor_type === "b2b" ? "B2B" : c.debtor_type === "b2c" ? "B2C" : "—"}</span>
+                        {(() => {
+                          // S255: zelfde etiket als de dossierkop — geen eigen vertaling.
+                          const e = partijEtiket(c.debtor_type, c.opposing_party_legal_form, c.opposing_party_beperkt_aansprakelijk);
+                          return e ? <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${e.badge}`} title={e.title}>{e.label}</span> : <span className="text-xs text-muted-foreground">—</span>;
+                        })()}
                       </td>
                       <td className="px-3 py-2 text-right font-mono">{formatCurrency(c.total_principal)}</td>
                       <td className="px-3 py-2 text-right font-mono">

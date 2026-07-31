@@ -49,6 +49,24 @@ EXCLUDED_LEGAL_FORM_KEYWORDS = (
 )
 
 
+def is_beperkt_aansprakelijk(legal_form: str | None) -> bool | None:
+    """Is deze rechtsvorm beperkt aansprakelijk (BV/NV/stichting/coöperatie)?
+
+    None = rechtsvorm onbekend, dus géén oordeel. Dat verschil is belangrijk:
+    bij onbekend gaat de rentebijlage vóór de zekerheid wél mee (besluit B), en
+    het scherm moet dat als "weten we niet" tonen, niet als een hard oordeel.
+
+    Deze functie is de ENIGE plek waar de keywordlijst gelezen wordt buiten
+    `should_attach_rente_bijlage` zelf; de schermen (dossierkop, incassolijst)
+    krijgen het antwoord via de API, zodat er nooit een tweede lijst in
+    TypeScript ontstaat die stil uit de pas kan lopen.
+    """
+    if not legal_form:
+        return None
+    vorm = legal_form.lower()
+    return any(kw in vorm for kw in EXCLUDED_LEGAL_FORM_KEYWORDS)
+
+
 def should_attach_rente_bijlage(opposing_party, debtor_type: str | None = None) -> bool:
     """Moet het renteoverzicht als PDF-bijlage mee bij de 14-dagenbrief/eerste
     sommatie? Ja bij een privé aansprakelijke wederpartij (particulier,

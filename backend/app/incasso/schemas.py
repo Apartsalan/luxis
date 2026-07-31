@@ -134,6 +134,12 @@ class CaseInPipeline(BaseModel):
     incasso_step_id: uuid.UUID | None
     step_name: str | None = None
     debtor_type: str = "b2b"
+    # S255: de lijst toonde "B2B"/"B2C" terwijl het dossier zelf de rechtsvorm
+    # laat zien — hetzelfde dossier in twee talen, en de lijst zweeg juist over
+    # het onderscheid dat bepaalt of de rentebijlage meegaat. Deze twee velden
+    # voeden hetzelfde etiket als de dossierkop (partijEtiket).
+    opposing_party_legal_form: str | None = None
+    opposing_party_beperkt_aansprakelijk: bool | None = None
     has_verweer: bool = False
     status: str
     date_opened: str

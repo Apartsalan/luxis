@@ -39,6 +39,10 @@ export interface CaseInPipeline {
   incasso_step_id: string | null;
   step_name: string | null;
   debtor_type: string;
+  // S255: voedt hetzelfde etiket als de dossierkop (partijEtiket), zodat de
+  // lijst en het dossier niet in twee talen over dezelfde wederpartij praten.
+  opposing_party_legal_form: string | null;
+  opposing_party_beperkt_aansprakelijk: boolean | null;
   has_verweer: boolean;
   status: string;
   date_opened: string;

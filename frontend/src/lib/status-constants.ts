@@ -164,6 +164,15 @@ const RECHTSVORM_KORT: Record<string, string> = {
 // mededeling uitgeschreven, voor plekken met een eigen veldnaam (zoals de
 // dossierinfo-zijbalk) waar afkorten niets oplevert. Beide komen uit deze ene
 // functie, zodat kop en zijbalk nooit iets anders kunnen beweren.
+// Voor KEUZES (voor welk soort debiteur geldt deze pijplijnstap / dit dossier),
+// niet voor het tonen van een bestaande wederpartij — daar is partijEtiket voor.
+// Gewone taal i.p.v. "B2B"/"B2C": Luxis praat Nederlands (S255).
+export const DEBTOR_SCOPE_LABELS: Record<string, string> = {
+  both: "Beide",
+  b2b: "Zakelijk",
+  b2c: "Consument",
+};
+
 export type PartijEtiket = {
   label: string;
   volledig: string;

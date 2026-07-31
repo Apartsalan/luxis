@@ -232,12 +232,9 @@ class ContactBrief(BaseModel):
     @computed_field
     @property
     def beperkt_aansprakelijk(self) -> bool | None:
-        from app.collections.compliance import EXCLUDED_LEGAL_FORM_KEYWORDS
+        from app.collections.compliance import is_beperkt_aansprakelijk
 
-        if not self.legal_form:
-            return None
-        vorm = self.legal_form.lower()
-        return any(kw in vorm for kw in EXCLUDED_LEGAL_FORM_KEYWORDS)
+        return is_beperkt_aansprakelijk(self.legal_form)
 
     model_config = {"from_attributes": True}
 

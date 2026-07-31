@@ -1005,8 +1005,8 @@ function NieuweZaakPage() {
                     className={inputClass}
                   >
                     <option value="">Automatisch</option>
-                    <option value="b2b">B2B (bedrijf)</option>
-                    <option value="b2c">B2C (particulier)</option>
+                    <option value="b2b">Zakelijk (bedrijf)</option>
+                    <option value="b2c">Consument (particulier)</option>
                   </select>
                   <p className="mt-1 text-[11px] text-muted-foreground">
                     Wordt automatisch ingevuld bij selectie wederpartij

@@ -60,7 +60,8 @@ gesloopt om te zien of de test rood wordt:
 
 ### Verificatie
 375 tests groen op de kruispunt-run (send/compose/followup/incasso/scheduled/notification/
-advance/dagenbrief/closed); `uvx ruff` schoon; **CI groen** op `68c9e97` (Backend Tests, lint,
+advance/dagenbrief/closed) en **volledige suite 1693 passed / 0 fouten** (lokaal, schone run);
+`uvx ruff` schoon; **CI groen** op `68c9e97` (Backend Tests, lint,
 typecheck, build, security — alleen de bekende niet-blokkerende sharp-CVE-audit rood).
 Gedeployd via SSH: containers healthy, login 200, de poort aantoonbaar in de draaiende
 container (`incasso/service.py` 2×, `followup_service.py` 2×, `scheduled_service.py` 4×).
@@ -79,7 +80,8 @@ container (`incasso/service.py` 2×, `followup_service.py` 2×, `scheduled_servi
   vóór een nieuwe run; volledige suite via `docker compose exec -d`.
 - Resterende ⚠️ (5): etiket vs rechtsvorm (438 KVK), griffierecht/nakosten-actualiteit,
   sjabloonmenu per stap, TOKEN_ENCRYPTION_KEY, kennisregels admin-only.
-- Lokale volledige suite draaide bij afsluiting nog (CI dekt hem al groen af).
+- Lokale volledige suite ná de afsluiting alsnog schoon binnengekomen: **1693 passed, 0 fouten**
+  (27:57, één run tegelijk) — bevestigt CI en ontkracht de eerdere spookfouten.
 
 ### Volgende sessie
 S255 — Arsalan bepaalt. Sterkste kandidaat: de 438 KVK-opzoekingen (eerst het

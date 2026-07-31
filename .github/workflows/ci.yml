@@ -190,14 +190,22 @@ jobs:
           pip-audit --requirement requirements.txt --progress-spinner off
 
   # ── Frontend Dependency Audit ────────────────────────────────────────────────
-  # Non-blocking (informational): residual *moderate* advisories live inside
-  # Next 15's own dependency tree and can only be "fixed" by downgrading Next
-  # (rejected, S161). --audit-level=high flags only high/critical so a real
-  # high-severity runtime issue is still loud, without failing CI on Next noise.
+  # S255: BLOKKEREND geworden, en alleen nog over de *runtime*-closure
+  # (--omit=dev) — symmetrisch met de backend-audit, die ook alleen de
+  # geëxporteerde runtime-deps toetst.
+  #
+  # Waarom: de audit stond op continue-on-error en draaide over álle deps, dus
+  # ook eslint-gereedschap. Daardoor stond hij permanent rood en las niemand hem
+  # nog — terwijl er acht échte Next-adviezen in verstopt zaten (DoS, SSRF,
+  # cache-confusion; S255 opgelost door 15.5.20 -> 15.5.22). Een controle die
+  # altijd rood staat is geen controle.
+  #
+  # Runtime is nu schoon (0 vulnerabilities). Komt er een nieuw advies op een
+  # pakket dat écht meedraait, dan hoort dat de deploy tegen te houden. Een
+  # onoplosbaar advies accepteren kan met `npm audit --exclude <pakket>` + reden.
   frontend-audit:
     name: Frontend Dependency Audit
     runs-on: ubuntu-latest
-    continue-on-error: true
     defaults:
       run:
         working-directory: frontend
@@ -210,7 +218,15 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: npm audit (high+)
+      - name: npm audit — runtime (high+, blokkerend)
+        run: npm audit --omit=dev --audit-level=high
+
+      # Bouwgereedschap blijft zichtbaar maar houdt de deploy niet tegen: het
+      # draait nooit op de server. Nu rood op brace-expansion (DoS in eslint's
+      # minimatch) — alleen te dichten door heel eslint te forceren, wat niets
+      # oplevert. Zonder deze stap zou dat stil uit beeld verdwijnen.
+      - name: npm audit — inclusief bouwgereedschap (informatief)
+        continue-on-error: true
         run: npm audit --audit-level=high
 
   # ── Security Checks ─────────────────────────────────────────────────────────

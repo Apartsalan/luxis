@@ -201,8 +201,11 @@ jobs:
   # altijd rood staat is geen controle.
   #
   # Runtime is nu schoon (0 vulnerabilities). Komt er een nieuw advies op een
-  # pakket dat écht meedraait, dan hoort dat de deploy tegen te houden. Een
-  # onoplosbaar advies accepteren kan met `npm audit --exclude <pakket>` + reden.
+  # pakket dat écht meedraait, dan hoort dat rood te worden. Let op: npm audit
+  # kent GEEN ignore-lijst (S255-review: `--exclude` bestaat niet). Een advies
+  # accepteren of dichten doet je via "overrides" in package.json — pin het
+  # pakket op een gefixte versie (zoals met sharp gedaan); is er écht geen fix,
+  # dan is de laatste uitweg --audit-level=critical mét een gedateerde reden hier.
   frontend-audit:
     name: Frontend Dependency Audit
     runs-on: ubuntu-latest

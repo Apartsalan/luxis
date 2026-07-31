@@ -1,10 +1,11 @@
 """S211: eenmalige backfill van `legal_form` op wederpartijen met KvK-nummer.
 
-Loopt alle relaties met een KvK-nummer en een lege rechtsvorm af, haalt de
-rechtsvorm uit het KvK-basisprofiel en slaat die op (source="kvk"). Bedoeld om
-in één keer de ~438 zakelijke wederpartijen te vullen zodat de renteoverzicht-
-bijlage-beslissing (should_attach_rente_bijlage) op echte data draait i.p.v.
-op "onbekend → wél bijlage" (besluit B).
+Loopt de WEDERPARTIJEN met een KvK-nummer en een lege rechtsvorm af (S255-filter:
+contacts die op minstens één zaak `opposing_party` zijn — 438 op prod, niet de
+726 relaties in totaal), haalt de rechtsvorm uit het KvK-basisprofiel en slaat
+die op (source="kvk"). Bedoeld om in één keer de zakelijke wederpartijen te
+vullen zodat de renteoverzicht-bijlage-beslissing (should_attach_rente_bijlage)
+op echte data draait i.p.v. op "onbekend → wél bijlage" (besluit B).
 
 ⚠️ NIET DRAAIEN met de test-sleutel — die kent alleen nepbedrijven en zou echte
 relaties met None (of erger: verkeerde data) vullen. Pas draaien zodra de ECHTE
@@ -22,11 +23,12 @@ from __future__ import annotations
 import argparse
 import asyncio
 
-from sqlalchemy import select, text
+from sqlalchemy import exists, select, text
 
 # Importeer main om alle SQLAlchemy modellen te registreren
 import app.main  # noqa: F401
 from app.auth.models import Tenant
+from app.cases.models import Case
 from app.database import async_session
 from app.integrations.kvk_service import get_rechtsvorm
 from app.relations.models import Contact
@@ -45,6 +47,13 @@ async def backfill(dry_run: bool) -> None:
             # RLS-context; UUID is een gevalideerd type uit de DB → veilig te interpoleren.
             await session.execute(text(f"SET LOCAL app.current_tenant = '{tenant.id}'"))
 
+            # S255: ALLEEN wederpartijen. Zonder dit filter loopt het script álle
+            # relaties af (726 op prod: ook opdrachtgevers, deurwaarders, rechtbanken)
+            # — dat is €6 te veel én verrijkt relaties waar de rentebijlage-beslissing
+            # nooit naar kijkt. De beslissing (should_attach_rente_bijlage) leest
+            # uitsluitend de wederpartij van een zaak. Besluit S253.
+            is_wederpartij = exists().where(Case.opposing_party_id == Contact.id)
+
             contacts = list(
                 (
                     await session.execute(
@@ -53,6 +62,7 @@ async def backfill(dry_run: bool) -> None:
                             Contact.kvk_number.isnot(None),
                             Contact.kvk_number != "",
                             Contact.legal_form.is_(None),
+                            is_wederpartij,
                         )
                     )
                 )
@@ -61,11 +71,11 @@ async def backfill(dry_run: bool) -> None:
             )
 
             if not contacts:
-                print(f"[{tenant.name}] geen relaties met KvK-nummer en lege rechtsvorm")
+                print(f"[{tenant.name}] geen wederpartijen met KvK-nummer en lege rechtsvorm")
                 continue
 
             print(
-                f"[{tenant.name}] {len(contacts)} relaties met KvK-nummer, rechtsvorm leeg"
+                f"[{tenant.name}] {len(contacts)} wederpartijen met KvK-nummer, rechtsvorm leeg"
             )
             total_found += len(contacts)
 

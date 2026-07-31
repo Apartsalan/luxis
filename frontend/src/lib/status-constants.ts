@@ -160,7 +160,16 @@ const RECHTSVORM_KORT: Record<string, string> = {
   "vereniging van eigenaars": "VvE",
 };
 
-export type PartijEtiket = { label: string; badge: string; title: string };
+// `label` is de korte vorm voor het bolletje in de kop; `volledig` is dezelfde
+// mededeling uitgeschreven, voor plekken met een eigen veldnaam (zoals de
+// dossierinfo-zijbalk) waar afkorten niets oplevert. Beide komen uit deze ene
+// functie, zodat kop en zijbalk nooit iets anders kunnen beweren.
+export type PartijEtiket = {
+  label: string;
+  volledig: string;
+  badge: string;
+  title: string;
+};
 
 export function partijEtiket(
   debtorType: string | null | undefined,
@@ -176,6 +185,7 @@ export function partijEtiket(
   if (debtorType === "b2c") {
     return {
       label: "Consument",
+      volledig: "Consument",
       badge: DEBTOR_TYPE_BADGE.b2c,
       title: "Consument — wettelijke kostenstaffel geldt, renteoverzicht gaat mee",
     };
@@ -184,6 +194,7 @@ export function partijEtiket(
   if (!legalForm) {
     return {
       label: "Zakelijk",
+      volledig: "Zakelijk (rechtsvorm onbekend)",
       badge: DEBTOR_TYPE_BADGE.onbekend,
       title:
         "Zakelijk, rechtsvorm nog onbekend — het renteoverzicht gaat voor de zekerheid wél mee",
@@ -194,11 +205,13 @@ export function partijEtiket(
   return beperktAansprakelijk
     ? {
         label: kort,
+        volledig: legalForm,
         badge: DEBTOR_TYPE_BADGE.b2b,
         title: `${legalForm} — beperkt aansprakelijk, renteoverzicht gaat niet mee`,
       }
     : {
         label: kort,
+        volledig: legalForm,
         badge: DEBTOR_TYPE_BADGE.b2c,
         title: `${legalForm} — privé aansprakelijk, renteoverzicht gaat mee`,
       };

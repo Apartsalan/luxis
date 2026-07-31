@@ -19,6 +19,7 @@ import { useTimeEntrySummary } from "@/hooks/use-time-entries";
 import { useModules } from "@/hooks/use-modules";
 import type { CaseDetail } from "@/hooks/use-cases";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { partijEtiket } from "@/lib/status-constants";
 import { STATUS_LABELS, TYPE_LABELS, INTEREST_LABELS } from "../types";
 
 
@@ -44,6 +45,13 @@ export default function DossierSidebar({
   );
   const { data: timeSummary } = useTimeEntrySummary({ case_id: zaak.id });
   const { hasModule } = useModules();
+
+  // S255: zelfde bron als het bolletje in de dossierkop.
+  const partijEtiketZaak = partijEtiket(
+    zaak.debtor_type,
+    zaak.opposing_party?.legal_form,
+    zaak.opposing_party?.beperkt_aansprakelijk,
+  );
 
   const toggle = () => {
     const next = !isOpen;
@@ -110,13 +118,19 @@ export default function DossierSidebar({
                 {formatDate(zaak.date_opened)}
               </dd>
             </div>
-            {/* S216 blok 2: Debiteur (B2B/B2C) en Rente zijn incasso-begrippen —
-                niet tonen op een advies-/gewone zaak (waren daar betekenisloos). */}
-            {isIncasso && zaak.debtor_type && (
+            {/* S216 blok 2: Debiteur en Rente zijn incasso-begrippen — niet tonen
+                op een advies-/gewone zaak (waren daar betekenisloos).
+                S255: toont de rechtsvorm i.p.v. "B2B"/"B2C", uit dezelfde functie
+                als het bolletje in de kop — anders zou de zijbalk iets anders
+                kunnen beweren dan de kop. */}
+            {isIncasso && partijEtiketZaak && (
               <div className="flex items-center justify-between">
                 <dt className="text-xs text-muted-foreground">Debiteur</dt>
-                <dd className="text-xs font-medium text-foreground uppercase">
-                  {zaak.debtor_type}
+                <dd
+                  className="text-xs font-medium text-foreground text-right"
+                  title={partijEtiketZaak.title}
+                >
+                  {partijEtiketZaak.volledig}
                 </dd>
               </div>
             )}

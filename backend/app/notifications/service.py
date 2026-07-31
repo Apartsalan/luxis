@@ -20,6 +20,7 @@ NOTIF_BIK_ABOVE_STAFFEL = "bik_above_staffel"  # S230/V1: B2C-kosten boven WIK-s
 NOTIF_CASE_CLOSED_INVOICE = "case_closed_invoice"  # S235: auto-afgesloten → cliënt factureren?
 NOTIF_EMAIL_UNSORTED = "email_unsorted"  # S240: nieuwe mail in de ongesorteerde bak
 NOTIF_SCHEDULED_EMAIL_FAILED = "scheduled_email_failed"  # S246: geplande mail mislukt
+NOTIF_DEBTOR_TYPE_MISMATCH = "debtor_type_mismatch"  # S255: consument-etiket op een onderneming
 
 # A5/A11 (S198): meldings-typen die uit de meldingenlijst + ongelezen-teller worden
 # gefilterd. De classificatielijn staat op pauze en 'classification_done' verzoop de
@@ -763,6 +764,50 @@ async def create_bik_above_staffel_notification(
         tenant_id,
         NotificationCreate(
             type=NOTIF_BIK_ABOVE_STAFFEL,
+            title=title,
+            message=message,
+        ),
+        dedup_minutes=dedup_days * 24 * 60,
+    )
+
+
+async def create_debtor_type_mismatch_notification(
+    db: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    aantal: int,
+    aantal_lopend: int,
+    voorbeeld_case_number: str | None,
+    dedup_days: int,
+) -> int:
+    """S255: meld dossiers met een consument-etiket waarvan de wederpartij een
+    onderneming blijkt (rechtsvorm of KvK-nummer op de contactkaart).
+
+    Eén samenvattende melding per kantoor, net als de staffel-melding: het is een
+    controleklus met een lijst. Het etiket zelf wordt NIET automatisch omgezet —
+    daar hangt de hele geldberekening aan (rente + kosten opnieuw), dus dat blijft
+    een beslissing per dossier (S252: IN100077 handmatig, met terugrekening).
+    """
+    title = f"Consument-etiket op een onderneming: {aantal} dossier(s)"
+    verdeling = (
+        f"{aantal_lopend} lopend, {aantal - aantal_lopend} archief"
+        if aantal_lopend < aantal
+        else f"{aantal} lopend"
+    )
+    message = (
+        f"Bij {aantal} dossier(s) ({verdeling}) staat het etiket op consument, "
+        f"terwijl de wederpartij een rechtsvorm of KvK-nummer heeft en dus een "
+        f"onderneming is"
+        + (f", bijvoorbeeld {voorbeeld_case_number}" if voorbeeld_case_number else "")
+        + ". Controleer het etiket: bij een onderneming geldt de wettelijke "
+        "kostenstaffel niet en mag er meer gevorderd worden. Zet het etiket "
+        "alleen om na controle — rente en kosten worden dan opnieuw berekend."
+    )
+    return await _notify_all_tenant_users(
+        db,
+        tenant_id,
+        NotificationCreate(
+            type=NOTIF_DEBTOR_TYPE_MISMATCH,
             title=title,
             message=message,
         ),

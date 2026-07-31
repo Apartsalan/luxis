@@ -11,7 +11,7 @@ from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
 from dateutil.relativedelta import relativedelta
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cases.models import Case
@@ -382,6 +382,67 @@ async def find_bik_above_staffel(
                 }
             )
     return sorted(treffers, key=lambda t: t["te_veel"], reverse=True)
+
+
+async def find_debtor_type_mismatch(
+    db: AsyncSession, tenant_id: uuid.UUID
+) -> list[dict]:
+    """Alle dossiers met een CONSUMENT-etiket waarvan de wederpartij aantoonbaar
+    een onderneming is (S255-wachter).
+
+    Waarom een sweep en niet een controle op het moment van handelen: het etiket
+    komt uit de BaseNet-import, die `debtor_type` op b2c zet zodra de wederpartij
+    een PERSOON is (`scripts/basenet/mapping.py::resolve_debtor_type`). Een
+    eenmanszaak staat in BaseNet als persoon — dat is het blinde gat. Het
+    persoonsrecord in de export bevat geen KvK-nummer of bedrijfsveld (S255
+    nagemeten op de echte export), dus de import KAN het daar niet beter weten.
+    De fout wordt pas zichtbaar zodra iemand later een KvK-nummer of rechtsvorm
+    op de contactkaart zet — precies wat deze sweep afvangt.
+
+    Kost geld: IN100077 (Kaandorp) stond fout op b2c en scheelde € 6.300 (S252),
+    omdat de dwingende WIK-staffel alleen voor echte consumenten geldt.
+
+    Twee signalen, allebei bewijs van een onderneming:
+    - de wederpartij heeft een rechtsvorm (een consument heeft er geen);
+    - de wederpartij heeft een KvK-nummer (idem).
+    Beide worden gemeld, ook als de rechtsvorm nog leeg is — anders zou de
+    wachter pas bijten ná een KvK-bevraging.
+    """
+    from app.relations.models import Contact
+
+    rows = (
+        await db.execute(
+            select(Case, Contact)
+            .join(Contact, Contact.id == Case.opposing_party_id)
+            .where(
+                Case.tenant_id == tenant_id,
+                Case.debtor_type == "b2c",
+                or_(
+                    Contact.legal_form.isnot(None),
+                    and_(
+                        Contact.kvk_number.isnot(None),
+                        Contact.kvk_number != "",
+                    ),
+                ),
+            )
+        )
+    ).all()
+
+    treffers = [
+        {
+            "case_id": case.id,
+            "case_number": case.case_number,
+            "wederpartij": contact.name,
+            "legal_form": contact.legal_form,
+            "kvk_number": contact.kvk_number,
+            # Zelfde onderscheid als de staffel-sweep: alleen bij een lopend
+            # dossier gaat er nú nog een verkeerd bedrag de deur uit.
+            "afgesloten": case.status == "afgesloten",
+        }
+        for case, contact in rows
+    ]
+    # Lopende dossiers eerst — dat is waar handelen nog zin heeft.
+    return sorted(treffers, key=lambda t: t["afgesloten"])
 
 
 async def pre_send_compliance_check(

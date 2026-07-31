@@ -42,6 +42,7 @@ export type NotificationType =
   | "email_unsorted"
   | "scheduled_email_failed"
   | "bik_above_staffel"
+  | "debtor_type_mismatch"
   | "system";
 
 export const NOTIFICATION_TYPE_CONFIG: Record<
@@ -68,6 +69,7 @@ export const NOTIFICATION_TYPE_CONFIG: Record<
   email_unsorted: { label: "Ongesorteerde mail", icon: "mail", color: "amber" },
   scheduled_email_failed: { label: "Geplande mail mislukt", icon: "mail-x", color: "red" },
   bik_above_staffel: { label: "Kosten boven staffel", icon: "alert-triangle", color: "amber" },
+  debtor_type_mismatch: { label: "Etiket klopt niet", icon: "alert-triangle", color: "amber" },
   system: { label: "Systeem", icon: "info", color: "gray" },
 };
 

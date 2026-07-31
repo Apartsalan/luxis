@@ -778,6 +778,47 @@ async def daily_bik_staffel_check() -> None:
         logger.exception("Scheduler: BIK-staffel check failed")
 
 
+async def daily_debtor_type_check() -> None:
+    """Daily job: meld dossiers met een consument-etiket op een onderneming (S255).
+
+    Het etiket komt uit de BaseNet-import, die iedere PERSOON als consument
+    aanmerkt — een eenmanszaak valt daar precies tussenuit (S252: IN100077,
+    € 6.300 verschil). Het persoonsrecord in de export bevat geen KvK-nummer,
+    dus de import kan het niet beter weten; deze sweep vangt het zodra er wél
+    ondernemingsgegevens op de contactkaart staan. Wekelijks gededupliceerd.
+    """
+    from app.auth.models import Tenant
+    from app.collections.compliance import find_debtor_type_mismatch
+    from app.notifications.service import create_debtor_type_mismatch_notification
+
+    logger.info("Scheduler: starting debtor-type mismatch check")
+    try:
+        async with async_session() as session:
+            result = await session.execute(select(Tenant).where(Tenant.is_active.is_(True)))
+            for tenant in list(result.scalars().all()):
+                treffers = await find_debtor_type_mismatch(session, tenant.id)
+                if not treffers:
+                    continue
+                lopend = sum(1 for t in treffers if not t["afgesloten"])
+                logger.warning(
+                    "Scheduler: debtor-type — %d dossiers met consument-etiket op een "
+                    "onderneming (%d lopend)",
+                    len(treffers),
+                    lopend,
+                )
+                await create_debtor_type_mismatch_notification(
+                    session,
+                    tenant.id,
+                    aantal=len(treffers),
+                    aantal_lopend=lopend,
+                    voorbeeld_case_number=treffers[0]["case_number"],
+                    dedup_days=7,
+                )
+            await session.commit()
+    except Exception:
+        logger.exception("Scheduler: debtor-type mismatch check failed")
+
+
 async def daily_pipeline_auto_drafts() -> None:
     """Daily job: evalueer timeout-rules + genereer AI-drafts per tenant.
 
@@ -953,6 +994,15 @@ def start_scheduler() -> None:
         CronTrigger(hour=6, minute=45),
         id="daily_bik_staffel_check",
         name="Flag B2C cases with BIK above the WIK-staffel",
+        replace_existing=True,
+    )
+
+    # Daily at 06:50 UTC: consument-etiket op een onderneming (S255-wachter)
+    scheduler.add_job(
+        daily_debtor_type_check,
+        CronTrigger(hour=6, minute=50),
+        id="daily_debtor_type_check",
+        name="Flag b2c-labelled cases whose opposing party is a business",
         replace_existing=True,
     )
 

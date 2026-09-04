@@ -510,8 +510,8 @@ export function FacturenTab({ caseId, clientId }: { caseId: string; clientId?: s
           // DF117-17: split out credit notes from regular invoices for clarity
           const regularInvoices = invoices.filter((i) => i.invoice_type !== "credit_note");
           const creditNotes = invoices.filter((i) => i.invoice_type === "credit_note");
-          const grossTotal = regularInvoices.reduce((sum, inv) => sum + inv.total, 0);
-          const creditedTotal = creditNotes.reduce((sum, inv) => sum + inv.total, 0); // already negative
+          const grossTotal = regularInvoices.reduce((sum, inv) => sum + Number(inv.total), 0);
+          const creditedTotal = creditNotes.reduce((sum, inv) => sum + Number(inv.total), 0); // already negative
           const netTotal = grossTotal + creditedTotal;
           const hasCredit = creditNotes.length > 0;
 
@@ -828,7 +828,7 @@ function VerschottenSection({ caseId }: { caseId: string }) {
               {expenses.length} verschot{expenses.length !== 1 ? "ten" : ""}
             </p>
             <p className="text-sm font-semibold text-foreground tabular-nums">
-              Totaal: {formatCurrency(expenses.reduce((sum, e) => sum + e.amount, 0))}
+              Totaal: {formatCurrency(expenses.reduce((sum, e) => sum + Number(e.amount), 0))}
             </p>
           </div>
         )}

@@ -42,7 +42,7 @@ import {
   type WorkflowTask,
 } from "@/hooks/use-workflow";
 import { useMyTodayEntries, useTimeEntrySummary } from "@/hooks/use-time-entries";
-import { useInvoices, INVOICE_STATUS_LABELS, INVOICE_STATUS_COLORS } from "@/hooks/use-invoices";
+import { useInvoices, useReceivables, INVOICE_STATUS_LABELS, INVOICE_STATUS_COLORS } from "@/hooks/use-invoices";
 import { useKycDashboard } from "@/hooks/use-kyc";
 import { useFollowupStats } from "@/hooks/use-followup";
 import { useUnlinkedCount } from "@/hooks/use-email-sync";
@@ -539,15 +539,22 @@ function TodayHoursCard() {
 }
 
 function OpenInvoicesCard() {
-  const { data } = useInvoices({ status: "sent" });
-  const totalOpen = data?.items?.reduce((sum, inv) => sum + (inv.total ?? 0), 0) ?? 0;
+  // S256: zelfde bron als het debiteurenoverzicht op de Facturen-pagina, zodat
+  // dashboard en Facturen hetzelfde bedrag zeggen. De oude telling telde alleen
+  // status "verzonden" en telde de string-bedragen van de API als tekst op
+  // (toonde € 0,00 terwijl 88 vervallen facturen openstonden).
+  const { data } = useReceivables();
+  const totalOpen = Number(data?.total_outstanding ?? 0);
+  const openCount = data
+    ? data.current.count + data.days_31_60.count + data.days_61_90.count + data.days_90_plus.count
+    : 0;
 
   return (
     <KPICard
       icon={<Receipt className="h-5 w-5" />}
       label="Open facturen"
       value={formatCurrency(totalOpen)}
-      subtitle={`${data?.total ?? 0} verzonden`}
+      subtitle={`${openCount} onbetaald`}
       color="warning"
       href="/facturen"
     />

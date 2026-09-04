@@ -14,7 +14,7 @@
 > gebruik geen nieuwe geschonden waarheid oplevert. Tot die twee dingen waar zijn, is
 > "ik denk dat we er zijn" een gevoel, geen feit.
 >
-> Stand: **34 ✅ / 4 ⚠️ / 2 ❓** (S255).
+> Stand: **35 ✅ / 4 ⚠️ / 2 ❓** (S256).
 >
 > Bijwerken: alleen bij een nieuwe vondst of nieuwe wachter — geen onderhoudsplicht per sessie.
 > *(Oogst S254 gedaan: archief S200-S253, compliance-hart, huisregels `breed-testen`,
@@ -38,6 +38,7 @@
 - ✅ Derdengelden-boekingen (storting, verrekening, storno) zijn test-bewaakt — `test_trust_funds*.py`
 - ✅ Het etiket zakelijk/consument klopt met de contactkaart van de wederpartij, **in beide richtingen** — `test_debtor_type_mismatch.py` (8) + dagelijkse veegronde (S255). Richting 1: consument-etiket terwijl de wederpartij een rechtsvorm óf KvK-nummer heeft → er wordt te weinig gevorderd (S252 Kaandorp: €6.300). Richting 2: zakelijk etiket op een persoon zónder KvK-nummer én zonder rechtsvorm → is het tóch een consument, dan gaan er kosten boven de dwingende staffel de deur uit; de b2c-grendel en de staffel-veegronde kijken allebei alleen naar b2c en lieten dit door. De import-regel "persoon = consument" (`scripts/basenet/mapping.py`) blijft bewust staan: het persoonsrecord in de BaseNet-export bevat géén KvK-nummer of bedrijfsveld (S255 nagemeten op de echte export), dus op importmoment is het niet te weten — de veegronde vangt het zodra de contactkaart het verraadt. Stand op prod: 0 treffers in richting 1, **1 in richting 2 (IN100077 Kaandorp — contactkaart mist zijn KvK-nummer)**.
 - ✅ Wat het dossierscherm over de wederpartij zegt, klopt met wat er daadwerkelijk verstuurd wordt — `test_partij_etiket.py` (S255). De kop toont sinds S255 de rechtsvorm (Consument / Eenmanszaak / BV) i.p.v. "B2B"/"B2C" en kleurt naar privé-aansprakelijkheid; die kleur komt uit `ContactBrief.beperkt_aansprakelijk`, berekend met dezelfde constante als de rentebijlage-beslissing. De test pint ze aan elkaar over alle 8 rechtsvormen die op prod voorkomen — anders zou het scherm kunnen beweren "krijgt geen bijlage" terwijl hij wél meegaat. Zijbalk en kop lezen uit dezelfde functie (visuele controle S255 ving hier een echte tegenspraak: kop "BV", zijbalk "B2B").
+- ✅ De frontend telt geldbedragen nooit op als tekst — `test_frontend_money_sum_guard.py` (S256). De API levert elke Decimal als string en de TypeScript-types zeggen `number`, dus `sum + inv.total` rijgt tekst aaneen: het dashboard toonde "Open facturen € 0,00" bij 88 vervallen facturen (€ 78.469,57) en dossier IN100016 toonde € 145,21 als totaal van drie facturen die samen € 1.062,05 zijn. De wachter leest de frontend-broncode (pijl- én blokvorm, sabotage-bewezen); het dashboard-tegeltje leest nu dezelfde bron als het debiteurenoverzicht op de Facturen-pagina.
 - ⚠️ Griffierechten en nakosten-tarieven zijn actueel — de berekening is getest (`test_nakosten.py`, `test_griffierechten.py`) maar pint de tarieven van nu; een wetswijziging valt niet vanzelf rood (de rente heeft zo'n actualiteitswachter wél)
 
 ## Brieven & verzending (naar buiten = onomkeerbaar)

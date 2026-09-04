@@ -1,5 +1,33 @@
 # Beoordeling Luxis — 4 september 2026 (S256, Fable 5.1)
 
+> **Bijgewerkt dezelfde middag na de eerste uitvoerronde.** Vier correcties op de ochtendversie:
+> 1. **Lisanne:** het slot van 19 aug verliep binnen het uur. Zij vroeg om 13:54 een nieuw wachtwoord aan,
+>    de mail ging correct de deur uit (link klopte, pagina werkt), maar de link is nooit gebruikt.
+>    Opgelost: nieuw wachtwoord gezet en geverifieerd (login 200). Teller staat op 0, geen valstrik.
+> 2. **"4 herhalingen per taak" op de bel is géén fout:** bewust één herinnering per taak per maand,
+>    per gebruiker (sinds S242). De ruis komt van 48 taken die niemand afhandelt, niet van de herhaling.
+> 3. **"Termijnen op gesloten dossiers afboeken" was een VERKEERD voorstel.** Gemeten: 15 dossiers met
+>    een actieve regeling en gemiste termijnen (24 termijnen, € 11.093,54). Tien daarvan staan in Luxis
+>    op "afgesloten" terwijl BaseNet zei "Bijhouden regelingen". Dat zijn échte alarmen op échte
+>    regelingen. NIET afboeken. Wél: de teller kan betalingen niet zien (1 van 266 termijnen is aan een
+>    betaling gekoppeld; regelingen en betalingen kwamen apart uit de import) — dus tussen die 15
+>    zitten ook debiteuren die wél betaald hebben (IN100543, IN100505, IN100494). Lijst hieronder.
+> 4. **Facturen-tegeltje + dossier-factuursom GEFIXT en live** (commit aeb5d91, wachter
+>    `test_frontend_money_sum_guard.py`, WAARHEDEN 35 ✅). Dashboard: € 78.469,57 / 88 onbetaald.
+>    Dossier IN100016: € 1.062,05 (was € 145,21).
+>
+> **Regelingen met gemiste termijnen — voor Lisanne om te beoordelen (Luxis-status / BaseNet-fase /
+> verschuldigd tot nu / betaald rond de regeling / betaald totaal):**
+> IN100535 afgesloten, Regeling treffen, € 1.948,55 / 0 / 0 · IN100515 in behandeling, € 1.005,79 / 0 / 0 ·
+> IN100026 afgesloten, Bijhouden, € 1.000 / 0 / 4.300 · IN100019 afgesloten, Dagvaarding naar DW, € 1.000 / 0 / 700 ·
+> IN100582 afgesloten, Stukken opgevraagd, € 600 / 0 / 0 · IN100430 afgesloten, Bijhouden, € 400 / 0 / 0 ·
+> IN100329 afgesloten, Regeling treffen, € 300 / 0 / 0 · IN100305 afgesloten, € 150 / 0 / 0 ·
+> IN100215 in behandeling, € 1.049,21 / 250 / 250 · IN100494 nieuw, € 2.073,17 / 1.036,58 / 1.036,58 (helft betaald) ·
+> IN100345 nieuw, € 100 / 50 / 350 · IN100497 afgesloten, € 796,05 / 0 / 3.192 (vrijwel volledig betaald) ·
+> IN100454 afgesloten, € 186,73 / 0 / 1.494,30 · IN100505 afgesloten, € 267,80 / 0 / 267,80 (exact betaald) ·
+> IN100543 nieuw, € 216,24 / 216,25 / 216,25 (betaald, alarm onterecht).
+
+
 Vraag van Arsalan: wat vind je van Luxis, wat kan beter, wat is kapot, wat missen we nog.
 Alles hieronder is deze sessie gemeten op productie (database, logboeken, schermen) of in de
 broncode; waar dat niet lukte staat "niet geverifieerd".
@@ -41,7 +69,7 @@ zonder vervolgstap: daar houdt de werkstroom gewoon op.
 (b) hoofdpad automatisch laten lopen met alleen een stop-knop. Dit is een beslissing, geen bouwklus.
 
 ## Kapot (klein, wel echt)
-- **Dashboard "Open facturen € 0,00"** terwijl er 88 vervallen facturen (€ 78.469,57) openstaan.
+- ~~**Dashboard "Open facturen € 0,00"**~~ GEFIXT (zie boven) — was: 88 vervallen facturen (€ 78.469,57) onzichtbaar.
   Het tegeltje telt alleen status "verzonden" (7 stuks, samen −€ 5.707 aan creditnota's) en telt
   bedragen als tekst op in plaats van als getal. Bron: `OpenInvoicesCard` in het dashboard.
 - **Dashboard "€ 13.690,26 ontvangen"** is de som van alle betalingen ooit op de 52 actieve dossiers,

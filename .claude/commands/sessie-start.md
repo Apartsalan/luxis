@@ -2,7 +2,7 @@ Start een nieuwe werksessie.
 
 Stappen:
 
-1. **`/effort max`** — zet reasoning op maximum voor deze sessie (voorkomt 0-reasoning beurten door adaptive thinking)
+1. **Effort per model** (S256, onderzoek Fable 5.1): op **Opus** `/effort max`; op **Fable 5.1** `/effort high` — Anthropic's startpunt; op max denkt 5.1 langer vóór het schrijft en spawnt het ongevraagd subagents. Alleen naar xhigh/max voor één zware review/audit, en dan bewust.
 2. **Lees** via `luxis-researcher` subagent: SESSION-NOTES.md (wat vorige sessie deed + volgende stap) en LUXIS-ROADMAP.md (status + prioriteiten). NIET zelf lezen — subagent houdt context schoon.
 3. **Module + route scan** — draai deze 2 commando's en bewaar output in werkgeheugen voor de hele sessie:
    - Frontend pagina's: `Glob` met pattern `frontend/src/app/(dashboard)/**/page.tsx`

@@ -826,6 +826,20 @@ async def daily_debtor_type_check() -> None:
         logger.exception("Scheduler: debtor-type mismatch check failed")
 
 
+async def daily_summary_mail() -> None:
+    """Daily job (S256): één mail per ochtend met wat op de advocaat wacht."""
+    from app.notifications.daily_summary import send_daily_summaries
+
+    logger.info("Scheduler: starting daily summary mail")
+    try:
+        n = await send_daily_summaries()
+        logger.info("Scheduler: daily summary mail — %d mail(s) verstuurd", n)
+        await _write_heartbeat("daily_summary_mail", None)
+    except Exception as e:
+        logger.exception("Scheduler: daily summary mail failed")
+        await _write_heartbeat("daily_summary_mail", f"{type(e).__name__}: {e}")
+
+
 async def daily_pipeline_auto_drafts() -> None:
     """Daily job: evalueer timeout-rules + genereer AI-drafts per tenant.
 
@@ -1010,6 +1024,16 @@ def start_scheduler() -> None:
         CronTrigger(hour=6, minute=50),
         id="daily_debtor_type_check",
         name="Flag b2c-labelled cases whose opposing party is a business",
+        replace_existing=True,
+    )
+
+    # Daily at 07:00 UTC (09:00 NL), ná alle ochtendcontroles: samenvattingsmail
+    # naar de kantoorgebruikers (S256). Geen mail als er niets wacht.
+    scheduler.add_job(
+        daily_summary_mail,
+        CronTrigger(hour=7, minute=0),
+        id="daily_summary_mail",
+        name="Dagelijkse samenvattingsmail aan kantoorgebruikers",
         replace_existing=True,
     )
 

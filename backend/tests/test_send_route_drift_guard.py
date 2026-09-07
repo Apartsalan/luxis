@@ -52,6 +52,9 @@ EXPECTED_SMTP_EXITS = {
     ("app/email/router.py", "send_test_email"),
     # Wachtwoord-reset: systeemmail, geen dossier-mail.
     ("app/auth/router.py", "_send_reset_email_safe"),
+    # Dagelijkse samenvatting (S256): systeemmail aan de eigen kantoorgebruikers,
+    # nooit aan een debiteur; geen dossier-mail, dus buiten het drieluik.
+    ("app/notifications/daily_summary.py", "send_daily_summaries"),
 }
 
 # ── M4: verzend-aanroepen waarvan het onderwerp NIET rechtstreeks uit de
@@ -77,9 +80,11 @@ SUBJECT_ALLOWLIST = {
     # ResponseTemplate (geen stale BaseNet-sjabloon). Vondst V2c S224:
     # kandidaat om naar build_reply_subject te verhuizen.
     ("app/ai_agent/service.py", "execute_classification"),
-    # Instellingen-test + wachtwoord-reset: vaste/systeem-onderwerpen.
+    # Instellingen-test + wachtwoord-reset + dagelijkse samenvatting (S256):
+    # vaste/systeem-onderwerpen aan de eigen gebruikers, geen debiteur-post.
     ("app/email/router.py", "send_test_email"),
     ("app/auth/router.py", "_send_reset_email_safe"),
+    ("app/notifications/daily_summary.py", "send_daily_summaries"),
 }
 
 SUBJECT_BUILDERS = {"build_email_subject", "build_reply_subject"}

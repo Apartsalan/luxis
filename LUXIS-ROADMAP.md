@@ -5,7 +5,7 @@
 > je een systeemkoppeling → kaart bijwerken in dezelfde sessie. Feitelijke inventaris:
 > `docs/audits/inventaris-2026-07-05.md`.
 
-**Laatst bijgewerkt:** 31 juli 2026 (S255 — 438 KVK-opzoekingen gedaan, etiket-wachter beide richtingen, 8 Next.js-CVE's gedicht, rechtsvorm zichtbaar op dossier + lijst; **34 ✅ / 4 ⚠️ / 2 ❓**). Rapport: entry S255 in `SESSION-NOTES.md`. **Volgende = S256 (`docs/sessions/PROMPT-S256.md`).**
+**Laatst bijgewerkt:** 7 september 2026 (S256 — beoordeling na 5 weken stilte; Lisanne weer binnen, 10 regelingsdossiers heropend, dagelijkse samenvattingsmail live, geldbedragen-optelfout gefixt; **35 ✅ / 4 ⚠️ / 2 ❓**). Rapport: `docs/audits/beoordeling-2026-09-04.md` + entry S256 in `SESSION-NOTES.md`. **Volgende = S257 (`docs/sessions/PROMPT-S257.md`).**
 **Product:** Praktijkmanagementsysteem voor Nederlandse advocatenkantoren
 **Eerste klant:** Kesting Legal (Lisanne Kesting, 1 advocaat, incasso/insolventie, Amsterdam)
 **Productie:** https://luxis.kestinglegal.nl
@@ -53,7 +53,7 @@
 
 ---
 
-## 🎯 Huidige prioriteit (bijgewerkt 31 juli 2026, S255)
+## 🎯 Huidige prioriteit (bijgewerkt 7 september 2026, S256)
 
 > 🧭 **KOERSREGEL (Arsalan, 30 juli): GEEN nieuwe features meer — afmaken en verbeteren
 > wat er al is.** Luxis moet áf. Sessievoorstellen zijn herstel-/afmaakklussen (bugs,
@@ -65,154 +65,34 @@
 > geld, reputatie of juridische fouten verdienen een wachter. Elke gevonden fout wordt
 > voortaan een waarheid + wachter voor zijn SOORT. Luxis is AF wanneer de lijst geen ⚠️/❓
 > meer heeft én twee weken echt gebruik geen nieuwe schending oplevert. Werkafspraken:
-> `WERKWIJZE.md` → "Klaar is een lijst, geen gevoel". Stand na S255: **34 ✅ / 4 ⚠️ / 2 ❓**.
+> `WERKWIJZE.md` → "Klaar is een lijst, geen gevoel". Stand na S256: **35 ✅ / 4 ⚠️ / 2 ❓**.
 >
-> ✅ **S254 AFGEROND — de oogst + 4 wachters + één echte verzendfout gedicht.**
-> (a) `WAARHEDEN.md` van startlijst naar compleet: 13✅/7⚠️/3❓ → **32 ✅ / 5 ⚠️ / 2 ❓**, elke
-> status tegen de echte testbestanden gecheckt. Eén onterecht vinkje gecorrigeerd (er was géén
-> wachter die een NIEUWE verzenddeur zonder 14-dagenbrief-gate betrapt). (b) **Echte fout:** de
-> batch-knop én follow-up 'Uitvoeren' verstuurden een sommatie op een betaald/afgesloten dossier
-> (rood bewezen, `emails_sent=1`); alleen de 'Verstuur later'-wachtrij controleerde dit. Nu één
-> gedeelde poort `check_case_closed_gate`. (c) Vier wachters, elk bewezen bijtend door de regel
-> te slopen: gesloten dossier (gedrag + soort), 14-dagenbrief-gate op nieuwe deuren, afzender
-> altijd incasso@, meldingsoort heeft label/icoon/kleur. 375 tests groen, CI groen, live.
->
-> ✅ **S255 AFGEROND — de dikste ⚠️ dicht + een verborgen beveiligingsachterstand opgeruimd.**
-> (a) **438 KVK-opzoekingen gedaan** (filter op wederpartij eerst, 726 → 438): 437 rechtsvormen
-> gevuld (223 eenmanszaak, 172 BV, 35 VOF, rest klein), 1 leeg. **175 wederpartijen krijgen de
-> rentebijlage niet meer, waarvan 20 op lopende dossiers** — end-to-end geverifieerd op echte
-> prod-dossiers. (b) **Etiket-wachter, beide richtingen** (`find_debtor_type_mismatch` + dagelijkse
-> veegronde + melding): richting 1 (consument-etiket op onderneming, de Kaandorp-fout van €6.300)
-> = 0 treffers; **richting 2 kwam er pas bij na zelfkritiek** — zakelijk etiket zonder énig bewijs
-> is de gevaarlijkere kant, want b2c-grendel én staffel-veegronde filteren allebei op b2c en lieten
-> dit door (1 treffer: IN100077). Import-regel bewust ongewijzigd: het BaseNet-persoonsrecord bevat
-> géén KvK-veld (nagemeten op de echte export). (c) **Beveiliging:** de frontend-audit stond maanden
-> "bekend rood" en werd daarom niet gelezen — er zaten **8 échte Next.js-adviezen** in (DoS, SSRF,
-> cache-confusion, endpoint-disclosure). Next 15.5.20 → 15.5.22, dompurify + sharp bij; audit nu
-> **blokkerend, alleen runtime, en groen**. (d) **Rechtsvorm zichtbaar** op dossierkop, zijbalk én
-> incassolijst i.p.v. "B2B/B2C", uit één gedeelde bron (kleur = privé aansprakelijk = rentebijlage
-> gaat mee). (e) **Taalwachter** die de frontend-broncode leest; eerst rood bewezen tegen de kapotte
-> code, en de sabotage-proef vond twéé gaten in de wachter zelf. 10 commits, CI groen, live,
-> visueel gecontroleerd op prod.
->
-> 🎯 **VOLGENDE (S256): Arsalan bepaalt.** Resterende ⚠️ (4): actualiteit griffierecht-/nakosten-
-> tarieven (de rente heeft zo'n verouderingsalarm wél, deze niet), sjabloonmenu per stap,
-> TOKEN_ENCRYPTION_KEY (mét Lisanne plannen — verbreekt haar mailkoppeling), kennisregels
-> admin-only. ❓ (2): verjaringsteller kent geen stuiting (bouwen of als handwerk-signaal laten,
-> keuze Arsalan/Lisanne) en de menuvraag voor Lisanne. Verder onveranderd: mobiel-check
-> sjabloonmenu 390×844, keuze C (ontwerpspoor kleur/leesbaarheid), etiket-controle vóór
-> fase-heropening 406. **Voor Lisanne:** KvK-nummer 72908475 op de contactkaart van Kaandorp
-> (IN100077) — staat als melding op de bel.
->
-> ✅ **S253 AFGEROND — KVK-koppeling live + werkwijze-omslag + omgeving opgeruimd.**
-> (a) KVK-sleutel (binnengekomen bij Lisanne 28-7) op prod gezet; rechtsvorm wordt nu
-> automatisch opgehaald bij aanmaken/bijwerken van een relatie. Live geverifieerd:
-> Kesting Legal en Kaandorp → "Eenmanszaak". (b) Backfill gemeten: 726 relaties met
-> KvK-nummer en lege rechtsvorm, maar **438 zijn wederpartij** (33 open / 405 gesloten) —
-> GO gegeven (±€9), bewust uitgesteld; script mist nog het wederpartij-filter.
-> (c) CLAUDE.md 250 → 139 regels volgens het Claude 5-recept; `future-modules.md` niet
-> meer altijd geladen. (d) Drie tekstregels werden hooks: `git add -A` geblokkeerd,
-> push met rode ruff geweigerd, notificatiegeluid automatisch. Rapport: entry S253.
->
-> ✅ **S252 AFGEROND — bel-labels + sjabloonmenu op de stappen + IN100077 zakelijk, LIVE.**
-> (a) De bel kende 2 van de 12 meldingstypen niet (grijs "Systeem"); tijdens de live-check
-> bleek een derde (AI-concept) om dezelfde reden grijs — icoon/kleur ontbraken in de
-> tekenkaarten. Alle 21 typen daarna machinaal nageteld: nul gaten. (b) Sjabloonmenu volgt
-> nu de pijplijnstappen 0-5: de brief "Tweede sommatie (standaard herhaling)" was intern
-> `wederom_sommatie_kort` = het anker van de DÉRDE sommatie, vandaar dat de stap niet
-> doorschoof (S251-vondst IN100602). BaseNet-brief L11 (`wederom_sommatie_inhoudelijk`)
-> weer bereikbaar — bestond, stond in geen menu. Nul backend-gedragswijziging.
-> (c) IN100077 (Kaandorp): niet de rente maar het ETIKET was fout — de import zette
-> debtor_type op b2c zodra de wederpartij een persoon was, en een eenmanszaak is precies
-> dat blinde gat. Uit de 27 dossiermails + KvK 72908475 bleek zakelijk; na GO gezet op
-> b2b + 2%/mnd + 15% (rente € 1.278 → € 6.732, kosten € 900 → € 1.878, beide nageteld;
-> terugdraai-set in `_s252_interest_backup_cases`). Rapport: entry S252 in SESSION-NOTES.
->
-> ✅ **S251 AFGEROND — geld-audit + briefmachine-fix + 15% overal + b2c-grendel, LIVE.**
-> Vondst Arsalan (brief ≠ Financieel-tabblad) leidde tot een volledige geld-audit
-> (`docs/audits/geld-audit-2026-07-29.md`): de briefmachine negeerde de kosten-afspraak
-> én de rente-stopdatum van het dossier (6 brieven fout de deur uit, € 10.304,71 te
-> weinig gevorderd). Gefixt via één gedeelde rekenroute; alle 6 bureaukaarten +
-> IN100602/IN100605 op 15% (besluit Arsalan); consument kan nooit meer boven de
-> dwingende staffel (erving, handmatig én intake-pad); waakhond ziet nu ook
-> percentages. Eind-natelling: 45/45 actieve dossiers tot de cent kloppend,
-> 43/43 brief == scherm. 22 nieuwe wachters, 886 tests groen, alle CI groen.
->
-> *(De S252-vooruitblik die hier stond is afgehandeld — zie de S252-blok hierboven.
-> Fase-heropening 406 blijft open: `docs/plans/BASENET-STATUS-HERSTEL.md`, GO per groep,
-> 153 met rentemeter bevroren op openingsdatum, nu mét etiket-controle vooraf.)*
->
-> ✅ **S250 AFGEROND — mail-conventie in de gespreksregels + 2 veegpunten, LIVE.** De
-> gespreksregel toonde één richting-pijl van het laatste bericht (na "sommatie uit →
-> antwoord binnen" zag je alleen inkomend). Nu de Gmail/Outlook-conventie in beide
-> regelvarianten: deelnemers met "ik", "Aan: <ontvanger>" bij alleen-verstuurd, grijze
-> voorbeeldregel en mail-datums ("Vrijdag 00:14" / "17 jul"). Verder: een afgeronde taak
-> toont niet langer "X dagen te laat", en de faalmelding van een mislukte geplande mail
-> gaat nu naar álle actieve gebruikers i.p.v. alleen de inplanner (inclusief het pad
-> "gebruiker bestaat niet meer", dat eerder helemaal stil viel) — wachter-test rood
-> bewezen, daarna groen. Visueel nagekeken op prod, desktop + telefoon. Rapport: entry
-> S250 in SESSION-NOTES.
->
-> 🎨 **Ontwerpspoor klaargezet, NIET gestart (S250).** Eerste doorlichting van de live app
-> met Impeccable: **28/40**. Geen AI-slop, maar geen vormtaal eronder — 877 rauwe
-> kleurklassen naast het tokensysteem, 15 families met dubbelingen, badge-component wordt
-> in 3 bestanden gebruikt terwijl de rest handmatig badges bouwt. 5 gemeten contrastfouten
-> (amber-tekst 3,19 · groen 3,77 · wit-op-rood 3,76 · lichtrood-op-roze 2,13 · grijs 4,39)
-> en één echte bug: de zwevende Timer-knop dekt inhoud af (dashboard + incassotabel).
-> Doorgerekend plan met stappen: `docs/plans/ONTWERP-kleur-en-leesbaarheid-S250.md`.
-> Volledige doorlichting: `.impeccable/critique/`. **Arsalan: richting akkoord, nu geen actie.**
->
-> ⏸️ **Kostenblokje uitgesteld (besluit Arsalan, S250).** Gemeten: 1 week cijfers, $6,53
-> waarvan meer dan de helft eigen testverkeer; echt gebruik ≈ €13/maand. Opnieuw bekijken
-> zodra er een volle maand echte cijfers ligt.
 
-> ✅ **S248 AFGEROND — juridische kennisregels GEBOUWD + LIVE.** Nieuwe feature naast
-> "Slim leren": Lisanne kan zelf juridische standaardkennis vastleggen ("als een
-> debiteur *dit* beweert, is dat onjuist, en *dit* is de weerlegging — art. X BW").
-> De AI gebruikt een regel alleen ná goedkeuring, en alleen als het verweer echt
-> gevoerd wordt én de voorwaarde klopt. **Het scherpste risico is hard afgevangen:**
-> een regel die alleen voor bedrijven geldt (art. 6:235 BW) kan nooit op een consument
-> worden losgelaten — op prod bewezen (bij een zakelijk dossier wél, bij een consument
-> leeg). Door alle 3 de conceptroutes een échte AI-brief gehaald ($0,09), alles
-> teruggedraaid, prod schoon (0 regels). 8 wachters, CI groen. Doc bijgewerkt naar
-> GEBOUWD + LIVE: `docs/plans/ONTWERP-juridische-kennisregels-S247.md`. Rapport: entry
-> S248 in SESSION-NOTES.
+> ✅ **S256 AFGEROND — beoordeling na vijf weken stilte, plus drie uitgevoerde GO's.**
+> De techniek bleek gezond (containers healthy, backup, 0 fouten in 7 dagen logboek); het
+> probleem is **gebruik**: sinds 1 augustus één werkdag activiteit, 162/164 meldingen
+> ongelezen, terwijl Lisanne doorwerkte in Outlook. (a) **Lisanne weer binnen** — nieuw
+> wachtwoord, login geverifieerd; het slot van 19-8 was allang verlopen, haar eigen
+> reset-link is nooit gebruikt. (b) **Geldbedragen-optelfout gefixt + wachter**
+> (`test_frontend_money_sum_guard.py`, WAARHEDEN 35 ✅): het dashboard toonde € 0,00 terwijl
+> 88 vervallen facturen (€ 78.469,57) openstonden, en een dossier toonde € 145,21 voor
+> € 1.062,05 — de API levert Decimals als string en de frontend telde tekst op.
+> (c) **10 regelingsdossiers heropend** (stap Bijhouden regeling, eigenaar Lisanne,
+> terugdraai-tabel `_s256_reopen_backup_cases`, niets gemaild): daar lopen echte
+> betalingsregelingen met 24 gemiste termijnen (€ 11.093,54) die onzichtbaar waren.
+> (d) **Dagelijkse samenvattingsmail live** (09:00 NL): brieven die op akkoord wachten,
+> verweren, gemiste termijnen; niets te melden = geen mail. (e) **Beveiligingsachterstand
+> sinds 31 juli gedicht** (nanoid high, aiosmtplib, cryptography) — CI weer 8/8 groen.
+> **Drie eigen conclusies zijn tijdens de sessie gecorrigeerd** — met name "termijnen op
+> gesloten dossiers afboeken" bleek een gevaarlijk voorstel: die alarmen zijn echt.
 >
-> ✅ **S248-NAGEKOMEN — Kimi-security-scan + 7 fixes LIVE.** Op verzoek van Arsalan een
-> grote security-scan via zijn Kimi-API (K3 voor auth/tenant/geld, k2.7-code voor de rest;
-> alleen broncode, geen PII/secrets — ~$4,31). Claude verifieerde élke vondst tegen de echte
-> code + prod. Kroonjuwelen houden stand; de meeste "critical/high" waren al afgeschermd
-> (11 vals-alarm bevestigd). 7 echte fixes gebouwd, getest en live: SSTI-sandbox voor
-> sjablonen (SEC-25, RCE dicht — latent-kritiek voor multi-tenant), atomaire refresh-token-
-> rotatie (SEC-26), kantoor-actief-check (SEC-27), RLS-grendel default-secure (SEC-28),
-> IMAP-SSRF-ranges (SEC-29), max wachtwoordlengte (SEC-30), rate-limits (SEC-31). Alle CI
-> groen (m.u.v. de al bestaande niet-blokkerende sharp-CVE-audit). **Open (Arsalan beslist,
-> kost iets):** aparte TOKEN_ENCRYPTION_KEY (verbreekt Lisanne's mailkoppeling), kennisregel-
-> endpoints admin-only. Rapport: nagekomen-sectie entry S248 in SESSION-NOTES.
->
-## Projectdocumenten
-
-### In de Git repo (`C:\Users\arsal\Documents\luxis\`)
-
-| Document | Doel | Status |
-|----------|------|--------|
-| `LUXIS-ROADMAP.md` | **Dit document** — overzicht van alles. Status, prioriteit, bugs, features | **ENIGE source of truth** — alle andere docs verwijzen hiernaar |
-| `docs/ARCHITECTUUR-KAART.md` | **Verbindingskaart** — hoe alle systemen aan elkaar hangen (2 pag.) | **Elke sessie eerst lezen** (auto via SessionStart-hook); bijwerken bij elke koppeling-wijziging |
-| `docs/audits/inventaris-2026-07-05.md` | Feitelijke feature-inventaris + dubbele systemen + verweer-woordenschat (audit S172) | Referentie — wat er ÍS |
-| `CLAUDE.md` | AI development guide, architectuurregels, werkwijze | Actief |
-| `backend/CLAUDE.md` / `frontend/CLAUDE.md` | Backend/frontend-conventies | Actief |
-| `docs/DECISIONS.md` | Tech stack keuzes + onderbouwing | Deels stale (Celery/Nginx/jose — zie audit S172); paden gecorrigeerd S172 (stonden op repo-root) |
-| `docs/archief/` | Historie: oude sessie-entries, roadmap-secties, prompts, audits, afgeronde plannen | Archief — verplaatsen, nooit verwijderen |
-| `docs/FEATURE-INVENTORY.md` | Markt-checklist: wat een PMS zou kúnnen (concurrent-onderzoek) | Referentie — de "wat zou kunnen" lijst (NIET wat er is) |
-| `docs/research/UX-REVIEW.md` / `UX-VERBETERPLAN.md` / `BUGS-EN-VERBETERPUNTEN.md` / `PROMPT-TEMPLATES-IN-WORKFLOW.md` | Historische detail-docs (feb-mrt 2026) | Archief — status staat in deze roadmap |
-
-### Op Bureaublad (`C:\Users\arsal\OneDrive\Bureaublad\Kesting Legal\Luxis\`)
-
-| Document | Doel | Status |
-|----------|------|--------|
-| `LUXIS-PROJECT-PROMPT.md` | Oorspronkelijk projectbriefing (wie, wat, waarom, fasering) | Verwerkt in deze roadmap — bewaren als archief |
-| `TECH-STACK-DECISION-PROMPT.md` | Opdracht die leidde tot DECISIONS.md | Verwerkt — bewaren als archief |
-
+> 🎯 **VOLGENDE (S257): de ruis uit Lisannes lijsten halen.** (1) De 14 testdossiers
+> (2026-00006 t/m 00020) markeren en filteren uit incassolijst, follow-up, dashboard én de
+> nieuwe ochtendmail — nu is 14 van de 37 "openstaande brieven" nep. (2) Daarna de keuze
+> over Arsalans privé-post in de maillijst (seidony@ ontkoppelen of filteren; 63
+> ongesorteerd). **Voor Lisanne:** bevroren rente op IN100515, en het KvK-nummer 72908475
+> op de contactkaart van Kaandorp (IN100077). Nog dicht en wachtend op GO per groep:
+> ongeveer 395 dossiers die in BaseNet liepen.
 
 ---
 

@@ -2,10 +2,125 @@
 
 <!-- Kop = exact deze 4 regels, elk max 1-2 zinnen. Detail hoort in de sessie-entry. -->
 <!-- Max 10 sessie-entries in dit bestand; oudere → docs/archief/SESSION-ARCHIVE.md (regels: /sessie-einde). -->
-**Laatst bijgewerkt:** 31 juli 2026 (S255 — 438 KVK-opzoekingen gedaan, etiket-wachter beide richtingen, 8 Next.js-CVE's gedicht, rechtsvorm zichtbaar op dossier + lijst).
-**Laatste feature/fix:** De schermen toonden "B2B/B2C" terwijl het juridisch om privé-aansprakelijkheid gaat; dossierkop, zijbalk en incassolijst tonen nu de rechtsvorm uit één gedeelde bron, met wachter tegen nieuwe eigen vertalingen (S255).
-**Openstaand:** koersregel: GEEN nieuwbouw. Waarheden: **34 ✅ / 4 ⚠️ / 2 ❓**. Resterend: griffierecht/nakosten-actualiteit, sjabloonmenu per stap, TOKEN_ENCRYPTION_KEY (mét Lisanne), kennisregels admin-only. Verder: mobiel-check sjabloonmenu, verjaring/stuiting (keuze Arsalan/Lisanne), menu-vragen Lisanne, etiket-controle vóór fase-heropening 406.
-**Volgende sessie:** S256 — Arsalan kiest uit de 4 resterende ⚠️'s of keuze C (ontwerp). Zie `docs/sessions/PROMPT-S256.md`.
+**Laatst bijgewerkt:** 4-7 september 2026 (S256 — beoordeling na 5 weken stilte; Lisanne weer binnen, 10 regelingsdossiers heropend, dagelijkse samenvattingsmail live, geldbedragen-optelfout gefixt).
+**Laatste feature/fix:** Dagelijkse samenvattingsmail (09:00 NL) met wat op de advocaat wacht, plus de fix dat de frontend geldbedragen niet meer als tekst optelt (dashboard toonde € 0,00 bij € 78.469,57 open) — beide live, CI groen (S256).
+**Openstaand:** koersregel: GEEN nieuwbouw. Waarheden: **35 ✅ / 4 ⚠️ / 2 ❓**. Grootste probleem is gebruik, niet techniek: 37 openstaande brieven (incl. 14 testdossiers die uit Lisannes lijsten moeten), privé-post van Arsalan in de maillijst, ~395 dossiers nog dicht die in BaseNet liepen. Voor Lisanne: bevroren rente op IN100515.
+**Volgende sessie:** S257 — testdossiers markeren + uit de lijsten filteren, daarna privé-mail. Zie `docs/sessions/PROMPT-S257.md`.
+
+## Sessie 256 (4 + 7 september 2026, Fable-onderzoek → Opus-bouw → Fable-uitvoering — beoordeling na 5 weken stilte + drie GO's uitgevoerd, LIVE)
+
+### Samenvatting
+
+Eerste sessie na vijf weken stilte. Vraag Arsalan: "wat vind je van Luxis, wat kan beter,
+wat is kapot, wat missen we". Rapport: `docs/audits/beoordeling-2026-09-04.md`. Daarna GO
+op drie punten, alle drie afgerond.
+
+**0. Fable 5.1-herijking (`0900569`).** Onderzoek naar het nieuwe model (last30days + de
+officiele prompting-documentatie). Sessie-start zet effort nu **high** op Fable 5.1 (was
+altijd max; op max denkt 5.1 langer voor het schrijft en spawnt het ongevraagd subagents),
+max blijft voor Opus. `fable-diepte` kreeg de regel "herkennen is niet kennen, eerst
+kijken", `fable-tegenspreker` een natelling op aantallen/limieten/citaten. Anthropic's
+eigen modelkeuze-advies bevestigt de S210-regel: Opus standaard, Fable voor review en
+lange ketens.
+
+**1. De beoordeling (`7b09766`, gecorrigeerd in `351e28b`).** Techniek is gezond
+(containers healthy, backup 03:00, 0 fouten in 7 dagen logboek, 10 nachtjobs met
+heartbeat). Het probleem is **gebruik**: sinds 1 augustus een werkdag activiteit, 162 van
+164 meldingen ongelezen, terwijl Lisanne gewoon doorwerkte in Outlook (IN100330-draad tot
+3 september). Drie oorzaken gemeten: (a) zij kon niet inloggen, (b) ongeveer 405 dossiers
+staan op "afgesloten" terwijl BaseNet ze als lopend kende, (c) 19 dossiers wachtten 29-46
+dagen op een brief die klaarstond maar op een klik wachtte.
+
+**Drie eigen conclusies gecorrigeerd na doormeten** — de reden dat dit rapport twee
+versies heeft:
+- "Lisanne zit op slot" was fout: het slot van 19-8 verliep binnen het uur. Zij vroeg om
+  13:54 een nieuw wachtwoord aan, de mail ging correct de deur uit (link klopte, pagina
+  leeft), maar de link is nooit gebruikt. Geen technische fout.
+- "Bel herhaalt 4x per taak" is geen fout: bewust een herinnering per taak per maand, per
+  gebruiker (S242). De ruis komt van 48 taken die niemand afhandelt.
+- **"Termijnen op gesloten dossiers afboeken" was een gevaarlijk voorstel.** Doorgemeten:
+  15 dossiers met een ACTIEVE regeling en gemiste termijnen, 24 termijnen, EUR 11.093,54.
+  Eerst leek de teller blind voor betalingen (1 van 266 termijnen heeft een payment_id),
+  maar het importscript van 6-7 nam **alleen toekomstige termijnen** over (notes-veld:
+  "alleen toekomstige termijnen overgenomen"). Elke betaling van voor die datum hoorde bij
+  termijnen die Luxis niet kent. **Alle 24 gemiste termijnen zijn dus echt gemist**;
+  koppelen met terugwerkende kracht was niet nodig en zou het alarm ten onrechte hebben
+  gedempt.
+
+**2. Lisanne weer binnen.** Nieuw wachtwoord gezet via SSH, teller op 0, reset-token
+gewist; login geverifieerd (HTTP 200). De hele herstelketen (mail, link, pagina) bleek
+technisch in orde.
+
+**3. Geldbedragen-optelfout + wachter (`aeb5d91`).** De API levert Decimals als string, de
+TypeScript-types zeggen `number`, dus `sum + inv.total` rijgt tekst aaneen en `parseFloat`
+maakt er een verkeerd getal van. Dashboard "Open facturen" toonde **EUR 0,00** terwijl 88
+vervallen facturen (**EUR 78.469,57**) openstonden; dossier IN100016 toonde EUR 145,21 voor
+drie facturen van samen EUR 1.062,05. Het dashboard-tegeltje leest nu dezelfde bron als het
+debiteurenoverzicht op de Facturen-pagina. `test_frontend_money_sum_guard.py` leest de
+frontend-broncode; **rood bewezen** tegen de ongefixte code (4 regels aangewezen), en de
+sabotage-proef vond een gat in de wachter zelf (de blokvorm met return glipte door de
+eerste regex). Beide schermen op prod nagekeken. WAARHEDEN: 34 naar **35 groen**.
+
+**4. Tien regelingsdossiers heropend** (IN100019/026/305/329/430/454/497/505/535/582),
+exact volgens `docs/plans/PLAN-heropening-werkvoorraad.md`: status `in_behandeling`, stap
+**Bijhouden regeling**, eigenaar Lisanne, `interest_freeze_date` gewist, een transactie met
+terugdraai-tabel `_s256_reopen_backup_cases` en een activiteitenlog-regel per dossier. Alle
+acceptatiequery's uit het draaiboek OK: 10/10 op de juiste stap, 0 zonder eigenaar, 0 met
+sluitdatum, `email_logs` voor is gelijk aan na (66, er is niets gemaild), vangnet
+BaseNet-gesloten = 0. Actieve dossiers 52 naar 62. **Er is geen timeout-transitie vanaf
+Bijhouden regeling**, dus er loopt niets automatisch. Wat er speelde: IN100026 reageerde
+28-7 en 5-9 op een "niet voldaan aan regeling"-sommatie, IN100582 had begin augustus een
+schikkingsgesprek via incasso@ — beide levend terwijl Luxis ze "afgesloten" noemde.
+Etiketten zakelijk/consument klopten bij alle tien met de contactkaart.
+
+**5. Dagelijkse samenvattingsmail (`ac59c07`).** Keuze Arsalan: mail, niet automatisch
+versturen. `app/notifications/daily_summary.py` + job 07:00 UTC (09:00 NL, na alle
+ochtendcontroles). Drie blokken: brieven die op akkoord wachten (te laat eerst), dossiers
+in "Verweer beantwoorden", gemiste termijnen op lopende regelingen. **Niets te melden is
+geen mail.** Systeemmail aan de eigen gebruikers, gemotiveerd op de allowlist van
+`test_send_route_drift_guard.py` (nooit naar een debiteur). Vier tests op de mailopbouw
+(leeg, alle blokken, afkappen bij 20 met telling, HTML-ontsnapping). Proefdraai naar
+seidony@: "37 brieven, 3 verweren, 24 gemiste termijnen".
+
+**6. Beveiligingsachterstand sinds 31 juli (`7fc338d`).** De CI stond rood op beide
+afhankelijkheids-audits. Frontend: nanoid (**high**), dompurify, tiptap, postcss —
+`npm audit fix` **zonder** `--force` (Next 15.5.22 naar 15.5.25), audit weer 0. Backend:
+aiosmtplib 5.1.1 naar 5.1.2 (CVE-2026-55558), cryptography 48.0.1 naar 50.0.1 (4
+PYSEC-adviezen); pip-audit op de vergrendelde runtime-set schoon, Fernet-proef groen.
+**CI daarna volledig groen (8/8)**, prod draait op deze versie.
+
+### Gewijzigde bestanden
+- `backend/app/notifications/daily_summary.py` (nieuw) — samenvattingsmail
+- `backend/app/workflow/scheduler.py` — job `daily_summary_mail` (07:00 UTC) + heartbeat
+- `backend/tests/test_daily_summary_mail.py`, `test_frontend_money_sum_guard.py` (nieuw)
+- `backend/tests/test_send_route_drift_guard.py` — allowlist (systeemmail, met motivering)
+- `frontend/src/app/(dashboard)/page.tsx` — tegeltje leest `/api/invoices/receivables`
+- `frontend/src/app/(dashboard)/zaken/[id]/components/DocumentenTab.tsx` — Number() op 3 sommen
+- `backend/pyproject.toml` + `uv.lock`, `frontend/package-lock.json` — beveiligingsupdates
+- `WAARHEDEN.md` (35 groen), `docs/audits/beoordeling-2026-09-04.md` (nieuw)
+- `.claude/commands/sessie-start.md` — effort per model
+- Prod-database: 10 dossiers heropend + `_s256_reopen_backup_cases`; wachtwoord Lisanne gereset
+
+### Bekende issues
+- **IN100515 heeft een bevroren rentedatum (9-6) terwijl het dossier open is.** Bestond al
+  voor deze sessie (regeling door Lisanne aangemaakt op 6-8); NIET aangeraakt. Als dat niet
+  bewust is, loopt daar geen rente. **Voor Lisanne.**
+- **14 testdossiers (2026-00006 t/m 00020) staan tussen de echte** en dus ook in de nieuwe
+  ochtendmail (37 brieven = 23 echt + 14 test). Eerste klus S257.
+- Arsalans prive-post (Hetzner, Philips Hue) staat in de maillijst omdat seidony@ als
+  kantoormailbox meesynct; 63 "ongesorteerd". Keuze Arsalan: ontkoppelen of filteren.
+- Lisanne's eigen mailbox (kesting@) is niet gekoppeld — haar directe correspondentie is
+  alleen zichtbaar als incasso@ in de cc staat.
+- Ongeveer 395 dossiers staan nog op "afgesloten" terwijl BaseNet ze als lopend kende;
+  heropening blijft per groep, na GO.
+- 48 taken "te laat", 143 mail-classificaties en 26 AI-concepten wachten op beoordeling;
+  3 intakes sinds 19-8 onbeoordeeld.
+- Geen gerechtelijke werkstroom na "Akkoord dagvaarden" (11 dossiers staan daar stil).
+- De weergave van de samenvattingsmail in Outlook zelf is niet gecontroleerd (geen inzage).
+
+### Volgende sessie
+S257: testdossiers markeren en uit Lisannes lijsten plus de ochtendmail filteren, daarna de
+prive-mail-keuze. Zie `docs/sessions/PROMPT-S257.md`.
 
 ## Sessie 255 (31 juli 2026, Opus-bouw ↔ Fable-onderzoek/review — KVK-backfill + etiket-keten + beveiligingsachterstand, LIVE)
 
@@ -759,67 +874,3 @@ op 2026-00006, daarna gewist), IN100606-concept bekeken (toont nog de kapotte pl
 ### Volgende sessie
 S248 — Arsalan bepaalt de hoofdtaak. Kennisregels bouwen kan zodra het ontwerp
 akkoord is. Zie `docs/sessions/PROMPT-S248.md`.
-
-## Sessie 246-nacht (24 juli 2026, Fable solo op GO Arsalan — eindreview + reviewfixes + lopende band, LIVE)
-
-### Samenvatting
-Nachtopdracht Arsalan ("doe zoveel mogelijk, probeer ook de lopende band met
-testdossiers, fix het gewoon"). Alles op Fable gedaan — óók de bouw, want
-Arsalan sliep en kon niet naar Opus wisselen; kostenafwijking bewust genomen.
-
-**1. Fable-eindreview S246 (was verplicht open).** Hele diff tegen­gelezen op het
-kruispunt "de wereld verandert tussen inplannen en verzenden, en er kijkt geen
-mens meer": 4 vondsten, alle gefixt + wachters (`90aa57f`):
-- Dossier intussen betaald/afgesloten → geplande mail werd tóch verstuurd. Nu: guard blokkeert + melding.
-- AI-concept intussen handmatig verstuurd/afgewezen → geplande kopie = dubbele mail aan debiteur + extra doorschuif. Nu: guard blokkeert + melding.
-- Mislukte rij was onopruimbaar (bleef eeuwig staan). Nu: "Weghalen"-knop, foutreden blijft bewaard.
-- Nazorg-fout-melding zei "mail IS verstuurd" én "verstuur hem zelf" (uitnodiging tot dubbel). Tekst hangt nu af van of de mail echt weg is. Plus: bijlage-totaalgrootte al bij inplannen bewaakt.
-
-**2. Lopende band (`8ef2d88`, migratie s246c).** Het open ontwerpbesluit is
-genomen: bij inplannen gebeurt er NIETS (geen brief, geen document, geen
-doorschuiven); op het gekozen moment draait de bezorger exact dezelfde functie
-als de knop (batch_execute per dossier / execute_recommendation) — brief krijgt
-de rentestand van het verzendmoment, dossier schuift dan pas door. Follow-up:
-goedkeuren gebeurt wél meteen (besluit van vanavond), alleen uitvoeren wacht.
-Guards: stap-anker (batch: dossier op andere stap → verkeerde brief zou uitgaan
-→ blokkeer+meld), follow-up via de bestaande statusmachine (verouderd/al
-uitgevoerd → niets + melding), dubbel-plan-guard per aanbeveling. Wachtrij
-kreeg een soort-veld ('compose'/'batch_step'/'followup'). UI: gedeelde
-"Verstuur later"-knop in het batch-venster en de follow-up-voorvertoning.
-
-**3. Live bewezen op testdossiers (beide ketens, prod):**
-- Batch: 2026-00006 (Tweede sommatie) om 00:12 ingepland → 00:14:22 automatisch
-  vertrokken; brief gegenereerd óp het verzendmoment, mail via incasso@ in de
-  correspondentie, dossier doorgeschoven naar Derde sommatie. Daarna teruggezet.
-- Follow-up: 2026-00015 via de nieuwe UI-knop (voorvertoning → Verstuur later →
-  eigen tijdstip) → aanbeveling meteen 'approved', uitvoering 00:19:22:
-  brief verstuurd, aanbeveling 'executed', dossier doorgeschoven. Teruggezet
-  naar Derde sommatie (de verbruikte aanbeveling maakt de 30-min-scanner
-  vanzelf opnieuw aan als het dossier weer lang genoeg stilstaat).
-
-### Gewijzigde bestanden
-Backend: `email/scheduled_service.py` (guards + 2 soorten + inplan-functies),
-`email/scheduled_models.py`, migratie `s246c_sched_kinds.py`,
-`incasso/router.py`+`schemas.py` (batch scheduled_at),
-`ai_agent/followup_router.py` (schedule-execute).
-Frontend: `verstuur-later-menu.tsx` (nieuw, gedeeld), `incasso/page.tsx`,
-`followup/page.tsx`, `scheduled-emails-panel.tsx` (Weghalen), hooks.
-Tests: `test_scheduled_emails.py` 12→20 wachters. Commits `90aa57f`, `8ef2d88`.
-
-### Verificatie
-20 wachtrij-wachters + 78 keten-tests + 181 batch/follow-up/incasso-tests groen
-(runs ná elkaar, één tegelijk); ruff + tsc schoon; migratie s246c op prod; alle
-containers healthy; login 200; screenshots van batch-venster, follow-up-venster
-en wachtrij-blok bekeken; beide live-verzendingen in de database nagetrokken
-(rij sent/1 poging, document, synced_email via incasso@, stap-verschuiving).
-
-### Bekende issues / bewust niet gedaan
-- **Verse-ogen-review nodig op de nachtdiff** (`90aa57f`+`8ef2d88`): gebouwd én
-  getest door dezelfde instantie — tegen de vaste cyclus in; eerste taak S247.
-- Melding bij mislukte geplande verzending gaat alleen naar wie hem inplande;
-  wordt die gebruiker inactief, dan ziet niemand hem (klein, 2 gebruikers).
-- Batch-inplannen via de "Per stap"-weergave niet apart getest (zelfde dialoog).
-- CI-runs van de nacht-commits niet afgewacht (deploy via SSH; tests lokaal groen).
-
-### Volgende sessie
-S247: verse-ogen-review nachtdiff → AI-kennislaag. Zie `docs/sessions/PROMPT-S247.md`.

@@ -11956,3 +11956,69 @@ als bij een klik) + `case_activities` "E-mail verzonden naar …".
 
 ### Volgende sessie
 Eerst Fable-eindreview S246, daarna S247 AI-kennislaag. Zie `docs/sessions/PROMPT-S247.md`.
+
+---
+
+## Sessie 246-nacht (24 juli 2026, Fable solo op GO Arsalan — eindreview + reviewfixes + lopende band, LIVE)
+
+### Samenvatting
+Nachtopdracht Arsalan ("doe zoveel mogelijk, probeer ook de lopende band met
+testdossiers, fix het gewoon"). Alles op Fable gedaan — óók de bouw, want
+Arsalan sliep en kon niet naar Opus wisselen; kostenafwijking bewust genomen.
+
+**1. Fable-eindreview S246 (was verplicht open).** Hele diff tegen­gelezen op het
+kruispunt "de wereld verandert tussen inplannen en verzenden, en er kijkt geen
+mens meer": 4 vondsten, alle gefixt + wachters (`90aa57f`):
+- Dossier intussen betaald/afgesloten → geplande mail werd tóch verstuurd. Nu: guard blokkeert + melding.
+- AI-concept intussen handmatig verstuurd/afgewezen → geplande kopie = dubbele mail aan debiteur + extra doorschuif. Nu: guard blokkeert + melding.
+- Mislukte rij was onopruimbaar (bleef eeuwig staan). Nu: "Weghalen"-knop, foutreden blijft bewaard.
+- Nazorg-fout-melding zei "mail IS verstuurd" én "verstuur hem zelf" (uitnodiging tot dubbel). Tekst hangt nu af van of de mail echt weg is. Plus: bijlage-totaalgrootte al bij inplannen bewaakt.
+
+**2. Lopende band (`8ef2d88`, migratie s246c).** Het open ontwerpbesluit is
+genomen: bij inplannen gebeurt er NIETS (geen brief, geen document, geen
+doorschuiven); op het gekozen moment draait de bezorger exact dezelfde functie
+als de knop (batch_execute per dossier / execute_recommendation) — brief krijgt
+de rentestand van het verzendmoment, dossier schuift dan pas door. Follow-up:
+goedkeuren gebeurt wél meteen (besluit van vanavond), alleen uitvoeren wacht.
+Guards: stap-anker (batch: dossier op andere stap → verkeerde brief zou uitgaan
+→ blokkeer+meld), follow-up via de bestaande statusmachine (verouderd/al
+uitgevoerd → niets + melding), dubbel-plan-guard per aanbeveling. Wachtrij
+kreeg een soort-veld ('compose'/'batch_step'/'followup'). UI: gedeelde
+"Verstuur later"-knop in het batch-venster en de follow-up-voorvertoning.
+
+**3. Live bewezen op testdossiers (beide ketens, prod):**
+- Batch: 2026-00006 (Tweede sommatie) om 00:12 ingepland → 00:14:22 automatisch
+  vertrokken; brief gegenereerd óp het verzendmoment, mail via incasso@ in de
+  correspondentie, dossier doorgeschoven naar Derde sommatie. Daarna teruggezet.
+- Follow-up: 2026-00015 via de nieuwe UI-knop (voorvertoning → Verstuur later →
+  eigen tijdstip) → aanbeveling meteen 'approved', uitvoering 00:19:22:
+  brief verstuurd, aanbeveling 'executed', dossier doorgeschoven. Teruggezet
+  naar Derde sommatie (de verbruikte aanbeveling maakt de 30-min-scanner
+  vanzelf opnieuw aan als het dossier weer lang genoeg stilstaat).
+
+### Gewijzigde bestanden
+Backend: `email/scheduled_service.py` (guards + 2 soorten + inplan-functies),
+`email/scheduled_models.py`, migratie `s246c_sched_kinds.py`,
+`incasso/router.py`+`schemas.py` (batch scheduled_at),
+`ai_agent/followup_router.py` (schedule-execute).
+Frontend: `verstuur-later-menu.tsx` (nieuw, gedeeld), `incasso/page.tsx`,
+`followup/page.tsx`, `scheduled-emails-panel.tsx` (Weghalen), hooks.
+Tests: `test_scheduled_emails.py` 12→20 wachters. Commits `90aa57f`, `8ef2d88`.
+
+### Verificatie
+20 wachtrij-wachters + 78 keten-tests + 181 batch/follow-up/incasso-tests groen
+(runs ná elkaar, één tegelijk); ruff + tsc schoon; migratie s246c op prod; alle
+containers healthy; login 200; screenshots van batch-venster, follow-up-venster
+en wachtrij-blok bekeken; beide live-verzendingen in de database nagetrokken
+(rij sent/1 poging, document, synced_email via incasso@, stap-verschuiving).
+
+### Bekende issues / bewust niet gedaan
+- **Verse-ogen-review nodig op de nachtdiff** (`90aa57f`+`8ef2d88`): gebouwd én
+  getest door dezelfde instantie — tegen de vaste cyclus in; eerste taak S247.
+- Melding bij mislukte geplande verzending gaat alleen naar wie hem inplande;
+  wordt die gebruiker inactief, dan ziet niemand hem (klein, 2 gebruikers).
+- Batch-inplannen via de "Per stap"-weergave niet apart getest (zelfde dialoog).
+- CI-runs van de nacht-commits niet afgewacht (deploy via SSH; tests lokaal groen).
+
+### Volgende sessie
+S247: verse-ogen-review nachtdiff → AI-kennislaag. Zie `docs/sessions/PROMPT-S247.md`.
